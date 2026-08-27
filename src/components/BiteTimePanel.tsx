@@ -33,7 +33,7 @@ function moonEmoji(phase: string): string {
   return map[phase] ?? '🌙';
 }
 
-export default function BiteTimePanel({ lat, lng, conditions }: Props) {
+export default function BiteTimePanel({ lat, conditions }: Props) {
   const [selectedSpecies, setSelectedSpecies] = useState('Largemouth Bass');
   const now     = new Date();
   const solunar = calculateSolunar(now, lat);

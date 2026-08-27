@@ -3,16 +3,17 @@ import { useState, useRef, useEffect } from 'react';
 import { calculateSolunar } from '@/lib/scoring/solunar';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string; }
+interface Advice { error?: string; go_fishing?: boolean; best_time_today?: string; top_bait?: string; top_technique?: string; target_depth?: string; hotspot_tip?: string; caution?: string; }
 interface Props {
   spot: { id: string; name: string; water_type: string; spot_type: string; lat: number; lng: number };
-  conditions: any;
+  conditions: object;
 }
 
 export default function FishBot({ spot, conditions }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [advice, setAdvice] = useState<any>(null);
+  const [advice, setAdvice] = useState<Advice | null>(null);
   const [species, setSpecies] = useState('Largemouth Bass');
   const scrollRef = useRef<HTMLDivElement>(null);
   const solunar = calculateSolunar(new Date(), spot.lat);
@@ -27,7 +28,7 @@ export default function FishBot({ spot, conditions }: Props) {
         body: JSON.stringify({ conditions, spot, species, solunar }),
       });
       setAdvice(await res.json());
-    } catch(e) { console.error(e); }
+    } catch (error) { console.error(error); }
     finally { setLoading(false); }
   };
 
@@ -44,7 +45,7 @@ export default function FishBot({ spot, conditions }: Props) {
       });
       const data = await res.json();
       setMessages(p => [...p, { role: 'bot', text: data.reply ?? 'Sorry, try again.', ts: new Date().toLocaleTimeString() }]);
-    } catch(e) {
+    } catch {
       setMessages(p => [...p, { role: 'bot', text: 'Connection error.', ts: new Date().toLocaleTimeString() }]);
     } finally { setLoading(false); }
   };

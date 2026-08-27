@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { useMapEvents, Marker, Popup, Circle } from 'react-leaflet';
+import { useMapEvents, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 export interface Waypoint {

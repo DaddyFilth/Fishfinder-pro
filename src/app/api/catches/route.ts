@@ -26,8 +26,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = CatchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { photo_url, ...rest } = parsed.data;
-  const { data, error } = await supabase.from('catches').insert(rest).select().single();
+  const { data, error } = await supabase.from('catches').insert(parsed.data).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
 }

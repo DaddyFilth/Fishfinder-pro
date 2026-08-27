@@ -72,9 +72,9 @@ export default function CatchesTab() {
               <div style={{fontSize:'10px',color:'#64748b',marginBottom:'4px'}}>{c.spot} · {c.date}</div>
               <div style={{display:'flex',gap:'6px'}}>
                 <span style={{background:'#0c4a6e',color:'#7dd3fc',fontSize:'10px',padding:'2px 7px',borderRadius:'8px'}}>{c.weight} lbs</span>
-                {c.length&&<span style={{background:'#1e1b4b',color:'#a5b4fc',fontSize:'10px',padding:'2px 7px',borderRadius:'8px'}}>{c.length}"</span>}
+                {c.length&&<span style={{background:'#1e1b4b',color:'#a5b4fc',fontSize:'10px',padding:'2px 7px',borderRadius:'8px'}}>{c.length}&quot;</span>}
               </div>
-              {c.notes&&<div style={{fontSize:'10px',color:'#475569',marginTop:'4px',fontStyle:'italic'}}>"{c.notes}"</div>}
+              {c.notes&&<div style={{fontSize:'10px',color:'#475569',marginTop:'4px',fontStyle:'italic'}}>&quot;{c.notes}&quot;</div>}
             </div>
           </div>
         ))}

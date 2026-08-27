@@ -70,7 +70,7 @@ export async function fetchNWSConditions(lat: number, lng: number) {
     const tempC = current.temperatureUnit === 'F'
       ? ((current.temperature - 32) * 5) / 9
       : current.temperature;
-    const windMatch = current.windSpeed.match(/(d+)/);
+    const windMatch = current.windSpeed.match(/(\d+(?:\.\d+)?)/);
     const windMs = windMatch ? (safeNum(windMatch[1]) ?? 0) * 0.44704 : null;
     return {
       source: 'NOAA NWS',

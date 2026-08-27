@@ -1,8 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import AITripPlanner from "@/components/AITripPlanner";
-import MapView from "@/components/MapView";
 import SpeciesTab from "@/components/SpeciesTab";
 import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
@@ -25,7 +23,6 @@ export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedSpot, setSelectedSpot] = useState<Spot|null>(null);
 
   useEffect(() => {
     getSpots().then(setSpots);
@@ -100,7 +97,7 @@ export default function MobilePage() {
                     <span style={{ color:'#0ea5e9' }}>Hide ↓</span>
                   </div>
                   {spots.slice(0,8).map((s, i) => (
-                    <div key={s.id} onClick={e => { e.stopPropagation(); setSelectedSpot(s); }}
+                    <div key={s.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); }}
                       style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:'1px solid #0f172a', cursor:'pointer' }}>
                       <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
                       <div style={{ flex:1 }}>
@@ -147,7 +144,7 @@ export default function MobilePage() {
         {/* TOP SPOTS TAB */}
         {tab === 'top' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
-            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>🏆 Ptop Spots</div>
+            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>🏆 Top Spots</div>
             {spots.slice(0,20).map((s, i) => (
               <div key={s.id} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'12px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px' }}>
                 <span style={{ fontSize:'20px', fontWeight:'bold', color:'#334155', minWidth:'28px' }}>#{i+1}</span>

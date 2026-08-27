@@ -84,7 +84,7 @@ export default function MapView({spots,onSpotSelect,aiPicks=[]}:{spots:Spot[];on
     drawDepthMap(canvas);
   },[]);
 
-  function toggleLayer(id:string){setActiveLayers(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});}
+  function toggleLayer(id:string){setActiveLayers(prev=>{const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n;});}
   function selectSpot(s:Spot){setSelected(s);onSpotSelect(s);}
   const rankOf=(id:string)=>aiPicks.indexOf(id);
 

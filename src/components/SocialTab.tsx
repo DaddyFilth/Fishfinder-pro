@@ -20,7 +20,7 @@ const LEADERBOARD=[
 export default function SocialTab(){
   const [tab,setTab]=useState<'feed'|'leaderboard'>('feed');
   const [liked,setLiked]=useState<Set<string>>(new Set());
-  function toggleLike(id:string){setLiked(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});}
+  function toggleLike(id:string){setLiked(prev=>{const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n;});}
 
   return(
     <div style={{height:'100%',display:'flex',flexDirection:'column',background:'#060d1a'}}>
@@ -45,7 +45,7 @@ export default function SocialTab(){
               <div style={{fontSize:'28px'}}>{post.emoji}</div>
               <div><div style={{fontSize:'13px',fontWeight:'bold',color:'#e2e8f0'}}>{post.species}</div><div style={{fontSize:'11px',color:'#0ea5e9',fontWeight:'bold'}}>{post.weight} lbs</div></div>
             </div>
-            <div style={{fontSize:'11px',color:'#94a3b8',marginBottom:'10px',fontStyle:'italic'}}>"{post.comment}"</div>
+            <div style={{fontSize:'11px',color:'#94a3b8',marginBottom:'10px',fontStyle:'italic'}}>&quot;{post.comment}&quot;</div>
             <div style={{display:'flex',gap:'8px'}}>
               <button onClick={()=>toggleLike(post.id)} style={{background:liked.has(post.id)?'rgba(239,68,68,0.15)':'#0f172a',border:`1px solid ${liked.has(post.id)?'#ef4444':'#334155'}`,color:liked.has(post.id)?'#ef4444':'#475569',padding:'5px 12px',borderRadius:'16px',fontSize:'11px',cursor:'pointer'}}>
                 {liked.has(post.id)?'❤️':'🤍'} {post.likes+(liked.has(post.id)?1:0)}

@@ -9,8 +9,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(_req: NextRequest, { params }: { params: { spotId: string } }) {
-  const parsed = z.object({ spotId: z.string().uuid() }).safeParse(params);
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ spotId: string }> }) {
+  const parsed = z.object({ spotId: z.string().uuid() }).safeParse(await params);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid spot ID' }, { status: 400 });
 
   const { spotId } = parsed.data;
@@ -50,7 +50,7 @@ export async function GET(_req: NextRequest, { params }: { params: { spotId: str
     wind_speed_ms:        nwsData?.wind_speed_ms ?? null,
     wave_height_m:        marineData?.wave_height_m ?? null,
     dissolved_oxygen_mgl: (usgsData?.dissolved_oxygen_mgl as number | null) ?? null,
-    tide_type:            (tideData as any)?.tide_type ?? null,
+    tide_type:            null,
     is_daytime:           nwsData?.is_daytime ?? undefined,
   };
 

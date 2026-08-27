@@ -21,11 +21,9 @@ Respond with ONLY a JSON object: { "summary": "your 3-sentence summary here", "e
       }]
     });
     const raw = response.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```json
-?/g, '').replace(/```
-?/g, '').trim();
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     return NextResponse.json(JSON.parse(cleaned));
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
 
 interface IDResult {
