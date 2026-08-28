@@ -81,12 +81,12 @@ export default function MobilePage() {
 { id: "log",      icon: "📓",  label: "Logbook"  },
 { id: "ai",       icon: "🤖",  label: "AI"       },
 { id: "top",      icon: "🏆",  label: "Top Spots"},
-{ id: "species",  icon: "🐠",  label: "Species"  },
+{ id: "species",  icon: "◎",   label: "Species"  },
 { id: "settings", icon: "⚙️", label: "Settings" },
 { id: "bitetime", icon: "⏱",  label: "Bite Time"},
 { id: "weather",  icon: "🌤",  label: "Weather"  },
 { id: "social",   icon: "👥",  label: "Social"   },
-{ id: "catches",  icon: "🐟",  label: "Catches"  },
+{ id: "catches",  icon: "◈",   label: "Catches"  },
 ] as const;
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:'#030712', color:'white', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>

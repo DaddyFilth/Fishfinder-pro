@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { SPECIES } from '@/lib/speciesCatalog';
 interface Spot { id:string; name:string; lat:number; lng:number; water_type:string; spot_type:string; }
 interface Plan { destination:Spot; driveTime:string; bestTime:string; species:string[]; gear:string[]; tips:string[]; score:number; }
 function score(s:Spot){let h=0;for(const c of s.id)h=(h*31+c.charCodeAt(0))&0xffff;return 50+(h%45);}
@@ -10,9 +11,15 @@ export default function AITripPlanner({spots}:{spots:Spot[]}){
   const[sel,setSel]=useState('');
   function build(spot:Spot):Plan{
     const sc=score(spot);
-    const sw:Record<string,string[]>={freshwater:['Largemouth Bass','Bluegill','Catfish'],saltwater:['Redfish','Speckled Trout','Flounder'],brackish:['Redfish','Striped Bass','Drum']};
+    const waterType = spot.water_type?.toLowerCase();
+    const candidates = waterType === 'saltwater'
+      ? SPECIES.filter((species) => species.habitat === 'Saltwater')
+      : waterType === 'brackish'
+        ? SPECIES.filter((species) => species.habitat !== 'Freshwater')
+        : SPECIES.filter((species) => species.habitat === 'Freshwater');
+    const targetSpecies = candidates.slice(0, 3).map((species) => species.name);
     const gt:Record<string,string[]>={bank:['Medium spinning rod','8-12lb mono','Worm rigs'],boat:['Heavy baitcaster','17-20lb braid','Crankbaits'],pier:['Long surf rod','20lb mono','Cut bait'],wade:['Light spinning rod','6lb fluoro','Soft plastics']};
-    return{destination:spot,driveTime:`${15+(score(spot)%45)} min`,bestTime:sc>70?'Dawn 5:30-8:00 AM':'Dusk 5:00-7:30 PM',species:(sw[spot.water_type?.toLowerCase()]??['Bass','Catfish','Bream']),gear:(gt[spot.spot_type?.toLowerCase()]??['Medium rod','Live bait','Tackle box']),score:sc,tips:[sc>70?'Excellent conditions - go early!':'Fair conditions - try dusk.',`${spot.water_type} ${spot.spot_type} - ${sc>60?'high':'moderate'} activity expected.`,'Check wind direction before casting.','Bring extra hooks - snags likely near structure.']};
+    return{destination:spot,driveTime:`${15+(score(spot)%45)} min`,bestTime:sc>70?'Dawn 5:30-8:00 AM':'Dusk 5:00-7:30 PM',species:targetSpecies,gear:(gt[spot.spot_type?.toLowerCase()]??['Medium rod','Live bait','Tackle box']),score:sc,tips:[sc>70?'Excellent conditions - go early!':'Fair conditions - try dusk.',`${spot.water_type} ${spot.spot_type} - ${sc>60?'high':'moderate'} activity expected.`,'Check wind direction before casting.','Bring extra hooks - snags likely near structure.']};
   }
   function gen(){if(!spots.length)return;setLoading(true);setTimeout(()=>{const b=[...spots].sort((a,b)=>score(b)-score(a))[0];setPlan(build(b));setSel(b.id);setLoading(false);},1800);}
   function change(id:string){const s=spots.find(x=>x.id===id);if(s){setPlan(build(s));setSel(id);}setEditing(false);}
