@@ -60,8 +60,7 @@ Respond with ONLY valid JSON:
     const raw = response.choices[0].message.content ?? '{}';
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     return NextResponse.json(JSON.parse(cleaned));
-  } catch (e) {
-    console.error('[AI Advisor]', e);
+  } catch {
     return NextResponse.json({ error: 'AI advisor failed' }, { status: 500 });
   }
 }
