@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getOpenAI } from '@/lib/openai';
 
 export async function POST(req: NextRequest) {
-  const { conditions, spot } = await req.json();
+  const openai = getOpenAI();
+  if (!openai) return NextResponse.json({ error: 'AI service is not configured' }, { status: 503 });
+
+  let body: { conditions?: unknown; spot?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const { conditions, spot } = body;
+  const spotData = (spot && typeof spot === 'object' ? spot : {}) as Record<string, unknown>;
+  const conditionData = (conditions && typeof conditions === 'object' ? conditions : {}) as Record<string, unknown>;
 
   try {
     const response = await openai.chat.completions.create({
@@ -13,9 +22,9 @@ export async function POST(req: NextRequest) {
       temperature: 0.3,
       messages: [{
         role: 'user',
-        content: `You are a fishing conditions analyst. Given these water/weather conditions at "${spot?.name}", write a 3-sentence plain-English summary for an angler. Be specific, practical, and conversational. Mention what the conditions mean for fish behavior.
+        content: `You are a fishing conditions analyst. Given these water/weather conditions at "${spotData.name}", write a 3-sentence plain-English summary for an angler. Be specific, practical, and conversational. Mention what the conditions mean for fish behavior.
 
-Conditions: water_temp=${conditions?.water_temp_c}°C, air_temp=${conditions?.air_temp_c}°C, wind=${conditions?.wind_speed_ms}m/s, pressure=${conditions?.pressure_hpa}hPa, DO=${conditions?.dissolved_oxygen_mgl}mg/L, flow=${conditions?.flow_rate_cfs}cfs, score=${conditions?.fishing_score}/100, water_type=${spot?.water_type}.
+Conditions: water_temp=${conditionData.water_temp_c}°C, air_temp=${conditionData.air_temp_c}°C, wind=${conditionData.wind_speed_ms}m/s, pressure=${conditionData.pressure_hpa}hPa, DO=${conditionData.dissolved_oxygen_mgl}mg/L, flow=${conditionData.flow_rate_cfs}cfs, score=${conditionData.fishing_score}/100, water_type=${spotData.water_type}.
 
 Respond with ONLY a JSON object: { "summary": "your 3-sentence summary here", "emoji_rating": "🟢 Excellent" }`
       }]
