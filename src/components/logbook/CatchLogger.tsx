@@ -1,7 +1,8 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
-import { AVAILABLE_SPECIES } from '@/lib/scoring/speciesAdvisor';
+import FishIdentifierModal from '@/components/ai/FishIdentifierModal';
+import { AVAILABLE_SPECIES, getSpeciesImage } from '@lib/scoring/speciesAdvisor';
 
 interface CatchEntry {
   id: string;
@@ -134,7 +135,7 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
           {c.photo_url && <img src={c.photo_url} alt="catch" style={{ width:'100%', borderRadius:'4px', maxHeight:'80px', objectFit:'cover', marginBottom:'6px' }} />}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
-              <div style={{ fontSize:'12px', fontWeight:'bold', color:'#22d3ee' }}>{c.species}</div>
+              <div style={{ fontSize:'12px', fontWeight:'bold', color:'#22d3ee' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><img src={getSpeciesImage(c.species)} alt={c.species} style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} /><span>{c.species}</span></div></div>
               <div style={{ fontSize:'10px', color:'#94a3b8' }}>
                 {c.weight_lbs && `${c.weight_lbs} lbs`}{c.length_in && ` · ${c.length_in}"`}{c.bait && ` · ${c.bait}`}
               </div>
@@ -149,3 +150,5 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
     </div>
   );
 }
+
+<FishIdentifierModal isOpen{showAIModal} onClose{() => setShowAIModal(false)} onApplyToCatch{(d) => setForm(p => ({ ...p, ...d }))} />

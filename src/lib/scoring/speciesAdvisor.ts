@@ -139,3 +139,20 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
 }
 
 export const AVAILABLE_SPECIES = Object.keys(SPECIES_DB);
+
+
+export const SPECIES_IMAGES: Record<string, string> = {
+  'Largemouth Bass': '/fish/largemouth-bass.jpg',
+  'Smallmouth Bass': '/fish/smallmouth-bass.jpg',
+  'Rainbow Trout': '/fish/rainbow-trout.jpg',
+  'Channel Catfish': '/fish/channel-catfish.jpg',
+  'Black Crappie': '/fish/crappie.jpg',
+  'Crappie': '/fish/crappie.jpg',
+  'Bluegill': '/fish/bluegill.jpg',
+  'Walleye': '/fish/walleye.jpg',
+  'Northern Pike': '/fish/northern-pike.jpg',
+};
+
+export function getSpeciesImage(speciesName: string): string {
+  return SPECIES_IMAGES[speciesName] || '/fish/largemouth-bass.jpg';
+}

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { calculateSolunar, hourlyActivityForecast } from '@/lib/scoring/solunar';
-import { getSpeciesAdvice, AVAILABLE_SPECIES } from '@/lib/scoring/speciesAdvisor';
+import { getSpeciesAdvice, AVAILABLE_SPECIES, getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 
 interface Conditions {
   water_temp_c: number | null;
@@ -103,11 +103,24 @@ export default function BiteTimePanel({ lat, conditions }: Props) {
       {/* Species selector */}
       <div style={{ marginBottom: '8px' }}>
         <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}>TARGET SPECIES</div>
-        <select
-          value={selectedSpecies}
-          onChange={e => setSelectedSpecies(e.target.value)}
-          style={{ width: '100%', background: '#1e293b', color: 'white', border: '1px solid #334155', borderRadius: '6px', padding: '5px 8px', fontSize: '12px' }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src={getSpeciesImage(selectedSpecies)}
+            alt={selectedSpecies}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '6px',
+              objectFit: 'cover',
+              border: '1px solid #334155',
+              flexShrink: 0
+            }}
+          />
+          <select
+            value={selectedSpecies}
+            onChange={e => setSelectedSpecies(e.target.value)}
+            style={{ flex: 1, background: '#1e293b', color: 'white', border: '1px solid #334155', borderRadius: '6px', padding: '7px 8px', fontSize: '12px' }}
+          >
           {AVAILABLE_SPECIES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>

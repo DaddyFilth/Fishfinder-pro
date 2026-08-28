@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const baseURL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
+const model = process.env.OLLAMA_MODEL || 'llama3.2-vision';
+
+const client = new OpenAI({
+  baseURL,
+  apiKey: process.env.OPENAI_API_KEY || 'ollama',
+});
 
 export async function POST(req: NextRequest) {
-  const { image_base64 } = await req.json();
-  if (!image_base64) return NextResponse.json({ error: 'No image provided' }, { status: 400 });
-
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const { image_base64 } = await req.json();
+    if (!image_base64) {
+      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+    }
+
+    const response = await client.chat.completions.create({
+      model,
       max_tokens: 600,
       messages: [{
         role: 'user',
@@ -32,16 +40,21 @@ export async function POST(req: NextRequest) {
 }
 If no fish is visible set is_fish to false and only include that field.`
           },
-          { type: 'image_url', image_url: { url: image_base64, detail: 'low' } }
+          { type: 'image_url', image_url: { url: image_base64 } }
         ]
       }]
     });
 
     const raw = response.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    return NextResponse.json(JSON.parse(cleaned));
-  } catch (e) {
-    console.error('[AI Identify]', e);
-    return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
+    const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    const data = JSON.parse(cleaned);
+
+    return NextResponse.json(data);
+  } catch (e: any) {
+    console.error('[AI Identify Error]', e?.message || e);
+    return NextResponse.json(
+      { error: e?.message || 'AI identification failed' },
+      { status: 500 }
+    );
   }
 }
