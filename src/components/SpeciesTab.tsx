@@ -1,129 +1,253 @@
 'use client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const SPECIES = [
   { id:'lmb', name:'Largemouth Bass', sci:'Micropterus salmoides', image:'/fish/largemouth-bass.png', type:'Freshwater', difficulty:'Medium', record:'22 lb 4 oz', season:['Spring','Summer','Fall'], bestBait:['Plastic worms','Crankbaits','Spinnerbaits','Frogs'], bestTime:'Dawn & Dusk', depth:'2-15 ft', habitat:'Weeds, structure, docks', tips:'Target lily pads in summer. Topwater lures at dawn.', activity:[4,5,9,8,7,6,5,6,7,8,5,3] },
-  { id:'cat', name:'Channel Catfish',  sci:'Ictalurus punctatus',   image:'/fish/channel-catfish.png', type:'Freshwater', difficulty:'Easy',   record:'58 lb',      season:['Spring','Summer','Fall'], bestBait:['Chicken liver','Stink bait','Nightcrawlers','Cut shad'], bestTime:'Night', depth:'10-30 ft', habitat:'Deep holes, river bends', tips:'Fish the bottom at night near structure. Strong smell baits work best.', activity:[3,3,5,6,8,9,9,8,7,5,4,3] },
-  { id:'blu', name:'Bluegill',         sci:'Lepomis macrochirus',    image:'/fish/bluegill.png', type:'Freshwater', difficulty:'Easy',   record:'4 lb 12 oz', season:['Spring','Summer'],        bestBait:['Crickets','Worms','Small jigs','Bread'], bestTime:'Midday', depth:'1-8 ft', habitat:'Shallow weeds, piers', tips:'Use tiny hooks. Great for kids and beginners.', activity:[2,2,4,6,9,9,9,8,6,4,2,2] },
-  { id:'rdf', name:'Redfish',          sci:'Sciaenops ocellatus',    image:'/fish/redfish.png', type:'Saltwater',  difficulty:'Medium', record:'94 lb 2 oz', season:['Fall','Winter','Spring'], bestBait:['Live shrimp','Crab','Gold spoons','Soft plastics'], bestTime:'Incoming tide', depth:'1-6 ft', habitat:'Grass flats, oyster bars', tips:'Look for tailing reds in shallow flats. Spot-and-stalk.', activity:[7,6,7,8,7,6,5,5,8,9,8,7] },
-  { id:'spt', name:'Speckled Trout',   sci:'Cynoscion nebulosus',    image:'/fish/speckled-trout.png', type:'Saltwater',  difficulty:'Medium', record:'17 lb 7 oz', season:['Fall','Winter'],          bestBait:['Mirrolure','Live shrimp','Soft plastics'], bestTime:'Early morning', depth:'2-10 ft', habitat:'Grass beds, channels', tips:'Work topwaters over grass in low light. Vary retrieve speed.', activity:[6,5,6,7,7,6,5,5,7,9,9,7] },
-  { id:'crp', name:'Crappie',          sci:'Pomoxis nigromaculatus', image:'/fish/crappie.png', type:'Freshwater', difficulty:'Easy',   record:'5 lb 3 oz',  season:['Spring','Winter'],        bestBait:['Minnows','Jigs','Small spinners'], bestTime:'Dawn', depth:'5-15 ft', habitat:'Brush piles, bridges', tips:'Vertical jig near structure. Spider rig for covering water.', activity:[5,4,7,9,6,4,3,3,5,6,5,5] },
-  { id:'flo', name:'Flounder',         sci:'Paralichthys lethostigma',image:'/fish/flounder.png', type:'Saltwater', difficulty:'Hard',   record:'22 lb 7 oz', season:['Summer','Fall'],          bestBait:['Live finger mullet','Gulp shrimp','Jigs'], bestTime:'Incoming tide', depth:'3-20 ft', habitat:'Sandy bottoms, jetties', tips:'Bounce bait slowly on bottom. Look for ambush points.', activity:[2,2,3,4,6,7,8,9,8,7,4,2] },
-  { id:'str', name:'Striped Bass',     sci:'Morone saxatilis',       image:'/fish/striped-bass.png', type:'Both',       difficulty:'Hard',   record:'81 lb 14 oz',season:['Spring','Fall'],           bestBait:['Bunker','Eels','Swimbaits','Bucktails'], bestTime:'Dawn', depth:'5-40 ft', habitat:'Structure, rips, channels', tips:'Follow baitfish schools. Cast to breaking fish.', activity:[6,5,7,9,7,5,4,4,6,9,8,6] },
+  { id:'cat', name:'Channel Catfish', sci:'Ictalurus punctatus', image:'/fish/channel-catfish.png', type:'Freshwater', difficulty:'Easy', record:'58 lb', season:['Spring','Summer','Fall'], bestBait:['Chicken liver','Stink bait','Nightcrawlers','Cut shad'], bestTime:'Night', depth:'10-30 ft', habitat:'Deep holes, river bends', tips:'Fish the bottom at night near structure. Strong smell baits work best.', activity:[3,3,5,6,8,9,9,8,7,5,4,3] },
+  { id:'blu', name:'Bluegill', sci:'Lepomis macrochirus', image:'/fish/bluegill.png', type:'Freshwater', difficulty:'Easy', record:'4 lb 12 oz', season:['Spring','Summer'], bestBait:['Crickets','Worms','Small jigs','Bread'], bestTime:'Midday', depth:'1-8 ft', habitat:'Shallow weeds, piers', tips:'Use tiny hooks. Great for kids and beginners.', activity:[2,2,4,6,9,9,9,8,6,4,2,2] },
+  { id:'rdf', name:'Redfish', sci:'Sciaenops ocellatus', image:'/fish/redfish.png', type:'Saltwater', difficulty:'Medium', record:'94 lb 2 oz', season:['Fall','Winter','Spring'], bestBait:['Live shrimp','Crab','Gold spoons','Soft plastics'], bestTime:'Incoming tide', depth:'1-6 ft', habitat:'Grass flats, oyster bars', tips:'Look for tailing reds in shallow flats. Spot-and-stalk.', activity:[7,6,7,8,7,6,5,5,8,9,8,7] },
+  { id:'spt', name:'Speckled Trout', sci:'Cynoscion nebulosus', image:'/fish/speckled-trout.png', type:'Saltwater', difficulty:'Medium', record:'17 lb 7 oz', season:['Fall','Winter'], bestBait:['Mirrolure','Live shrimp','Soft plastics'], bestTime:'Early morning', depth:'2-10 ft', habitat:'Grass beds, channels', tips:'Work topwaters over grass in low light. Vary retrieve speed.', activity:[6,5,6,7,7,6,5,5,7,9,9,7] },
+  { id:'crp', name:'Crappie', sci:'Pomoxis nigromaculatus', image:'/fish/crappie.png', type:'Freshwater', difficulty:'Easy', record:'5 lb 3 oz', season:['Spring','Winter'], bestBait:['Minnows','Jigs','Small spinners'], bestTime:'Dawn', depth:'5-15 ft', habitat:'Brush piles, bridges', tips:'Vertical jig near structure. Spider rig for covering water.', activity:[5,4,7,9,6,4,3,3,5,6,5,5] },
+  { id:'flo', name:'Flounder', sci:'Paralichthys lethostigma', image:'/fish/flounder.png', type:'Saltwater', difficulty:'Hard', record:'22 lb 7 oz', season:['Summer','Fall'], bestBait:['Live finger mullet','Gulp shrimp','Jigs'], bestTime:'Incoming tide', depth:'3-20 ft', habitat:'Sandy bottoms, jetties', tips:'Bounce bait slowly on bottom. Look for ambush points.', activity:[2,2,3,4,6,7,8,9,8,7,4,2] },
+  { id:'str', name:'Striped Bass', sci:'Morone saxatilis', image:'/fish/striped-bass.png', type:'Both', difficulty:'Hard', record:'81 lb 14 oz', season:['Spring','Fall'], bestBait:['Bunker','Eels','Swimbaits','Bucktails'], bestTime:'Dawn', depth:'5-40 ft', habitat:'Structure, rips, channels', tips:'Follow baitfish schools. Cast to breaking fish.', activity:[6,5,7,9,7,5,4,4,6,9,8,6] },
+  { id:'smb', name:'Smallmouth Bass', sci:'Micropterus dolomieu', image:'/fish/smallmouth-bass.png', type:'Freshwater', difficulty:'Medium', record:'11 lb 15 oz', season:['Spring','Summer','Fall'], bestBait:['Tubes','Ned rigs','Crayfish','Topwater'], bestTime:'Dawn & Dusk', depth:'4-25 ft', habitat:'Rocky points, current, clear lakes', tips:'Fish current seams and boulder fields. Finesse in clear water.', activity:[3,4,8,9,8,7,6,6,8,8,5,3] },
+  { id:'spb', name:'Spotted Bass', sci:'Micropterus punctulatus', image:'/fish/spotted-bass.png', type:'Freshwater', difficulty:'Medium', record:'11 lb 4 oz', season:['Spring','Summer','Fall'], bestBait:['Drop shots','Jerkbaits','Small crankbaits'], bestTime:'Morning', depth:'8-40 ft', habitat:'Deep structure, river ledges', tips:'Hold deeper than largemouth. Vertical presentations shine.', activity:[4,5,8,8,7,6,5,6,7,8,5,3] },
+  { id:'whb', name:'White Bass', sci:'Morone chrysops', image:'/fish/white-bass.png', type:'Freshwater', difficulty:'Easy', record:'6 lb 13 oz', season:['Spring'], bestBait:['White jigs','Small spoons','Shad imitations'], bestTime:'Dawn', depth:'5-20 ft', habitat:'River runs, lake points', tips:'Follow spring spawning runs up tributaries.', activity:[4,6,9,8,6,5,4,4,6,7,5,3] },
+  { id:'rbt', name:'Rainbow Trout', sci:'Oncorhynchus mykiss', image:'/fish/rainbow-trout.png', type:'Freshwater', difficulty:'Medium', record:'48 lb', season:['Spring','Fall'], bestBait:['PowerBait','Spinners','Nymphs','Streamers'], bestTime:'Morning', depth:'2-20 ft', habitat:'Cold streams, tailwaters, alpine lakes', tips:'Fish seams and riffles. Match the hatch on flies.', activity:[6,7,8,8,6,4,3,4,8,9,7,6] },
+  { id:'bnt', name:'Brown Trout', sci:'Salmo trutta', image:'/fish/brown-trout.png', type:'Freshwater', difficulty:'Hard', record:'44 lb 5 oz', season:['Fall','Spring'], bestBait:['Streamers','Minnows','Spoons','Mice'], bestTime:'Dusk & Night', depth:'3-25 ft', habitat:'Undercut banks, deep pools', tips:'Nocturnal feeders. Big streamers after dark in fall.', activity:[5,5,7,7,6,4,3,4,8,9,8,6] },
+  { id:'brt', name:'Brook Trout', sci:'Salvelinus fontinalis', image:'/fish/brook-trout.png', type:'Freshwater', difficulty:'Easy', record:'14 lb 8 oz', season:['Spring','Fall'], bestBait:['Worms','Dry flies','Small spinners'], bestTime:'Morning', depth:'1-8 ft', habitat:'Cold mountain streams, beaver ponds', tips:'Stay low and stealthy. Small presentations in gin-clear water.', activity:[4,5,7,8,7,5,4,5,8,8,5,3] },
+  { id:'lkt', name:'Lake Trout', sci:'Salvelinus namaycush', image:'/fish/lake-trout.png', type:'Freshwater', difficulty:'Hard', record:'72 lb', season:['Spring','Summer','Fall'], bestBait:['Spoons','Tube jigs','Live ciscoes'], bestTime:'Dawn', depth:'20-100 ft', habitat:'Deep cold lakes, thermocline', tips:'Troll deep in summer. Shallow after ice-out.', activity:[5,6,8,7,5,4,3,4,7,8,6,5] },
+  { id:'wly', name:'Walleye', sci:'Sander vitreus', image:'/fish/walleye.png', type:'Freshwater', difficulty:'Medium', record:'25 lb', season:['Spring','Fall'], bestBait:['Jigs','Minnows','Crankbaits','Nightcrawlers'], bestTime:'Dusk & Night', depth:'8-35 ft', habitat:'Rocky points, river current, weeds', tips:'Low light is prime. Slow presentations on bottom.', activity:[4,5,8,9,7,5,4,5,8,9,6,4] },
+  { id:'sgr', name:'Sauger', sci:'Sander canadensis', image:'/fish/sauger.png', type:'Freshwater', difficulty:'Medium', record:'8 lb 12 oz', season:['Spring','Winter'], bestBait:['Jigs','Minnows','Twister tails'], bestTime:'Dawn', depth:'10-40 ft', habitat:'Turbid rivers, tailraces', tips:'Fish current breaks in stained water. Smaller than walleye.', activity:[5,6,8,7,5,4,3,4,6,7,6,5] },
+  { id:'sge', name:'Saugeye', sci:'Sander vitreus × S. canadensis', image:'/fish/saugeye.png', type:'Freshwater', difficulty:'Medium', record:'15 lb 6 oz', season:['Spring','Fall'], bestBait:['Jigs','Shad raps','Live minnows'], bestTime:'Dusk', depth:'8-30 ft', habitat:'Reservoirs, river tailwaters', tips:'Hybrid vigor — fish like walleye in stained reservoirs.', activity:[4,5,8,8,6,5,4,5,7,8,6,4] },
+  { id:'ypc', name:'Yellow Perch', sci:'Perca flavescens', image:'/fish/yellow-perch.png', type:'Freshwater', difficulty:'Easy', record:'4 lb 3 oz', season:['Winter','Spring'], bestBait:['Minnows','Small jigs','Worms'], bestTime:'Midday', depth:'8-25 ft', habitat:'Weedy lakes, ice cover', tips:'Find schools. Ice fishing staple over weed edges.', activity:[6,7,8,7,5,4,3,3,5,6,7,7] },
+  { id:'npk', name:'Northern Pike', sci:'Esox lucius', image:'/fish/northern-pike.png', type:'Freshwater', difficulty:'Medium', record:'55 lb 1 oz', season:['Spring','Fall'], bestBait:['Spoons','Spinnerbaits','Large streamers','Dead bait'], bestTime:'Morning', depth:'3-20 ft', habitat:'Weeds, bays, cold lakes', tips:'Use a wire leader. Cast tight to vegetation.', activity:[5,6,9,8,6,4,3,4,8,9,6,5] },
+  { id:'msk', name:'Muskellunge', sci:'Esox masquinongy', image:'/fish/muskellunge.png', type:'Freshwater', difficulty:'Hard', record:'67 lb 8 oz', season:['Fall','Summer'], bestBait:['Bucktails','Big swimbaits','Glide baits','Live suckers'], bestTime:'Dusk', depth:'5-30 ft', habitat:'Weeds, points, saddles', tips:'Figure-eight at boatside. Fall cold fronts fire them up.', activity:[3,3,5,6,7,6,6,7,9,9,6,4] },
+  { id:'tmk', name:'Tiger Muskie', sci:'Esox masquinongy × E. lucius', image:'/fish/tiger-muskie.png', type:'Freshwater', difficulty:'Hard', record:'51 lb 3 oz', season:['Fall','Summer'], bestBait:['Bucktails','Large spinners','Swimbaits'], bestTime:'Dusk', depth:'6-25 ft', habitat:'Stocked lakes, weeds, structure', tips:'Sterile hybrid. Aggressive follows — always figure-eight.', activity:[3,3,5,6,7,6,6,7,8,9,6,4] },
+  { id:'cpk', name:'Chain Pickerel', sci:'Esox niger', image:'/fish/chain-pickerel.png', type:'Freshwater', difficulty:'Easy', record:'9 lb 6 oz', season:['Spring','Fall','Winter'], bestBait:['Spinners','Small spoons','Soft plastics'], bestTime:'Morning', depth:'2-12 ft', habitat:'Weedy creeks, millponds', tips:'Sight-fish in stained Southern waters. Wire not always needed.', activity:[5,6,8,7,5,4,4,5,7,8,6,5] },
+  { id:'wcr', name:'White Crappie', sci:'Pomoxis annularis', image:'/fish/white-crappie.png', type:'Freshwater', difficulty:'Easy', record:'5 lb 3 oz', season:['Spring'], bestBait:['Minnows','Tube jigs','Small spinners'], bestTime:'Dawn', depth:'4-18 ft', habitat:'Creek arms, brush, river backwaters', tips:'Prefer slightly current-oriented water vs black crappie.', activity:[4,5,8,9,6,4,3,3,5,6,5,4] },
+  { id:'pks', name:'Pumpkinseed', sci:'Lepomis gibbosus', image:'/fish/pumpkinseed.png', type:'Freshwater', difficulty:'Easy', record:'2 lb 4 oz', season:['Spring','Summer'], bestBait:['Worms','Small flies','Crickets'], bestTime:'Midday', depth:'1-8 ft', habitat:'Weedy shallows, ponds', tips:'Colorful panfish. Tiny baits around docks and pads.', activity:[2,2,5,7,9,9,8,7,5,3,2,2] },
+  { id:'rkb', name:'Rock Bass', sci:'Ambloplites rupestris', image:'/fish/rock-bass.png', type:'Freshwater', difficulty:'Easy', record:'3 lb', season:['Spring','Summer'], bestBait:['Worms','Crayfish','Small jigs'], bestTime:'Morning', depth:'2-12 ft', habitat:'Rocky shorelines, rivers', tips:'Aggressive around boulders. Great bycatch while smallmouth fishing.', activity:[3,3,6,8,8,7,6,6,5,4,3,2] },
+  { id:'whp', name:'White Perch', sci:'Morone americana', image:'/fish/white-perch.png', type:'Both', difficulty:'Easy', record:'2 lb 12 oz', season:['Spring'], bestBait:['Small jigs','Grass shrimp','Bloodworms'], bestTime:'Incoming tide', depth:'5-20 ft', habitat:'Brackish rivers, coastal ponds', tips:'Schooling. Spring spawning runs in tidal rivers.', activity:[4,5,8,8,6,5,4,4,6,7,5,4] },
+  { id:'ccp', name:'Common Carp', sci:'Cyprinus carpio', image:'/fish/common-carp.png', type:'Freshwater', difficulty:'Medium', record:'75 lb 11 oz', season:['Spring','Summer'], bestBait:['Corn','Boilies','Dough balls','Worms'], bestTime:'Morning', depth:'3-15 ft', habitat:'Mud flats, river backwaters', tips:'Pre-bait a swim. Hair-rig corn for wary fish.', activity:[3,4,7,8,8,8,7,7,6,5,3,2] },
+  { id:'gcp', name:'Grass Carp', sci:'Ctenopharyngodon idella', image:'/fish/grass-carp.png', type:'Freshwater', difficulty:'Hard', record:'87 lb 10 oz', season:['Summer'], bestBait:['Cherry tomatoes','Lettuce','Dough','Corn'], bestTime:'Midday', depth:'4-12 ft', habitat:'Weedy lakes, golf ponds', tips:'Sight-cast to cruising fish. Extremely line-shy.', activity:[2,2,4,6,8,9,9,8,6,4,2,2] },
+  { id:'bff', name:'Bigmouth Buffalo', sci:'Ictiobus cyprinellus', image:'/fish/bigmouth-buffalo.png', type:'Freshwater', difficulty:'Hard', record:'70 lb 5 oz', season:['Spring'], bestBait:['Dough','Corn','Nymphs'], bestTime:'Morning', depth:'5-20 ft', habitat:'Large rivers, reservoirs', tips:'Fly-rod nymphs in current. Often misidentified as carp.', activity:[3,4,8,8,6,5,4,4,5,6,4,3] },
+  { id:'fhc', name:'Flathead Catfish', sci:'Pylodictis olivaris', image:'/fish/flathead-catfish.png', type:'Freshwater', difficulty:'Hard', record:'123 lb', season:['Summer','Fall'], bestBait:['Live bluegill','Live goldfish','Cut bait'], bestTime:'Night', depth:'8-40 ft', habitat:'Log jams, river holes', tips:'Live bait only. Fish snags after dark in current.', activity:[2,2,4,6,8,9,9,9,7,5,3,2] },
+  { id:'blc', name:'Blue Catfish', sci:'Ictalurus furcatus', image:'/fish/blue-catfish.png', type:'Freshwater', difficulty:'Medium', record:'143 lb', season:['Spring','Winter'], bestBait:['Cut shad','Skipjack','Blueback herring'], bestTime:'Night', depth:'15-60 ft', habitat:'Deep river channels, reservoirs', tips:'Drift cut bait along channel ledges. Winter trophy bite.', activity:[6,6,8,7,6,5,5,5,6,7,8,7] },
+  { id:'bhc', name:'Black Bullhead', sci:'Ameiurus melas', image:'/fish/black-bullhead.png', type:'Freshwater', difficulty:'Easy', record:'8 lb 2 oz', season:['Spring','Summer'], bestBait:['Worms','Chicken liver','Stink bait'], bestTime:'Night', depth:'3-12 ft', habitat:'Muddy ponds, slow creeks', tips:'Tough pan-sized cat. Fish the bottom in stained water.', activity:[3,3,6,8,8,8,7,6,5,4,3,2] },
+  { id:'wct', name:'White Catfish', sci:'Ameiurus catus', image:'/fish/white-catfish.png', type:'Freshwater', difficulty:'Easy', record:'18 lb 14 oz', season:['Spring','Summer'], bestBait:['Worms','Cut bait','Shrimp'], bestTime:'Night', depth:'5-20 ft', habitat:'Tidal rivers, coastal ponds', tips:'Common in East Coast tidal waters. Smaller than channel cats.', activity:[3,4,6,7,8,8,7,6,5,4,3,2] },
+  { id:'eel', name:'American Eel', sci:'Anguilla rostrata', image:'/fish/american-eel.png', type:'Both', difficulty:'Medium', record:'13 lb 8 oz', season:['Summer','Fall'], bestBait:['Nightcrawlers','Cut bait'], bestTime:'Night', depth:'5-30 ft', habitat:'Rivers, estuaries, dams', tips:'Fish bottom after dark near current. Excellent bait too.', activity:[2,2,4,6,7,8,8,8,7,5,3,2] },
+  { id:'bwf', name:'Bowfin', sci:'Amia calva', image:'/fish/bowfin.png', type:'Freshwater', difficulty:'Medium', record:'21 lb 8 oz', season:['Spring','Summer'], bestBait:['Spinnerbaits','Soft plastics','Live bait'], bestTime:'Morning', depth:'2-10 ft', habitat:'Swamps, weedy backwaters', tips:'Primitive predator. Hard strikes in thick cover.', activity:[4,5,8,8,7,6,6,6,5,4,3,3] },
+  { id:'lng', name:'Longnose Gar', sci:'Lepisosteus osseus', image:'/fish/longnose-gar.png', type:'Freshwater', difficulty:'Hard', record:'50 lb 5 oz', season:['Summer'], bestBait:['Nylon rope lures','Cut bait','Minnows'], bestTime:'Midday', depth:'3-15 ft', habitat:'River surface, slow pools', tips:'Fray nylon rope to snag the snout. Sight-cast sunning fish.', activity:[2,2,4,6,8,9,9,8,6,4,2,2] },
+  { id:'alg', name:'Alligator Gar', sci:'Atractosteus spatula', image:'/fish/alligator-gar.png', type:'Freshwater', difficulty:'Hard', record:'279 lb', season:['Spring','Summer'], bestBait:['Cut carp','Gar lures','Live shad'], bestTime:'Night', depth:'5-25 ft', habitat:'Large Southern rivers, oxbows', tips:'Heavy tackle. Float cut bait in current. Handle with care.', activity:[3,4,7,8,8,7,6,6,5,4,3,2] },
+  { id:'sng', name:'Shortnose Gar', sci:'Lepisosteus platostomus', image:'/fish/shortnose-gar.png', type:'Freshwater', difficulty:'Medium', record:'7 lb 4 oz', season:['Summer'], bestBait:['Rope lures','Small minnows'], bestTime:'Midday', depth:'2-10 ft', habitat:'Backwaters, sloughs', tips:'Smaller gar of the Mississippi basin. Surface cruiser.', activity:[2,2,4,6,8,9,9,8,6,4,2,2] },
+  { id:'fwd', name:'Freshwater Drum', sci:'Aplodinotus grunniens', image:'/fish/freshwater-drum.png', type:'Freshwater', difficulty:'Easy', record:'54 lb 8 oz', season:['Spring','Summer'], bestBait:['Crawlers','Cut bait','Jigs'], bestTime:'Night', depth:'8-30 ft', habitat:'Large rivers, reservoirs', tips:'Bottom feeder. Grunts when landed. Great table fare smoked.', activity:[3,4,7,8,8,7,6,6,5,4,3,2] },
+  { id:'bur', name:'Burbot', sci:'Lota lota', image:'/fish/burbot.png', type:'Freshwater', difficulty:'Medium', record:'25 lb 2 oz', season:['Winter'], bestBait:['Dead bait','Jigs','Spoons'], bestTime:'Night', depth:'20-80 ft', habitat:'Deep cold lakes, under ice', tips:'Spawn under ice. Night bite in midwinter is legendary.', activity:[8,8,6,4,3,2,2,2,3,5,7,9] },
+  { id:'cso', name:'Cisco', sci:'Coregonus artedi', image:'/fish/cisco.png', type:'Freshwater', difficulty:'Medium', record:'7 lb 4 oz', season:['Fall','Winter'], bestBait:['Small spoons','Jigs','Flies'], bestTime:'Dawn', depth:'20-60 ft', habitat:'Great Lakes, deep clear lakes', tips:'Fall spawning schools. Prime forage for lake trout.', activity:[4,4,5,5,4,3,3,4,7,8,7,5] },
+  { id:'lwf', name:'Lake Whitefish', sci:'Coregonus clupeaformis', image:'/fish/lake-whitefish.png', type:'Freshwater', difficulty:'Medium', record:'14 lb 6 oz', season:['Fall','Winter'], bestBait:['Small jigs','Minnows','Ice flies'], bestTime:'Dawn', depth:'15-50 ft', habitat:'Great Lakes, deep northern lakes', tips:'Ice-fishing favorite. Light line and small baits.', activity:[5,5,4,4,3,3,3,4,7,8,7,6] },
+  { id:'pdf', name:'Paddlefish', sci:'Polyodon spathula', image:'/fish/paddlefish.png', type:'Freshwater', difficulty:'Hard', record:'144 lb 8 oz', season:['Spring'], bestBait:['Snagging trebles (where legal)'], bestTime:'Morning', depth:'8-25 ft', habitat:'Large river current, reservoirs', tips:'Filter feeder — snagging only where allowed. Check regs.', activity:[3,5,9,8,5,3,2,2,3,4,3,2] },
+  { id:'gsf', name:'Green Sunfish', sci:'Lepomis cyanellus', image:'/fish/green-sunfish.png', type:'Freshwater', difficulty:'Easy', record:'2 lb 2 oz', season:['Spring','Summer'], bestBait:['Worms','Small spinners','Flies'], bestTime:'Midday', depth:'1-8 ft', habitat:'Creeks, ponds, rocky banks', tips:'Aggressive for their size. Eat lures meant for bass.', activity:[2,3,6,8,9,9,8,7,5,3,2,2] },
+  { id:'wrm', name:'Warmouth', sci:'Lepomis gulosus', image:'/fish/warmouth.png', type:'Freshwater', difficulty:'Easy', record:'2 lb 7 oz', season:['Spring','Summer'], bestBait:['Worms','Small jigs','Crickets'], bestTime:'Morning', depth:'2-8 ft', habitat:'Weedy sloughs, cypress', tips:'Big mouth for a sunfish. Fish heavy cover in the South.', activity:[2,3,6,8,9,9,8,7,5,3,2,2] },
+  { id:'res', name:'Redear Sunfish', sci:'Lepomis microlophus', image:'/fish/redear-sunfish.png', type:'Freshwater', difficulty:'Easy', record:'5 lb 12 oz', season:['Spring'], bestBait:['Worms','Grass shrimp','Small jigs'], bestTime:'Midday', depth:'4-12 ft', habitat:'Snail beds, shell bottoms', tips:'Shellcrackers — fish bottom on spawning beds.', activity:[2,3,6,9,8,7,6,5,4,3,2,2] },
+  { id:'les', name:'Longear Sunfish', sci:'Lepomis megalotis', image:'/fish/longear-sunfish.png', type:'Freshwater', difficulty:'Easy', record:'1 lb 12 oz', season:['Spring','Summer'], bestBait:['Flies','Worms','Tiny spinners'], bestTime:'Midday', depth:'1-6 ft', habitat:'Clear creeks, gravel', tips:'Most colorful North American sunfish. Tiny flies in creeks.', activity:[2,2,5,8,9,9,8,7,5,3,2,2] },
+  { id:'rsn', name:'Red Snapper', sci:'Lutjanus campechanus', image:'/fish/red-snapper.png', type:'Saltwater', difficulty:'Medium', record:'50 lb 4 oz', season:['Summer'], bestBait:['Cut squid','Pogies','Jigs'], bestTime:'Morning', depth:'60-250 ft', habitat:'Gulf reefs, wrecks, oil rigs', tips:'Federal seasons are short. Fish structure with heavy tackle.', activity:[3,3,4,5,7,9,9,8,6,4,3,3] },
+  { id:'msn', name:'Mangrove Snapper', sci:'Lutjanus griseus', image:'/fish/mangrove-snapper.png', type:'Saltwater', difficulty:'Medium', record:'18 lb 10 oz', season:['Summer','Fall'], bestBait:['Live shrimp','Pilchards','Cut bait'], bestTime:'Incoming tide', depth:'5-80 ft', habitat:'Mangroves, bridges, reefs', tips:'Line-shy around structure. Fluorocarbon and light leaders.', activity:[5,5,6,7,8,8,8,8,7,6,5,5] },
+  { id:'ysn', name:'Yellowtail Snapper', sci:'Ocyurus chrysurus', image:'/fish/yellowtail-snapper.png', type:'Saltwater', difficulty:'Easy', record:'11 lb 2 oz', season:['Summer'], bestBait:['Cut squid','Shrimp','Chum'], bestTime:'Morning', depth:'20-80 ft', habitat:'Florida reefs, wrecks', tips:'Chum heavily. Light tackle over the reef.', activity:[4,4,5,6,8,9,9,8,7,5,4,4] },
+  { id:'mts', name:'Mutton Snapper', sci:'Lutjanus analis', image:'/fish/mutton-snapper.png', type:'Saltwater', difficulty:'Hard', record:'30 lb 4 oz', season:['Spring','Summer'], bestBait:['Live pinfish','Crabs','Jigs'], bestTime:'Incoming tide', depth:'15-100 ft', habitat:'Patch reefs, wrecks, flats edges', tips:'Wary. Long casts with live bait on the flats.', activity:[5,5,7,8,8,7,6,6,7,6,5,5] },
+  { id:'cbs', name:'Cubera Snapper', sci:'Lutjanus cyanopterus', image:'/fish/cubera-snapper.png', type:'Saltwater', difficulty:'Hard', record:'121 lb 8 oz', season:['Summer'], bestBait:['Live lobster','Big jacks','Cut bait'], bestTime:'Night', depth:'40-200 ft', habitat:'Deep wrecks, ledges', tips:'Heavy gear. Night bite around full moons in summer.', activity:[3,3,4,5,7,9,9,8,6,4,3,3] },
+  { id:'lns', name:'Lane Snapper', sci:'Lutjanus synagris', image:'/fish/lane-snapper.png', type:'Saltwater', difficulty:'Easy', record:'8 lb 3 oz', season:['Summer'], bestBait:['Shrimp','Squid','Small jigs'], bestTime:'Morning', depth:'20-80 ft', habitat:'Nearshore reefs, sand-grass edges', tips:'Excellent eating. Small baits on light tackle.', activity:[4,4,5,6,8,8,8,8,6,5,4,4] },
+  { id:'rgr', name:'Red Grouper', sci:'Epinephelus morio', image:'/fish/red-grouper.png', type:'Saltwater', difficulty:'Medium', record:'42 lb 4 oz', season:['Spring','Summer'], bestBait:['Pinfish','Squid','Jigs'], bestTime:'Morning', depth:'60-250 ft', habitat:'Gulf hard bottom, ledges', tips:'Drop to bottom and hang on. Mind closed seasons.', activity:[4,5,7,8,8,7,6,6,6,5,4,4] },
+  { id:'ggr', name:'Gag Grouper', sci:'Mycteroperca microlepis', image:'/fish/gag-grouper.png', type:'Saltwater', difficulty:'Hard', record:'80 lb 6 oz', season:['Fall','Winter'], bestBait:['Live pinfish','Large jigs','Swimbaits'], bestTime:'Morning', depth:'20-120 ft', habitat:'Nearshore ledges, wrecks', tips:'Shallow winter bite. Horse them from structure immediately.', activity:[6,6,5,4,4,5,6,7,8,9,8,7] },
+  { id:'bgr', name:'Black Grouper', sci:'Mycteroperca bonaci', image:'/fish/black-grouper.png', type:'Saltwater', difficulty:'Hard', record:'113 lb 6 oz', season:['Winter','Spring'], bestBait:['Live bait','Heavy jigs'], bestTime:'Morning', depth:'40-200 ft', habitat:'Deep wrecks, walls, Keys reefs', tips:'Serious drag. Don’t give them the hole.', activity:[7,7,6,5,4,4,4,5,6,7,8,8] },
+  { id:'ngr', name:'Nassau Grouper', sci:'Epinephelus striatus', image:'/fish/nassau-grouper.png', type:'Saltwater', difficulty:'Hard', record:'38 lb 8 oz', season:['Winter'], bestBait:['Live bait','Jigs'], bestTime:'Morning', depth:'20-100 ft', habitat:'Caribbean reefs, wrecks', tips:'Protected in U.S. waters — catch-and-release only where required.', activity:[6,6,5,4,3,3,3,3,4,5,6,7] },
+  { id:'kng', name:'King Mackerel', sci:'Scomberomorus cavalla', image:'/fish/king-mackerel.png', type:'Saltwater', difficulty:'Medium', record:'93 lb', season:['Fall','Spring'], bestBait:['Live pogies','Ribbonfish','Spoons'], bestTime:'Dawn', depth:'10-60 ft', habitat:'Nearshore bait schools, wrecks', tips:'Wire leader. Slow-troll live bait around bait balls.', activity:[5,5,7,8,7,6,5,6,8,9,8,6] },
+  { id:'spm', name:'Spanish Mackerel', sci:'Scomberomorus maculatus', image:'/fish/spanish-mackerel.png', type:'Saltwater', difficulty:'Easy', record:'13 lb', season:['Spring','Fall'], bestBait:['Gotcha plugs','Spoons','Live shrimp'], bestTime:'Morning', depth:'5-20 ft', habitat:'Beaches, piers, inlets', tips:'Fast retrieve. Small wire or heavy fluoro for cutoffs.', activity:[4,5,8,8,6,5,4,5,8,9,7,5] },
+  { id:'cob', name:'Cobia', sci:'Rachycentron canadum', image:'/fish/cobia.png', type:'Saltwater', difficulty:'Hard', record:'135 lb 9 oz', season:['Spring'], bestBait:['Live eels','Jigs','Bucktails'], bestTime:'Morning', depth:'10-80 ft', habitat:'Buoys, rays, wrecks', tips:'Sight-cast fish following rays and turtles in spring.', activity:[4,6,9,8,6,5,4,4,5,6,5,4] },
+  { id:'pom', name:'Florida Pompano', sci:'Trachinotus carolinus', image:'/fish/pompano.png', type:'Saltwater', difficulty:'Medium', record:'8 lb 4 oz', season:['Fall','Winter','Spring'], bestBait:['Sand fleas','Jigs','Goofy jigs'], bestTime:'Incoming tide', depth:'2-12 ft', habitat:'Surf, inlets, bridges', tips:'Surf-fish sand fleas in the wash. Bright jigs in the current.', activity:[7,7,8,7,5,3,3,4,6,8,8,7] },
+  { id:'per', name:'Permit', sci:'Trachinotus falcatus', image:'/fish/permit.png', type:'Saltwater', difficulty:'Hard', record:'60 lb', season:['Spring','Summer'], bestBait:['Crabs','Shrimp','Permit flies'], bestTime:'Incoming tide', depth:'1-8 ft', habitat:'Flats, wrecks, channels', tips:'The flats grand slam fish. Perfect presentations only.', activity:[5,5,7,8,8,7,6,6,6,5,5,5] },
+  { id:'trp', name:'Tarpon', sci:'Megalops atlanticus', image:'/fish/tarpon.png', type:'Saltwater', difficulty:'Hard', record:'286 lb 9 oz', season:['Spring','Summer'], bestBait:['Live crabs','Threadfin','Flies','Swimbaits'], bestTime:'Dawn', depth:'3-20 ft', habitat:'Passes, flats, basins', tips:'Set the hook hard, bow to the jump. Peak in Florida late spring.', activity:[4,5,8,9,9,8,7,6,5,4,3,3] },
+  { id:'bnf', name:'Bonefish', sci:'Albula vulpes', image:'/fish/bonefish.png', type:'Saltwater', difficulty:'Hard', record:'19 lb', season:['Spring','Fall'], bestBait:['Shrimp','Crabs','Gotcha flies'], bestTime:'Incoming tide', depth:'1-4 ft', habitat:'Tropical flats, Bahamas, Florida', tips:'Lead the fish. Long casts, light leaders, stay low.', activity:[6,6,7,8,7,6,5,5,7,8,7,6] },
+  { id:'snk', name:'Common Snook', sci:'Centropomus undecimalis', image:'/fish/snook.png', type:'Saltwater', difficulty:'Hard', record:'53 lb 10 oz', season:['Summer','Fall'], bestBait:['Live pilchards','DOA shrimp','Topwater'], bestTime:'Night', depth:'2-15 ft', habitat:'Inlets, mangroves, docks', tips:'Ambush around lights and points. Closed seasons in Florida.', activity:[4,4,5,6,7,8,9,9,8,6,5,4] },
+  { id:'jck', name:'Jack Crevalle', sci:'Caranx hippos', image:'/fish/jack-crevalle.png', type:'Saltwater', difficulty:'Medium', record:'66 lb 2 oz', season:['Spring','Fall'], bestBait:['Topwater','Live bait','Spoons'], bestTime:'Dawn', depth:'3-20 ft', habitat:'Inlets, beaches, bait schools', tips:'Brutal fights. Cast into blitzes along the beach.', activity:[5,5,7,8,7,6,6,6,8,8,6,5] },
+  { id:'amj', name:'Greater Amberjack', sci:'Seriola dumerili', image:'/fish/amberjack.png', type:'Saltwater', difficulty:'Hard', record:'155 lb 10 oz', season:['Spring','Fall'], bestBait:['Live bait','Heavy jigs'], bestTime:'Morning', depth:'60-250 ft', habitat:'Wrecks, reefs, towers', tips:'Reef donkeys. Lock the drag and pull up, not out.', activity:[5,6,8,8,6,5,4,5,7,8,6,5] },
+  { id:'alj', name:'Almaco Jack', sci:'Seriola rivoliana', image:'/fish/almaco-jack.png', type:'Saltwater', difficulty:'Hard', record:'78 lb', season:['Summer'], bestBait:['Jigs','Live bait'], bestTime:'Morning', depth:'80-300 ft', habitat:'Deep wrecks, FADs, walls', tips:'Deeper and chunkier than AJ. Heavy vertical jigs.', activity:[4,4,5,6,7,8,8,8,6,5,4,4] },
+  { id:'mah', name:'Mahi-Mahi', sci:'Coryphaena hippurus', image:'/fish/mahi-mahi.png', type:'Saltwater', difficulty:'Medium', record:'87 lb', season:['Summer'], bestBait:['Ballyhoo','Chugger lures','Flies'], bestTime:'Morning', depth:'Surface', habitat:'Weed lines, FADs, offshore', tips:'Troll weed lines. Keep one hooked to hold the school.', activity:[3,3,4,6,8,9,9,9,7,5,3,3] },
+  { id:'wah', name:'Wahoo', sci:'Acanthocybium solandri', image:'/fish/wahoo.png', type:'Saltwater', difficulty:'Hard', record:'184 lb', season:['Winter','Fall'], bestBait:['High-speed lures','Ballyhoo','Jets'], bestTime:'Dawn', depth:'Surface–200 ft', habitat:'Drop-offs, temperature breaks', tips:'High-speed troll. Wire or heavy fluoro for teeth.', activity:[7,7,6,5,4,4,4,5,6,7,8,8] },
+  { id:'yft', name:'Yellowfin Tuna', sci:'Thunnus albacares', image:'/fish/yellowfin-tuna.png', type:'Saltwater', difficulty:'Hard', record:'427 lb', season:['Summer','Fall'], bestBait:['Live bait','Poppers','Cedar plugs'], bestTime:'Dawn', depth:'Surface–200 ft', habitat:'Canyons, FADs, tuna towers', tips:'Chunk and live-bait. Stay in the chum line.', activity:[4,4,5,6,7,8,9,9,8,6,5,4] },
+  { id:'bft', name:'Atlantic Bluefin Tuna', sci:'Thunnus thynnus', image:'/fish/bluefin-tuna.png', type:'Saltwater', difficulty:'Hard', record:'1,496 lb', season:['Summer','Fall'], bestBait:['Chunk bait','Live mackerel','Trolling lures'], bestTime:'Dawn', depth:'20-200 ft', habitat:'Northeast canyons, Cape Cod', tips:'Heavy stand-up gear. Strict quotas — know the regs.', activity:[3,3,4,5,6,8,9,9,8,6,4,3] },
+  { id:'kft', name:'Blackfin Tuna', sci:'Thunnus atlanticus', image:'/fish/blackfin-tuna.png', type:'Saltwater', difficulty:'Medium', record:'49 lb 6 oz', season:['Winter','Spring'], bestBait:['Small feathers','Live pilchards','Poppers'], bestTime:'Dawn', depth:'Surface–80 ft', habitat:'Nearshore wrecks, Gulf stream edges', tips:'Light-tackle tuna. Chum and cast small lures.', activity:[7,7,7,6,5,4,4,4,5,6,7,8] },
+  { id:'slf', name:'Atlantic Sailfish', sci:'Istiophorus platypterus', image:'/fish/sailfish.png', type:'Saltwater', difficulty:'Hard', record:'141 lb 1 oz', season:['Winter'], bestBait:['Ballyhoo','Strip baits','Flies'], bestTime:'Morning', depth:'Surface', habitat:'Florida current, sailfish alley', tips:'Kite-fish live bait in winter off South Florida.', activity:[8,8,7,5,4,3,3,3,4,5,7,8] },
+  { id:'blm', name:'Atlantic Blue Marlin', sci:'Makaira nigricans', image:'/fish/blue-marlin.png', type:'Saltwater', difficulty:'Hard', record:'1,402 lb', season:['Summer'], bestBait:['Mackerel','Horse ballyhoo','Lures'], bestTime:'Morning', depth:'Surface', habitat:'Canyons, blue water, temp breaks', tips:'Big-game trolling. Drop-back on the bite.', activity:[3,3,4,5,7,8,9,9,7,5,3,3] },
+  { id:'whm', name:'White Marlin', sci:'Kajikia albida', image:'/fish/white-marlin.png', type:'Saltwater', difficulty:'Hard', record:'181 lb 14 oz', season:['Summer','Fall'], bestBait:['Ballyhoo','Squid','Small lures'], bestTime:'Morning', depth:'Surface', habitat:'Mid-Atlantic canyons', tips:'Light-tackle billfish. Circle hooks and a long drop-back.', activity:[2,2,3,4,6,8,9,9,8,5,3,2] },
+  { id:'swd', name:'Swordfish', sci:'Xiphias gladius', image:'/fish/swordfish.png', type:'Saltwater', difficulty:'Hard', record:'1,182 lb', season:['Summer','Winter'], bestBait:['Squid','Mackerel','Deep-drop baits'], bestTime:'Night', depth:'200-1,800 ft', habitat:'Canyons, deep Gulf, Florida Straits', tips:'Daytime deep-drop or night-drift. Electric reels common.', activity:[5,5,6,6,7,8,8,8,7,6,5,5] },
+  { id:'bon', name:'Atlantic Bonito', sci:'Sarda sarda', image:'/fish/atlantic-bonito.png', type:'Saltwater', difficulty:'Easy', record:'18 lb 4 oz', season:['Spring','Fall'], bestBait:['Small metals','Epoxy jigs','Flies'], bestTime:'Dawn', depth:'Surface–30 ft', habitat:'Northeast inshore, bait schools', tips:'Fast retrieves. Great light-tackle blitz fish.', activity:[4,5,8,7,5,4,3,4,7,8,6,4] },
+  { id:'ltt', name:'Little Tunny', sci:'Euthynnus alletteratus', image:'/fish/little-tunny.png', type:'Saltwater', difficulty:'Medium', record:'37 lb', season:['Fall','Summer'], bestBait:['Epoxy jigs','Small poppers','Flies'], bestTime:'Dawn', depth:'Surface–40 ft', habitat:'Beaches, inlets, bait showers', tips:'False albacore. Match tiny bait with fast sinking flies.', activity:[3,3,4,5,6,7,8,8,9,8,6,4] },
+  { id:'blf', name:'Bluefish', sci:'Pomatomus saltatrix', image:'/fish/bluefish.png', type:'Saltwater', difficulty:'Easy', record:'31 lb 12 oz', season:['Spring','Fall'], bestBait:['Metals','Poppers','Cut bait'], bestTime:'Dawn', depth:'3-20 ft', habitat:'Beaches, rips, bait schools', tips:'Wire leader. Fall blitzes along the Northeast coast.', activity:[4,5,8,7,6,5,5,6,8,9,7,5] },
+  { id:'wkf', name:'Weakfish', sci:'Cynoscion regalis', image:'/fish/weakfish.png', type:'Saltwater', difficulty:'Medium', record:'19 lb 2 oz', season:['Spring'], bestBait:['Soft plastics','Shrimp','Bucktails'], bestTime:'Dusk', depth:'5-20 ft', habitat:'Bays, estuaries, Mid-Atlantic', tips:'Soft mouths — don’t horse them. Spring inshore run.', activity:[4,6,9,8,6,4,3,3,5,6,5,4] },
+  { id:'bkd', name:'Black Drum', sci:'Pogonias cromis', image:'/fish/black-drum.png', type:'Saltwater', difficulty:'Medium', record:'113 lb 1 oz', season:['Spring'], bestBait:['Crab','Clams','Shrimp'], bestTime:'Incoming tide', depth:'5-30 ft', habitat:'Inlets, bridges, oyster bars', tips:'Big spring fish around East Coast inlets. Circle hooks.', activity:[6,7,9,8,6,4,3,3,5,6,6,6] },
+  { id:'shp', name:'Sheepshead', sci:'Archosargus probatocephalus', image:'/fish/sheepshead.png', type:'Saltwater', difficulty:'Medium', record:'21 lb 4 oz', season:['Winter','Spring'], bestBait:['Fiddler crabs','Oysters','Shrimp'], bestTime:'Incoming tide', depth:'3-20 ft', habitat:'Pilings, jetties, oyster rock', tips:'Feel the tap. Tight-line crabs right on the structure.', activity:[7,7,8,7,5,4,3,3,4,5,6,7] },
+  { id:'trt', name:'Tripletail', sci:'Lobotes surinamensis', image:'/fish/tripletail.png', type:'Saltwater', difficulty:'Medium', record:'42 lb 5 oz', season:['Summer'], bestBait:['Live shrimp','Soft plastics','Flies'], bestTime:'Morning', depth:'1-15 ft', habitat:'Channel markers, weed lines', tips:'Sight-cast fish floating on their side under markers.', activity:[3,3,4,6,8,9,9,8,6,4,3,3] },
+  { id:'cod', name:'Atlantic Cod', sci:'Gadus morhua', image:'/fish/atlantic-cod.png', type:'Saltwater', difficulty:'Medium', record:'103 lb 2 oz', season:['Winter','Spring'], bestBait:['Jigs','Clams','Herring'], bestTime:'Morning', depth:'30-300 ft', habitat:'Northeast wrecks, hard bottom', tips:'Jig wrecks. Strict recreational limits — check regs.', activity:[7,7,6,5,4,3,3,3,4,5,6,7] },
+  { id:'plk', name:'Pollock', sci:'Pollachius virens', image:'/fish/pollock.png', type:'Saltwater', difficulty:'Medium', record:'46 lb 7 oz', season:['Spring','Fall'], bestBait:['Diamond jigs','Hogy lures'], bestTime:'Dawn', depth:'20-150 ft', habitat:'Northeast rips, wrecks', tips:'Fast jigging in current. Often higher in the column than cod.', activity:[5,6,8,7,5,4,3,4,7,8,6,5] },
+  { id:'had', name:'Haddock', sci:'Melanogrammus aeglefinus', image:'/fish/haddock.png', type:'Saltwater', difficulty:'Easy', record:'25 lb 12 oz', season:['Spring','Summer'], bestBait:['Clams','Jigs','Seaworms'], bestTime:'Morning', depth:'40-200 ft', habitat:'Gulf of Maine banks', tips:'Bottom fishing. Prime table fare of New England.', activity:[5,6,7,7,6,5,4,4,5,6,6,5] },
+  { id:'ahl', name:'Atlantic Halibut', sci:'Hippoglossus hippoglossus', image:'/fish/atlantic-halibut.png', type:'Saltwater', difficulty:'Hard', record:'255 lb 4 oz', season:['Summer'], bestBait:['Jigs','Herring','Cod'], bestTime:'Morning', depth:'80-400 ft', habitat:'Gulf of Maine, deep banks', tips:'Rare and regulated. Heavy jigs on hard bottom.', activity:[3,3,4,6,8,8,7,6,5,4,3,3] },
+  { id:'phl', name:'Pacific Halibut', sci:'Hippoglossus stenolepis', image:'/fish/pacific-halibut.png', type:'Saltwater', difficulty:'Hard', record:'459 lb', season:['Summer'], bestBait:['Herring','Jigs','Octopus'], bestTime:'Morning', depth:'50-400 ft', habitat:'Alaska, Pacific Northwest', tips:'Circle-hook herring on the bottom. Big fish, big gear.', activity:[2,2,3,5,8,9,9,8,6,3,2,2] },
+  { id:'lgc', name:'Lingcod', sci:'Ophiodon elongatus', image:'/fish/lingcod.png', type:'Saltwater', difficulty:'Hard', record:'82 lb 10 oz', season:['Spring','Fall'], bestBait:['Large jigs','Live bait','Scampi'], bestTime:'Morning', depth:'30-200 ft', habitat:'Pacific rocky reefs', tips:'Fish the rocks. Ugly, mean, and excellent eating.', activity:[5,6,8,7,6,5,4,5,7,8,6,5] },
+  { id:'rkf', name:'Rockfish', sci:'Sebastes spp.', image:'/fish/rockfish.png', type:'Saltwater', difficulty:'Easy', record:'33 lb 8 oz', season:['Summer'], bestBait:['Jigs','Shrimp flies','Cut bait'], bestTime:'Morning', depth:'40-250 ft', habitat:'Pacific reefs, kelp, wrecks', tips:'Many species and limits. Descend fish released from depth.', activity:[4,4,5,6,8,8,8,8,6,5,4,4] },
+  { id:'cab', name:'Cabezon', sci:'Scorpaenichthys marmoratus', image:'/fish/cabezon.png', type:'Saltwater', difficulty:'Medium', record:'23 lb 4 oz', season:['Spring','Fall'], bestBait:['Live crabs','Jigs'], bestTime:'Morning', depth:'20-100 ft', habitat:'Kelp, rocky Pacific bottom', tips:'Ambush predator. Fish crabs tight to structure.', activity:[5,6,7,7,6,5,4,5,6,7,6,5] },
+  { id:'chk', name:'Chinook Salmon', sci:'Oncorhynchus tshawytscha', image:'/fish/chinook-salmon.png', type:'Both', difficulty:'Hard', record:'97 lb 4 oz', season:['Summer','Fall'], bestBait:['Herring','Spinners','Egg clusters'], bestTime:'Dawn', depth:'10-80 ft', habitat:'Pacific, Great Lakes, rivers', tips:'Troll flashers and herring. River runs in late summer.', activity:[3,3,4,5,6,8,9,9,8,6,4,3] },
+  { id:'coh', name:'Coho Salmon', sci:'Oncorhynchus kisutch', image:'/fish/coho-salmon.png', type:'Both', difficulty:'Medium', record:'33 lb 4 oz', season:['Fall','Summer'], bestBait:['Spoons','Spinners','Flies'], bestTime:'Dawn', depth:'5-40 ft', habitat:'Great Lakes, Pacific rivers', tips:'Aggressive to spoons. Fall river fishing is peak.', activity:[3,3,4,5,6,7,8,9,9,7,4,3] },
+  { id:'sok', name:'Sockeye Salmon', sci:'Oncorhynchus nerka', image:'/fish/sockeye-salmon.png', type:'Both', difficulty:'Medium', record:'15 lb 3 oz', season:['Summer'], bestBait:['Flies','Small spoons','Pixie lures'], bestTime:'Morning', depth:'5-30 ft', habitat:'Alaska rivers, Pacific lakes', tips:'Line-bite fishing in Alaska. Bright, schooling fish.', activity:[2,2,3,4,7,9,9,8,5,3,2,2] },
+  { id:'stl', name:'Steelhead', sci:'Oncorhynchus mykiss', image:'/fish/steelhead.png', type:'Both', difficulty:'Hard', record:'42 lb 2 oz', season:['Winter','Spring'], bestBait:['Beads','Spawn bags','Swinging flies'], bestTime:'Dawn', depth:'3-15 ft', habitat:'Pacific rivers, Great Lakes tribs', tips:'Anadromous rainbows. Cover water, mend well, stay mobile.', activity:[8,8,7,6,5,3,2,3,5,6,7,8] },
+  { id:'ats', name:'Atlantic Salmon', sci:'Salmo salar', image:'/fish/atlantic-salmon.png', type:'Both', difficulty:'Hard', record:'79 lb 2 oz', season:['Spring','Fall'], bestBait:['Flies','Spoons'], bestTime:'Morning', depth:'3-15 ft', habitat:'Northeast rivers, Canada, Great Lakes', tips:'Mostly catch-and-release. Swing flies through lies.', activity:[4,5,7,8,7,5,4,4,6,7,6,4] },
+  { id:'bsb', name:'Black Sea Bass', sci:'Centropristis striata', image:'/fish/black-sea-bass.png', type:'Saltwater', difficulty:'Easy', record:'10 lb 4 oz', season:['Spring','Fall'], bestBait:['Squid','Jigs','Crabs'], bestTime:'Morning', depth:'20-120 ft', habitat:'Wrecks, reefs, Mid-Atlantic', tips:'Drop squid on wrecks. Excellent eating.', activity:[4,5,7,8,7,6,5,6,8,8,6,4] },
+  { id:'scp', name:'Scup', sci:'Stenotomus chrysops', image:'/fish/scup.png', type:'Saltwater', difficulty:'Easy', record:'6 lb 8 oz', season:['Summer'], bestBait:['Squid strips','Clams','Sandworms'], bestTime:'Incoming tide', depth:'15-80 ft', habitat:'Northeast wrecks, piers', tips:'Porgy parties. Small hooks, lots of bait.', activity:[3,3,4,6,8,9,9,8,6,4,3,3] },
+  { id:'ttg', name:'Tautog', sci:'Tautoga onitis', image:'/fish/tautog.png', type:'Saltwater', difficulty:'Hard', record:'28 lb 13 oz', season:['Fall','Spring'], bestBait:['Green crabs','White crabs','Clams'], bestTime:'Slack tide', depth:'10-60 ft', habitat:'Rocks, wrecks, jetties', tips:'Feel the crunch. Tight-line crabs into the rocks.', activity:[5,6,7,6,4,3,3,4,7,9,8,6] },
+  { id:'cun', name:'Cunner', sci:'Tautogolabrus adspersus', image:'/fish/cunner.png', type:'Saltwater', difficulty:'Easy', record:'3 lb 4 oz', season:['Summer'], bestBait:['Clams','Squid','Worms'], bestTime:'Morning', depth:'10-50 ft', habitat:'Northeast rocks, piers', tips:'Bait stealers around tautog structure. Small hooks.', activity:[3,3,4,6,8,9,9,8,6,4,3,3] },
+  { id:'srf', name:'Barred Surfperch', sci:'Amphistichus argenteus', image:'/fish/barred-surfperch.png', type:'Saltwater', difficulty:'Easy', record:'4 lb 5 oz', season:['Winter','Spring'], bestBait:['Sand crabs','Gulp','Mussels'], bestTime:'Incoming tide', depth:'2-10 ft', habitat:'Pacific surf, sandy beaches', tips:'Fish the wash with a Carolina rig and sand crabs.', activity:[7,7,8,7,5,4,3,3,4,5,6,7] },
+  { id:'bar', name:'Great Barracuda', sci:'Sphyraena barracuda', image:'/fish/barracuda.png', type:'Saltwater', difficulty:'Medium', record:'85 lb', season:['Summer'], bestBait:['Tubes','Needles','Live bait'], bestTime:'Midday', depth:'5-40 ft', habitat:'Flats, reefs, wrecks', tips:'Wire leader. Fast, flashy retrieves over the reef.', activity:[5,5,6,7,8,8,8,8,7,6,5,5] },
+  { id:'ldf', name:'Ladyfish', sci:'Elops saurus', image:'/fish/ladyfish.png', type:'Saltwater', difficulty:'Easy', record:'15 lb 8 oz', season:['Summer','Fall'], bestBait:['Spoons','Soft plastics','Flies'], bestTime:'Incoming tide', depth:'2-12 ft', habitat:'Inlets, beaches, flats', tips:'Poor man’s tarpon. Aerial fights on light tackle.', activity:[4,4,5,6,7,8,8,8,7,6,5,4] },
+  { id:'lkd', name:'Lookdown', sci:'Selene vomer', image:'/fish/lookdown.png', type:'Saltwater', difficulty:'Easy', record:'4 lb 10 oz', season:['Summer'], bestBait:['Small jigs','Shrimp','Flies'], bestTime:'Night', depth:'5-30 ft', habitat:'Lights, inlets, piers', tips:'Night fishing under lights. Thin, silvery, fun on fly.', activity:[4,4,5,6,7,8,8,8,6,5,4,4] },
+  { id:'afp', name:'African Pompano', sci:'Alectis ciliaris', image:'/fish/african-pompano.png', type:'Saltwater', difficulty:'Hard', record:'50 lb 8 oz', season:['Winter','Spring'], bestBait:['Jigs','Live bait'], bestTime:'Morning', depth:'40-200 ft', habitat:'Wrecks, deep reefs', tips:'Deep wreck trophy. Heavy jigs and a stout drag.', activity:[7,7,6,5,4,3,3,4,5,6,7,7] },
 ];
 
 const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 const TYPES = ['All','Freshwater','Saltwater','Both'];
 
+type Fish = typeof SPECIES[number];
+
+function SpeciesDetailModal({ fish, onClose }: { fish: Fish; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="species-modal-title"
+      onClick={onClose}
+      style={{ position:'fixed', inset:0, zIndex:50, background:'rgba(2,6,23,0.78)', display:'flex', alignItems:'flex-end', justifyContent:'center', padding:'12px' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width:'100%', maxWidth:'480px', maxHeight:'92vh', overflowY:'auto', background:'#060d1a', border:'1px solid #1e293b', borderRadius:'16px', boxShadow:'0 20px 50px rgba(0,0,0,0.45)' }}
+      >
+        <div style={{ background:'linear-gradient(180deg,#0c1e3a,#060d1a)', padding:'16px', borderBottom:'1px solid #1e293b', position:'relative' }}>
+          <button onClick={onClose} aria-label="Close" style={{ position:'absolute', top:'12px', right:'12px', width:'32px', height:'32px', borderRadius:'999px', border:'1px solid #334155', background:'#0f172a', color:'#e2e8f0', cursor:'pointer', fontSize:'18px', zIndex:2 }}>×</button>
+          <div style={{ position:'relative', width:'100%', height:'180px', marginBottom:'10px', borderRadius:'10px', overflow:'hidden', background:'#0f2744' }}>
+            <Image src={fish.image} alt={`${fish.name} photorealistic representation`} fill sizes="(max-width: 600px) 100vw, 420px" style={{ objectFit:'cover' }} priority />
+          </div>
+          <div id="species-modal-title" style={{ fontSize:'18px', fontWeight:'bold', color:'#e2e8f0', paddingRight:'36px' }}>{fish.name}</div>
+          <div style={{ fontSize:'11px', color:'#475569', fontStyle:'italic', marginBottom:'8px' }}>{fish.sci}</div>
+          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+            <span style={{ background:'#0c4a6e', color:'#7dd3fc', fontSize:'10px', padding:'3px 8px', borderRadius:'10px' }}>{fish.type}</span>
+            <span style={{ background: fish.difficulty==='Easy'?'#14532d':fish.difficulty==='Medium'?'#713f12':'#7f1d1d', color:fish.difficulty==='Easy'?'#4ade80':fish.difficulty==='Medium'?'#fbbf24':'#f87171', fontSize:'10px', padding:'3px 8px', borderRadius:'10px' }}>{fish.difficulty}</span>
+            <span style={{ background:'#1e1b4b', color:'#a5b4fc', fontSize:'10px', padding:'3px 8px', borderRadius:'10px' }}>Record: {fish.record}</span>
+          </div>
+        </div>
+
+        <div style={{ padding:'16px', display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'12px', padding:'14px' }}>
+            <div style={{ fontSize:'11px', color:'#475569', fontWeight:'bold', marginBottom:'10px' }}>MONTHLY ACTIVITY</div>
+            <div style={{ display:'flex', alignItems:'flex-end', gap:'4px', height:'50px' }}>
+              {fish.activity.map((v,i)=>(
+                <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'3px' }}>
+                  <div style={{ width:'100%', background:`rgba(14,165,233,${v/10})`, border:`1px solid rgba(14,165,233,${v/8})`, borderRadius:'3px 3px 0 0', height:`${v*5}px` }}/>
+                  <div style={{ fontSize:'7px', color:'#334155' }}>{MONTHS[i]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'12px', padding:'14px' }}>
+            <div style={{ fontSize:'11px', color:'#475569', fontWeight:'bold', marginBottom:'10px' }}>BEST BAITS</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+              {fish.bestBait.map(b => <span key={b} style={{ background:'#0f2744', border:'1px solid #1e4080', color:'#93c5fd', fontSize:'11px', padding:'5px 10px', borderRadius:'20px' }}>🪱 {b}</span>)}
+            </div>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+            {[
+              { label:'BEST TIME', value:fish.bestTime, icon:'⏰' },
+              { label:'DEPTH RANGE', value:fish.depth, icon:'🌊' },
+              { label:'PEAK SEASON', value:fish.season.join(', '), icon:'📅' },
+              { label:'HABITAT', value:fish.habitat, icon:'🌿' },
+            ].map(s => (
+              <div key={s.label} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'12px' }}>
+                <div style={{ fontSize:'9px', color:'#475569', marginBottom:'4px' }}>{s.icon} {s.label}</div>
+                <div style={{ fontSize:'11px', color:'#cbd5e1', lineHeight:1.3 }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ background:'linear-gradient(135deg,#0c1e3a,#0a0f1e)', border:'1px solid #1e4080', borderRadius:'12px', padding:'14px' }}>
+            <div style={{ fontSize:'11px', color:'#0ea5e9', fontWeight:'bold', marginBottom:'8px' }}>💡 PRO TIP</div>
+            <div style={{ fontSize:'12px', color:'#94a3b8', lineHeight:1.6 }}>{fish.tips}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SpeciesTab() {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<typeof SPECIES[0]|null>(null);
+  const [selected, setSelected] = useState<Fish|null>(null);
 
   const filtered = SPECIES.filter(s =>
     (filter==='All'||s.type===filter||s.type==='Both') &&
     s.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  if(selected) return (
-    <div style={{height:'100%',overflowY:'auto',background:'#060d1a'}}>
-      {/* Header */}
-      <div style={{background:'linear-gradient(180deg,#0c1e3a,#060d1a)',padding:'16px',borderBottom:'1px solid #1e293b'}}>
-        <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',color:'#0ea5e9',fontSize:'12px',cursor:'pointer',marginBottom:'8px',display:'flex',alignItems:'center',gap:'4px'}}>
-          ← Back to Species
-        </button>
-        <div style={{position:'relative',width:'100%',height:'180px',marginBottom:'10px',borderRadius:'10px',overflow:'hidden',background:'#0f2744'}}><Image src={selected.image} alt={`${selected.name} photorealistic representation`} fill sizes="(max-width: 600px) 100vw, 420px" style={{objectFit:'cover'}} priority /></div>
-        <div style={{fontSize:'18px',fontWeight:'bold',color:'#e2e8f0'}}>{selected.name}</div>
-        <div style={{fontSize:'11px',color:'#475569',fontStyle:'italic',marginBottom:'8px'}}>{selected.sci}</div>
-        <div style={{display:'flex',gap:'6px'}}>
-          <span style={{background:'#0c4a6e',color:'#7dd3fc',fontSize:'10px',padding:'3px 8px',borderRadius:'10px'}}>{selected.type}</span>
-          <span style={{background: selected.difficulty==='Easy'?'#14532d':selected.difficulty==='Medium'?'#713f12':'#7f1d1d', color:selected.difficulty==='Easy'?'#4ade80':selected.difficulty==='Medium'?'#fbbf24':'#f87171', fontSize:'10px',padding:'3px 8px',borderRadius:'10px'}}>{selected.difficulty}</span>
-          <span style={{background:'#1e1b4b',color:'#a5b4fc',fontSize:'10px',padding:'3px 8px',borderRadius:'10px'}}>Record: {selected.record}</span>
-        </div>
-      </div>
-
-      <div style={{padding:'16px',display:'flex',flexDirection:'column',gap:'12px'}}>
-        {/* Activity chart */}
-        <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'14px'}}>
-          <div style={{fontSize:'11px',color:'#475569',fontWeight:'bold',marginBottom:'10px'}}>MONTHLY ACTIVITY</div>
-          <div style={{display:'flex',alignItems:'flex-end',gap:'4px',height:'50px'}}>
-            {selected.activity.map((v,i)=>(
-              <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'3px'}}>
-                <div style={{width:'100%',background:`rgba(14,165,233,${v/10})`,border:`1px solid rgba(14,165,233,${v/8})`,borderRadius:'3px 3px 0 0',height:`${v*5}px`,transition:'height 0.3s'}}/>
-                <div style={{fontSize:'7px',color:'#334155'}}>{MONTHS[i]}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Best bait */}
-        <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'14px'}}>
-          <div style={{fontSize:'11px',color:'#475569',fontWeight:'bold',marginBottom:'10px'}}>BEST BAITS</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
-            {selected.bestBait.map(b=><span key={b} style={{background:'#0f2744',border:'1px solid #1e4080',color:'#93c5fd',fontSize:'11px',padding:'5px 10px',borderRadius:'20px'}}>🪱 {b}</span>)}
-          </div>
-        </div>
-
-        {/* Quick stats */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
-          {[
-            {label:'BEST TIME', value:selected.bestTime, icon:'⏰'},
-            {label:'DEPTH RANGE', value:selected.depth, icon:'🌊'},
-            {label:'PEAK SEASON', value:selected.season.join(', '), icon:'📅'},
-            {label:'HABITAT', value:selected.habitat, icon:'🌿'},
-          ].map(s=>(
-            <div key={s.label} style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'10px',padding:'12px'}}>
-              <div style={{fontSize:'9px',color:'#475569',marginBottom:'4px'}}>{s.icon} {s.label}</div>
-              <div style={{fontSize:'11px',color:'#cbd5e1',lineHeight:1.3}}>{s.value}</div>
-            </div>
+  return (
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#060d1a' }}>
+      <div style={{ padding:'12px 16px', borderBottom:'1px solid #1e293b' }}>
+        <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'8px' }}>Species Guide</div>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search species..."
+          style={{ width:'100%', background:'#0f172a', border:'1px solid #334155', borderRadius:'8px', padding:'8px 12px', fontSize:'12px', color:'#e2e8f0', marginBottom:'8px', boxSizing:'border-box' }}/>
+        <div style={{ display:'flex', gap:'6px' }}>
+          {TYPES.map(t => (
+            <button key={t} onClick={()=>setFilter(t)}
+              style={{ background:filter===t?'#0ea5e9':'#0f172a', border:`1px solid ${filter===t?'#0ea5e9':'#334155'}`, color:filter===t?'white':'#64748b', padding:'4px 10px', borderRadius:'12px', fontSize:'10px', cursor:'pointer', fontWeight:filter===t?'bold':'normal' }}>
+              {t}
+            </button>
           ))}
         </div>
-
-        {/* Pro tips */}
-        <div style={{background:'linear-gradient(135deg,#0c1e3a,#0a0f1e)',border:'1px solid #1e4080',borderRadius:'12px',padding:'14px'}}>
-          <div style={{fontSize:'11px',color:'#0ea5e9',fontWeight:'bold',marginBottom:'8px'}}>💡 PRO TIP</div>
-          <div style={{fontSize:'12px',color:'#94a3b8',lineHeight:1.6}}>{selected.tips}</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{height:'100%',display:'flex',flexDirection:'column',background:'#060d1a'}}>
-      <div style={{padding:'12px 16px',borderBottom:'1px solid #1e293b'}}>
-        <div style={{fontSize:'14px',fontWeight:'bold',color:'#22d3ee',marginBottom:'8px'}}>Species Guide</div>
-        {/* Search */}
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search species..."
-          style={{width:'100%',background:'#0f172a',border:'1px solid #334155',borderRadius:'8px',padding:'8px 12px',fontSize:'12px',color:'#e2e8f0',marginBottom:'8px',boxSizing:'border-box'}}/>
-        {/* Filter pills */}
-        <div style={{display:'flex',gap:'6px'}}>
-          {TYPES.map(t=><button key={t} onClick={()=>setFilter(t)}
-            style={{background:filter===t?'#0ea5e9':'#0f172a',border:`1px solid ${filter===t?'#0ea5e9':'#334155'}`,color:filter===t?'white':'#64748b',padding:'4px 10px',borderRadius:'12px',fontSize:'10px',cursor:'pointer',fontWeight:filter===t?'bold':'normal'}}>
-            {t}
-          </button>)}
-        </div>
       </div>
 
-      <div style={{flex:1,overflowY:'auto',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'8px'}}>
-        {filtered.map(s=>(
+      <div style={{ flex:1, overflowY:'auto', padding:'12px 16px', display:'flex', flexDirection:'column', gap:'8px' }}>
+        {filtered.map(s => (
           <button key={s.id} onClick={()=>setSelected(s)}
-            style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'12px',display:'flex',alignItems:'center',gap:'12px',cursor:'pointer',textAlign:'left',width:'100%',transition:'border-color 0.2s'}}>
-            <div style={{position:'relative',width:'72px',height:'72px',flexShrink:0,borderRadius:'8px',overflow:'hidden',background:'#0f2744'}}><Image src={s.image} alt={`${s.name} photorealistic representation`} fill sizes="72px" style={{objectFit:'cover'}} /></div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:'13px',fontWeight:'bold',color:'#e2e8f0',marginBottom:'2px'}}>{s.name}</div>
-              <div style={{fontSize:'10px',color:'#475569',fontStyle:'italic',marginBottom:'6px'}}>{s.sci}</div>
-              <div style={{display:'flex',gap:'5px',flexWrap:'wrap'}}>
-                <span style={{background:'#0c4a6e',color:'#7dd3fc',fontSize:'9px',padding:'2px 6px',borderRadius:'8px'}}>{s.type}</span>
-                <span style={{background:s.difficulty==='Easy'?'#14532d':s.difficulty==='Medium'?'#713f12':'#7f1d1d',color:s.difficulty==='Easy'?'#4ade80':s.difficulty==='Medium'?'#fbbf24':'#f87171',fontSize:'9px',padding:'2px 6px',borderRadius:'8px'}}>{s.difficulty}</span>
-                <span style={{background:'#1e1b4b',color:'#a5b4fc',fontSize:'9px',padding:'2px 6px',borderRadius:'8px'}}>🏆 {s.record}</span>
+            style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'12px', padding:'12px', display:'flex', alignItems:'center', gap:'12px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+            <div style={{ position:'relative', width:'72px', height:'72px', flexShrink:0, borderRadius:'8px', overflow:'hidden', background:'#0f2744' }}>
+              <Image src={s.image} alt={`${s.name} photorealistic representation`} fill sizes="72px" style={{ objectFit:'cover' }} />
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:'13px', fontWeight:'bold', color:'#e2e8f0', marginBottom:'2px' }}>{s.name}</div>
+              <div style={{ fontSize:'10px', color:'#475569', fontStyle:'italic', marginBottom:'6px' }}>{s.sci}</div>
+              <div style={{ display:'flex', gap:'5px', flexWrap:'wrap' }}>
+                <span style={{ background:'#0c4a6e', color:'#7dd3fc', fontSize:'9px', padding:'2px 6px', borderRadius:'8px' }}>{s.type}</span>
+                <span style={{ background:s.difficulty==='Easy'?'#14532d':s.difficulty==='Medium'?'#713f12':'#7f1d1d', color:s.difficulty==='Easy'?'#4ade80':s.difficulty==='Medium'?'#fbbf24':'#f87171', fontSize:'9px', padding:'2px 6px', borderRadius:'8px' }}>{s.difficulty}</span>
+                <span style={{ background:'#1e1b4b', color:'#a5b4fc', fontSize:'9px', padding:'2px 6px', borderRadius:'8px' }}>🏆 {s.record}</span>
               </div>
             </div>
-            <div style={{color:'#334155',fontSize:'16px'}}>›</div>
+            <div style={{ color:'#334155', fontSize:'16px' }}>›</div>
           </button>
         ))}
-        {filtered.length===0&&<div style={{textAlign:'center',color:'#334155',padding:'40px 0',fontSize:'13px'}}>No species found</div>}
+        {filtered.length===0 && <div style={{ textAlign:'center', color:'#334155', padding:'40px 0', fontSize:'13px' }}>No species found</div>}
       </div>
+
+      {selected && <SpeciesDetailModal fish={selected} onClose={()=>setSelected(null)} />}
     </div>
   );
 }
