@@ -1,0 +1,103 @@
+/**
+ * Run once to seed Oklahoma fishing spots into Supabase:
+ *   npx ts-node --project tsconfig.json -e "require('./src/lib/spots/seedSpots')"
+ * Or paste the SQL below directly into your Supabase SQL editor.
+ */
+export const OKLAHOMA_SPOTS = [
+  {
+    id: 'purcell-lake-ok',
+    name: 'Purcell Lake',
+    lat: 34.9773,
+    lng: -97.3614,
+    water_type: 'freshwater',
+    spot_type: 'lake',
+  },
+  {
+    id: 'lake-thunderbird-ok',
+    name: 'Lake Thunderbird',
+    lat: 35.2384,
+    lng: -97.2467,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'lake-hefner-ok',
+    name: 'Lake Hefner',
+    lat: 35.5614,
+    lng: -97.6042,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'lake-stanley-draper-ok',
+    name: 'Lake Stanley Draper',
+    lat: 35.3648,
+    lng: -97.3986,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'lake-texoma-ok',
+    name: 'Lake Texoma',
+    lat: 33.8837,
+    lng: -96.8960,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'eufaula-lake-ok',
+    name: 'Lake Eufaula',
+    lat: 35.2898,
+    lng: -95.5771,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'fort-gibson-lake-ok',
+    name: 'Fort Gibson Lake',
+    lat: 35.8748,
+    lng: -95.2441,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'tenkiller-lake-ok',
+    name: 'Lake Tenkiller',
+    lat: 35.6445,
+    lng: -95.0688,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'canton-lake-ok',
+    name: 'Canton Lake',
+    lat: 36.0820,
+    lng: -98.5848,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'arcadia-lake-ok',
+    name: 'Arcadia Lake',
+    lat: 35.6592,
+    lng: -97.3303,
+    water_type: 'freshwater',
+    spot_type: 'reservoir',
+  },
+  {
+    id: 'north-canadian-river-purcell',
+    name: 'North Canadian River – Purcell',
+    lat: 35.0134,
+    lng: -97.3598,
+    water_type: 'freshwater',
+    spot_type: 'river',
+  },
+  {
+    id: 'washita-river-ok',
+    name: 'Washita River – Chickasha',
+    lat: 35.0526,
+    lng: -97.9442,
+    water_type: 'freshwater',
+    spot_type: 'river',
+  },
+];
