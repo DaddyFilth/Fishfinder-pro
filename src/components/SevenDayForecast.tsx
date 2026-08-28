@@ -59,7 +59,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
           { headers: { 'User-Agent': 'FishFinderPro/1.0' } });
         const data = await fRes.json();
         setForecast(data.properties.periods.slice(0, 14).filter((p: DayForecast) => p.isDaytime));
-      } catch(e) {
+      } catch {
         setError('Unable to load 7-day forecast');
       } finally { setLoading(false); }
     };
