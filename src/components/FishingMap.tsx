@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -94,7 +94,7 @@ export default function FishingMap({spots}:{spots:Spot[]}){
   const [temperatureOn,setTemperatureOn]=useState(false);
   const [waypointsOn,setWaypointsOn]=useState(true);
 
-  const temperaturePoints = spots.map((spot) => ({
+  const temperaturePoints = useMemo(() => spots.map((spot) => ({
     lat: spot.lat,
     lng: spot.lng,
     name: spot.name,
