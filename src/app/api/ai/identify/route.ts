@@ -49,8 +49,7 @@ If no fish is visible set is_fish to false and only include that field.`
     const raw = response.choices[0].message.content ?? '{}';
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     return NextResponse.json(JSON.parse(cleaned));
-  } catch (e) {
-    console.error('[AI Identify]', e);
+  } catch {
     return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
   }
 }

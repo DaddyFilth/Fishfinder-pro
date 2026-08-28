@@ -27,7 +27,7 @@ function weatherEmoji(forecast: string): string {
 
 function fishingRatingFromWeather(forecast: string, wind: string): { rating: number; color: string; label: string } {
   const f = forecast.toLowerCase();
-  const windSpeed = parseInt(wind.match(/(d+)/)?.[1] ?? '0');
+  const windSpeed = parseInt(wind.match(/(\d+)/)?.[1] ?? '0', 10);
   let score = 70;
   if (f.includes('thunder')) score = 10;
   else if (f.includes('heavy rain')) score -= 30;
