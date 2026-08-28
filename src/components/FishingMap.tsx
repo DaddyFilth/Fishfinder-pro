@@ -99,7 +99,7 @@ export default function FishingMap({spots}:{spots:Spot[]}){
     lng: spot.lng,
     name: spot.name,
     temperature: conditions[spot.id]?.water_temp_c ?? null,
-  }));
+  })), [spots, conditions]);
   const rankedSpots = spots
     .filter((spot) => conditions[spot.id])
     .map((spot) => ({ spot, score: conditions[spot.id].fishing_score }))
@@ -107,19 +107,19 @@ export default function FishingMap({spots}:{spots:Spot[]}){
 
   const load=async(id:string)=>{
     if(conditions[id]||loading[id])return;
-    setLoading(p=>({...p,[id]:true}));
+    setLoading(p=>({...p,[id]:true})), [spots, conditions]);
     try{
       const res=await fetch(`/api/spots/${id}/conditions`);
       if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const data:Cond=await res.json();
-      setConditions(p=>({...p,[id]:data}));
-      setTabs(p=>({...p,[id]:'score'}));
+      setConditions(p=>({...p,[id]:data})), [spots, conditions]);
+      setTabs(p=>({...p,[id]:'score'})), [spots, conditions]);
     }catch(e){setErrors(p=>({...p,[id]:e instanceof Error?e.message:'Failed'}));}
     finally{setLoading(p=>({...p,[id]:false}));}
   };
 
   const retry=(id:string)=>{
-    setErrors(p=>({...p,[id]:''}));
+    setErrors(p=>({...p,[id]:''})), [spots, conditions]);
     setConditions(p=>{const n={...p};delete n[id];return n;});
     load(id);
   };
