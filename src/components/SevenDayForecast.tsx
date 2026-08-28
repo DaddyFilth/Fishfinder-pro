@@ -27,7 +27,7 @@ function weatherEmoji(forecast: string): string {
 
 function fishingRatingFromWeather(forecast: string, wind: string): { rating: number; color: string; label: string } {
   const f = forecast.toLowerCase();
-  const windSpeed = parseInt(wind.match(/(d+)/)?.[1] ?? '0');
+  const windSpeed = parseInt(wind.match(/(\d+)/)?.[1] ?? '0', 10);
   let score = 70;
   if (f.includes('thunder')) score = 10;
   else if (f.includes('heavy rain')) score -= 30;
@@ -59,7 +59,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
           { headers: { 'User-Agent': 'FishFinderPro/1.0' } });
         const data = await fRes.json();
         setForecast(data.properties.periods.slice(0, 14).filter((p: DayForecast) => p.isDaytime));
-      } catch(e) {
+      } catch {
         setError('Unable to load 7-day forecast');
       } finally { setLoading(false); }
     };

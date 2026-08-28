@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { fetchNWSConditions, fetchUSGSWaterData, fetchMarineConditions, fetchTideData } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { z } from 'zod';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ spotId: string }> }) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return NextResponse.json({ error: 'Database is not configured' }, { status: 503 });
   const parsed = z.object({ spotId: z.string().uuid() }).safeParse(await params);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid spot ID' }, { status: 400 });
 

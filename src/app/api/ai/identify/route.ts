@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< HEAD
 import OpenAI from 'openai';
 
 const baseURL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
@@ -10,6 +11,25 @@ const client = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
+=======
+import { getOpenAI } from '@/lib/openai';
+
+export async function POST(req: NextRequest) {
+  const openai = getOpenAI();
+  if (!openai) return NextResponse.json({ error: 'AI service is not configured' }, { status: 503 });
+
+  let body: { image_base64?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const { image_base64 } = body;
+  if (typeof image_base64 !== 'string' || !image_base64.startsWith('data:image/') || image_base64.length > 10_000_000) {
+    return NextResponse.json({ error: 'A valid image under 10MB is required' }, { status: 400 });
+  }
+
+>>>>>>> bdf67f5c98ebdd10e1473250a2798f70a8b7614e
   try {
     const { image_base64 } = await req.json();
     if (!image_base64) {
@@ -46,6 +66,7 @@ If no fish is visible set is_fish to false and only include that field.`
     });
 
     const raw = response.choices[0].message.content ?? '{}';
+<<<<<<< HEAD
     const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
     const data = JSON.parse(cleaned);
 
@@ -56,5 +77,11 @@ If no fish is visible set is_fish to false and only include that field.`
       { error: e?.message || 'AI identification failed' },
       { status: 500 }
     );
+=======
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    return NextResponse.json(JSON.parse(cleaned));
+  } catch {
+    return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
+>>>>>>> bdf67f5c98ebdd10e1473250a2798f70a8b7614e
   }
 }
