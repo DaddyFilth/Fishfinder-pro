@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getOpenAI } from '@/lib/openai';
 
 export async function POST(req: NextRequest) {
-  const { image_base64 } = await req.json();
-  if (!image_base64) return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+  const openai = getOpenAI();
+  if (!openai) return NextResponse.json({ error: 'AI service is not configured' }, { status: 503 });
+
+  let body: { image_base64?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const { image_base64 } = body;
+  if (typeof image_base64 !== 'string' || !image_base64.startsWith('data:image/') || image_base64.length > 10_000_000) {
+    return NextResponse.json({ error: 'A valid image under 10MB is required' }, { status: 400 });
+  }
 
   try {
     const response = await openai.chat.completions.create({
@@ -40,8 +49,7 @@ If no fish is visible set is_fish to false and only include that field.`
     const raw = response.choices[0].message.content ?? '{}';
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     return NextResponse.json(JSON.parse(cleaned));
-  } catch (e) {
-    console.error('[AI Identify]', e);
+  } catch {
     return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
   }
 }
