@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAI } from '@/lib/openai';
+import OpenAI from 'openai';
+import { SPECIES } from '@/lib/speciesCatalog';
+
+const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) =>
+  `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
+).join('\n');
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
-  const openai = getOpenAI();
-  if (!openai) return NextResponse.json({ error: 'AI service is not configured' }, { status: 503 });
-
-  let body: { image_base64?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const { image_base64 } = body;
-  if (typeof image_base64 !== 'string' || !image_base64.startsWith('data:image/') || image_base64.length > 10_000_000) {
-    return NextResponse.json({ error: 'A valid image under 10MB is required' }, { status: 400 });
-  }
+  const { image_base64 } = await req.json();
+  if (!image_base64) return NextResponse.json({ error: 'No image provided' }, { status: 400 });
 
   try {
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o',
+      model: 'gpt-4o',
       max_tokens: 600,
       messages: [{
         role: 'user',
@@ -39,17 +35,18 @@ export async function POST(req: NextRequest) {
   "legal_notes": "Check local regulations for size/bag limits",
   "is_fish": true
 }
-If no fish is visible set is_fish to false and only include that field.`
+Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`
           },
-          { type: 'image_url', image_url: { url: image_base64 } }
+          { type: 'image_url', image_url: { url: image_base64, detail: 'low' } }
         ]
       }]
     });
 
     const raw = response.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```jsons*/gi, '').replace(/```s*/g, '').trim();
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     return NextResponse.json(JSON.parse(cleaned));
-  } catch {
+  } catch (e) {
+    console.error('[AI Identify]', e);
     return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
   }
 }
