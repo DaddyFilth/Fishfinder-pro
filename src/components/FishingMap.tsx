@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,6 +10,7 @@ import FishBot from '@/components/ai/FishBot';
 import FishIdentifier from '@/components/ai/FishIdentifier';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
+import WaterTempOverlay from '@/components/WaterTempOverlay';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -90,7 +91,19 @@ export default function FishingMap({spots}:{spots:Spot[]}){
   const [errors,setErrors]=useState<Record<string,string>>({});
   const [tabs,setTabs]=useState<Record<string,Tab>>({});
   const [depthOn,setDepthOn]=useState(false);
+  const [temperatureOn,setTemperatureOn]=useState(false);
   const [waypointsOn,setWaypointsOn]=useState(true);
+
+  const temperaturePoints = spots.map((spot) => ({
+    lat: spot.lat,
+    lng: spot.lng,
+    name: spot.name,
+    temperature: conditions[spot.id]?.water_temp_c ?? null,
+  }));
+  const rankedSpots = spots
+    .filter((spot) => conditions[spot.id])
+    .map((spot) => ({ spot, score: conditions[spot.id].fishing_score }))
+    .sort((a, b) => b.score - a.score);
 
   const load=async(id:string)=>{
     if(conditions[id]||loading[id])return;
@@ -111,12 +124,20 @@ export default function FishingMap({spots}:{spots:Spot[]}){
     load(id);
   };
 
+  // The loader intentionally stays stable for this one-way initial hydration pass.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    spots.forEach((spot) => { load(spot.id); });
+  }, [spots]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
   return(
     <div style={{position:'relative',height:'100%'}}>
       {/* Layer toggles */}
       <div style={{position:'absolute',top:'10px',right:'10px',zIndex:1000,display:'flex',flexDirection:'column',gap:'4px'}}>
         {[
           ['📏 Depth',depthOn,()=>setDepthOn(p=>!p)],
+          ['🌡 Water temp',temperatureOn,()=>setTemperatureOn(p=>!p)],
           ['📍 Waypoints',waypointsOn,()=>setWaypointsOn(p=>!p)],
         ].map(([label,active,toggle])=>(
           <button key={label as string} onClick={toggle as ()=>void}
@@ -129,6 +150,7 @@ export default function FishingMap({spots}:{spots:Spot[]}){
       <MapContainer center={[35.5,-97.5]} zoom={7} style={{height:'100%',width:'100%'}}>
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
         <DepthOverlay enabled={depthOn}/>
+        <WaterTempOverlay points={temperaturePoints} enabled={temperatureOn}/>
         {waypointsOn && <WaypointMarkers/>}
 
         {spots.map(spot=>{
@@ -157,7 +179,10 @@ export default function FishingMap({spots}:{spots:Spot[]}){
                   {/* Header */}
                   <div style={{marginBottom:'8px',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                     <div>
-                      <strong style={{fontSize:'14px',color:'#22d3ee'}}>{spot.name}</strong>
+                      {rankedSpots.slice(0, 3).findIndex(({ spot: rankedSpot }) => rankedSpot.id === spot.id) >= 0 && (
+                        <span style={{ display: 'inline-block', color: '#22c55e', fontSize: '9px', fontWeight: 'bold', marginBottom: '2px' }}>OPTIMAL NOW · AI RANK #{rankedSpots.findIndex(({ spot: rankedSpot }) => rankedSpot.id === spot.id) + 1}</span>
+                      )}
+                      <strong style={{fontSize:'14px',color:'#22d3ee',display:'block'}}>{spot.name}</strong>
                       <p style={{color:'#6b7280',fontSize:'10px',margin:'2px 0 0'}}>{spot.water_type} · {spot.spot_type}</p>
                     </div>
                     {c && <div style={{textAlign:'right'}}>

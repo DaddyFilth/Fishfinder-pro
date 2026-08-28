@@ -1,14 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const revalidate = 300;
 
 export async function GET() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return NextResponse.json({ error: 'Database is not configured' }, { status: 503 });
   const { data, error } = await supabase
     .from('fishing_spots')
     .select('id, name, lat, lng, water_type, spot_type')
