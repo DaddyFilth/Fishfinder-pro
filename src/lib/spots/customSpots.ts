@@ -23,9 +23,9 @@ export function getCustomSpots(): CustomSpot[] {
 export function saveCustomSpot(spot: Omit<CustomSpot, 'id' | 'created_at'>): CustomSpot {
   const spots = getCustomSpots();
   const newSpot: CustomSpot = {
-    spot,
+    ...spot,
     id: 'spot_' + Date.now(),
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   };
   spots.unshift(newSpot);
   if (typeof window !== 'undefined') {
