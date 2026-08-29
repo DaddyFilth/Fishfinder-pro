@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
 import FishIdentifierModal from '@/components/ai/FishIdentifierModal';
-import { AVAILABLE_SPECIES, getSpeciesImage } from '@lib/scoring/speciesAdvisor';
+import { AVAILABLE_SPECIES, getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 
 interface CatchEntry {
   id: string;
@@ -151,4 +151,3 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
   );
 }
 
-<FishIdentifierModal isOpen{showAIModal} onClose{() => setShowAIModal(false)} onApplyToCatch{(d) => setForm(p => ({ ...p, ...d }))} />
