@@ -94,12 +94,17 @@ export default function FishingMap({spots}:{spots:Spot[]}){
   const [temperatureOn,setTemperatureOn]=useState(false);
   const [waypointsOn,setWaypointsOn]=useState(true);
 
-  const temperaturePoints = useMemo(() => spots.map((spot) => ({
-    lat: spot.lat,
-    lng: spot.lng,
-    name: spot.name,
-    temperature: conditions[spot.id]?.water_temp_c ?? null,
-  })), [spots, conditions]);
+  const temperaturePoints = useMemo(
+    () =>
+      spots.map((spot) => ({
+        lat: spot.lat,
+        lng: spot.lng,
+        name: spot.name,
+        temperature: conditions[spot.id]?.water_temp_c ?? null,
+      })),
+    [spots, conditions]
+  );
+
   const rankedSpots = spots
     .filter((spot) => conditions[spot.id])
     .map((spot) => ({ spot, score: conditions[spot.id].fishing_score }))
@@ -107,24 +112,23 @@ export default function FishingMap({spots}:{spots:Spot[]}){
 
   const load=async(id:string)=>{
     if(conditions[id]||loading[id])return;
-    setLoading(p=>({...p,[id]:true})), [spots, conditions]);
+    setLoading(p=>({...p,[id]:true}));
     try{
       const res=await fetch(`/api/spots/${id}/conditions`);
       if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const data:Cond=await res.json();
-      setConditions(p=>({...p,[id]:data})), [spots, conditions]);
-      setTabs(p=>({...p,[id]:'score'})), [spots, conditions]);
+      setConditions(p=>({...p,[id]:data}));
+      setTabs(p=>({...p,[id]:'score'}));
     }catch(e){setErrors(p=>({...p,[id]:e instanceof Error?e.message:'Failed'}));}
     finally{setLoading(p=>({...p,[id]:false}));}
   };
 
   const retry=(id:string)=>{
-    setErrors(p=>({...p,[id]:''})), [spots, conditions]);
+    setErrors(p=>({...p,[id]:''}));
     setConditions(p=>{const n={...p};delete n[id];return n;});
     load(id);
   };
 
-  // The loader intentionally stays stable for this one-way initial hydration pass.
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     spots.forEach((spot) => { load(spot.id); });
@@ -179,13 +183,13 @@ export default function FishingMap({spots}:{spots:Spot[]}){
                   {/* Header */}
                   <div style={{marginBottom:'8px',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                     <div>
-                      {rankedSpots.slice(0, 3).findIndex(({ spot: rankedSpot }) => rankedSpot.id === spot.id) >= 0 && (
-                        <span style={{ display: 'inline-block', color: '#22c55e', fontSize: '9px', fontWeight: 'bold', marginBottom: '2px' }}>OPTIMAL NOW · AI RANK #{rankedSpots.findIndex(({ spot: rankedSpot }) => rankedSpot.id === spot.id) + 1}</span>
+                      {rankedSpots.slice(0,3).findIndex(({spot:r})=>r.id===spot.id)>=0&&(
+                        <span style={{display:'inline-block',color:'#22c55e',fontSize:'9px',fontWeight:'bold',marginBottom:'2px'}}>OPTIMAL NOW · AI RANK #{rankedSpots.findIndex(({spot:r})=>r.id===spot.id)+1}</span>
                       )}
                       <strong style={{fontSize:'14px',color:'#22d3ee',display:'block'}}>{spot.name}</strong>
                       <p style={{color:'#6b7280',fontSize:'10px',margin:'2px 0 0'}}>{spot.water_type} · {spot.spot_type}</p>
                     </div>
-                    {c && <div style={{textAlign:'right'}}>
+                    {c&&<div style={{textAlign:'right'}}>
                       <div style={{fontSize:'11px',color:'#475569'}}>📍 {spot.lat.toFixed(3)}, {spot.lng.toFixed(3)}</div>
                     </div>}
                   </div>
@@ -220,12 +224,9 @@ export default function FishingMap({spots}:{spots:Spot[]}){
 
                       {/* Tabs */}
                       <div style={{display:'flex',gap:'2px',marginBottom:'8px'}}>
-                        {TB('score','📊')}
-                        {TB('water','💧')}
-                        {TB('atmosphere','🌤')}
+                        {TB('score','📊')}{TB('water','💧')}{TB('atmosphere','🌤')}
                         {spot.water_type!=='freshwater'&&TB('marine','🌊')}
-                        {TB('bite','🌙')}
-                        {TB('forecast','📅')}
+                        {TB('bite','🌙')}{TB('forecast','📅')}
                         {TB('ai','AI')}{TB('identify','ID')}{TB('log','🎣')}
                       </div>
 
@@ -276,14 +277,12 @@ export default function FishingMap({spots}:{spots:Spot[]}){
                           is_daytime: new Date().getHours()>6&&new Date().getHours()<20,
                         }}/>
                       )}
-                      {tab==='forecast'&&(
-                        <SevenDayForecast lat={spot.lat} lng={spot.lng}/>
-                      )}
-                      {tab==='log'&&(
-                        <CatchLogger spotId={spot.id} spotName={spot.name} lat={spot.lat} lng={spot.lng}/>
-                      )}
+                      {tab==='forecast'&&(<SevenDayForecast lat={spot.lat} lng={spot.lng}/>)}
+                      {tab==='log'&&(<CatchLogger spotId={spot.id} spotName={spot.name} lat={spot.lat} lng={spot.lng}/>)}
+                      {tab==='ai'&&(<FishBot spot={spot} conditions={c}/>)}
+                      {tab==='identify'&&(<FishIdentifier/>)}
 
-                      {tab==='ai'&&(<FishBot spot={spot} conditions={c}/>)}{tab==='identify'&&(<FishIdentifier/>)}{/* Footer */}
+                      {/* Footer */}
                       <div style={{marginTop:'8px',paddingTop:'6px',borderTop:'1px solid #1f2937'}}>
                         <p style={{color:'#4b5563',fontSize:'9px',margin:0}}>Sources: {c.data_sources?.join(' · ')}</p>
                         <p style={{color:'#374151',fontSize:'9px',margin:'1px 0 0'}}>
