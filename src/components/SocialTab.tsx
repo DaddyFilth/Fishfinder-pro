@@ -1,13 +1,14 @@
 'use client';
+import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { useState } from 'react';
 
 const FEED=[
-  {id:'1',user:'FishKing_TX',avatar:'🎣',species:'Largemouth Bass',weight:'6.4',spot:'Lake Fork',time:'12 min ago',emoji:'🐟',likes:14,comment:'Crushed it on a frog this morning!'},
-  {id:'2',user:'CoastalAngler',avatar:'🌊',species:'Redfish',weight:'9.1',spot:'Galveston Bay',time:'34 min ago',emoji:'🦈',likes:27,comment:'Bull red on live crab. Monster fish!'},
-  {id:'3',user:'BassPro_Dale',avatar:'🏆',species:'Striped Bass',weight:'12.3',spot:'Sabine Lake',time:'1 hr ago',emoji:'🐟',likes:41,comment:'New PB!! Could not believe it.'},
-  {id:'4',user:'NightOwlFisher',avatar:'🌙',species:'Channel Catfish',weight:'18.5',spot:'Caddo Lake',time:'2 hr ago',emoji:'🐠',likes:19,comment:'Bottom fishing at midnight always delivers.'},
-  {id:'5',user:'PierQueen_Gail',avatar:'🎀',species:'Flounder',weight:'3.2',spot:'Bolivar Pier',time:'3 hr ago',emoji:'🦈',likes:8,comment:'Limits on flounder today!'},
-  {id:'6',user:'FlyGuy_Tex',avatar:'🪰',species:'Trout',weight:'2.8',spot:'Guadalupe River',time:'4 hr ago',emoji:'🐟',likes:22,comment:'Fly fishing the Guadalupe never disappoints.'},
+  {id:'1',user:'FishKing_TX',avatar:'🎣',species:'Largemouth Bass',weight:'6.4',spot:'Lake Fork',time:'12 min ago',likes:14,comment:'Crushed it on a frog this morning!'},
+  {id:'2',user:'CoastalAngler',avatar:'🌊',species:'Redfish',weight:'9.1',spot:'Galveston Bay',time:'34 min ago',likes:27,comment:'Bull red on live crab. Monster fish!'},
+  {id:'3',user:'BassPro_Dale',avatar:'🏆',species:'Striped Bass',weight:'12.3',spot:'Sabine Lake',time:'1 hr ago',likes:41,comment:'New PB!! Could not believe it.'},
+  {id:'4',user:'NightOwlFisher',avatar:'🌙',species:'Channel Catfish',weight:'18.5',spot:'Caddo Lake',time:'2 hr ago',likes:19,comment:'Bottom fishing at midnight always delivers.'},
+  {id:'5',user:'PierQueen_Gail',avatar:'🎀',species:'Flounder',weight:'3.2',spot:'Bolivar Pier',time:'3 hr ago',likes:8,comment:'Limits on flounder today!'},
+  {id:'6',user:'FlyGuy_Tex',avatar:'🪰',species:'Trout',weight:'2.8',spot:'Guadalupe River',time:'4 hr ago',likes:22,comment:'Fly fishing the Guadalupe never disappoints.'},
 ];
 const LEADERBOARD=[
   {rank:1,user:'BassPro_Dale',catches:47,topWeight:'12.3',badge:'🥇'},
@@ -42,7 +43,7 @@ export default function SocialTab(){
               <div><div style={{fontSize:'12px',fontWeight:'bold',color:'#e2e8f0'}}>{post.user}</div><div style={{fontSize:'9px',color:'#475569'}}>{post.time} · {post.spot}</div></div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:'10px',background:'#0f172a',borderRadius:'8px',padding:'10px',marginBottom:'8px'}}>
-              <div style={{fontSize:'28px'}}>{post.emoji}</div>
+              <img src={getSpeciesImage(post.species)} alt={post.species} style={{width:'36px',height:'36px',objectFit:'cover',borderRadius:'8px'}} />
               <div><div style={{fontSize:'13px',fontWeight:'bold',color:'#e2e8f0'}}>{post.species}</div><div style={{fontSize:'11px',color:'#0ea5e9',fontWeight:'bold'}}>{post.weight} lbs</div></div>
             </div>
             <div style={{fontSize:'11px',color:'#94a3b8',marginBottom:'10px',fontStyle:'italic'}}>&quot;{post.comment}&quot;</div>
