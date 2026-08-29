@@ -1,6 +1,5 @@
 /**
  * Species-specific bait and technique advisor
- * Conditions mapped from published angler guides, state agency fish biology docs
  */
 
 export interface SpeciesAdvice {
@@ -36,6 +35,22 @@ const SPECIES_DB: Record<string, {
     techniqueCold: 'Slow presentation near deep structure. Finesse tactics work best.',
     depthWarm: 'Shallow (2–8ft) near cover', depthCold: 'Deep (15–30ft) near bottom',
   },
+  'Smallmouth Bass': {
+    optTempMin: 15, optTempMax: 24,
+    baitsWarm: ['Tubes','Crayfish imitations','Topwater poppers','Drop-shot'],
+    baitsCold: ['Blade baits','Ned rigs','Small jigs','Finesse worms'],
+    techniqueWarm: 'Target rocky points and gravel bars. Fast aggressive retrieves.',
+    techniqueCold: 'Slow finesse presentations near deep rocky structure.',
+    depthWarm: 'Rocky shallows (3–10ft)', depthCold: 'Deep rocky structure (15–30ft)',
+  },
+  'Spotted Bass': {
+    optTempMin: 15, optTempMax: 26,
+    baitsWarm: ['Finesse jigs','Drop-shot rigs','Small crankbaits','Topwater'],
+    baitsCold: ['Ned rigs','Small swimbaits','Blade baits'],
+    techniqueWarm: 'Target main lake points and ledges. Finesse approach.',
+    techniqueCold: 'Deep ledge fishing with slow presentations.',
+    depthWarm: 'Points and ledges (5–15ft)', depthCold: 'Deep ledges (20–40ft)',
+  },
   'Channel Catfish': {
     optTempMin: 21, optTempMax: 29,
     baitsWarm: ['Chicken liver','Nightcrawlers','Stink bait','Cut shad'],
@@ -43,6 +58,22 @@ const SPECIES_DB: Record<string, {
     techniqueWarm: 'Bottom fishing near channel edges at dusk/night.',
     techniqueCold: 'Deep holes and ledges. Slow-moving bait presentations.',
     depthWarm: 'Mid-depth (5–15ft) channel edges', depthCold: 'Deep holes (15–40ft)',
+  },
+  'Blue Catfish': {
+    optTempMin: 20, optTempMax: 28,
+    baitsWarm: ['Cut shad','Live skipjack','Large nightcrawlers'],
+    baitsCold: ['Cut carp','Live perch','Large cut bait'],
+    techniqueWarm: 'Anchor on main river channel ledges. Heavy tackle.',
+    techniqueCold: 'Deep wintering holes. Very slow presentation.',
+    depthWarm: 'River channels (10–25ft)', depthCold: 'Deep holes (25–50ft)',
+  },
+  'Flathead Catfish': {
+    optTempMin: 22, optTempMax: 30,
+    baitsWarm: ['Live bullheads','Live perch','Live sunfish'],
+    baitsCold: ['Live bream','Large shiners'],
+    techniqueWarm: 'Night fishing near log jams and deep holes.',
+    techniqueCold: 'Very deep holes. Slow live bait presentation.',
+    depthWarm: 'Deep cover (8–20ft) at night', depthCold: 'Deep holes (20–40ft)',
   },
   'Walleye': {
     optTempMin: 10, optTempMax: 18,
@@ -60,6 +91,14 @@ const SPECIES_DB: Record<string, {
     techniqueCold: 'Nymph fishing near bottom. Slow drift in deep pools.',
     depthWarm: 'Shallow riffles (1–4ft)', depthCold: 'Deep pools (4–12ft)',
   },
+  'Brown Trout': {
+    optTempMin: 8, optTempMax: 18,
+    baitsWarm: ['Streamers','Wooly Buggers','Large dry flies','Rapala minnows'],
+    baitsCold: ['Midge nymphs','Small egg patterns','Micro jigs'],
+    techniqueWarm: 'Large streamers at dawn/dusk near undercut banks.',
+    techniqueCold: 'Slow nymph drifts in deep pools.',
+    depthWarm: 'Undercut banks and deep pools (2–8ft)', depthCold: 'Deep pools (6–15ft)',
+  },
   'Crappie': {
     optTempMin: 15, optTempMax: 23,
     baitsWarm: ['Small jigs (1/32oz)','Minnows','Small spinners'],
@@ -68,6 +107,38 @@ const SPECIES_DB: Record<string, {
     techniqueCold: 'Very slow presentation near deep brush. Spider rigging.',
     depthWarm: 'Brush piles (4–12ft)', depthCold: 'Deep timber (15–25ft)',
   },
+  'Black Crappie': {
+    optTempMin: 15, optTempMax: 23,
+    baitsWarm: ['Small jigs','Live minnows','Small spinners'],
+    baitsCold: ['Tiny jigs','Small minnows'],
+    techniqueWarm: 'Vertical jigging near brush and timber at dawn.',
+    techniqueCold: 'Deep slow presentation near submerged structure.',
+    depthWarm: 'Brush piles (4–12ft)', depthCold: 'Deep timber (15–25ft)',
+  },
+  'White Crappie': {
+    optTempMin: 14, optTempMax: 24,
+    baitsWarm: ['Small jigs','Minnows','Tube baits'],
+    baitsCold: ['Tiny jigs','Live minnows'],
+    techniqueWarm: 'Slow vertical jigging near channel edges and brush.',
+    techniqueCold: 'Very slow finesse presentation in deep water.',
+    depthWarm: 'Channel edges (6–15ft)', depthCold: 'Deep brush (15–25ft)',
+  },
+  'Bluegill': {
+    optTempMin: 18, optTempMax: 27,
+    baitsWarm: ['Crickets','Red worms','Small poppers','Wet flies'],
+    baitsCold: ['Wax worms','Small jigs','Mealworms'],
+    techniqueWarm: 'Light tackle near weeds and dock edges. Small hooks.',
+    techniqueCold: 'Deep slow presentation. Very small baits.',
+    depthWarm: 'Shallow weeds (2–6ft)', depthCold: 'Deeper structure (8–15ft)',
+  },
+  'Redear Sunfish': {
+    optTempMin: 18, optTempMax: 27,
+    baitsWarm: ['Snails','Worms','Small crickets'],
+    baitsCold: ['Wax worms','Small worms'],
+    techniqueWarm: 'Bottom fishing near shell beds. Very light tackle.',
+    techniqueCold: 'Slow bottom presentation in deeper water.',
+    depthWarm: 'Shell beds (4–10ft)', depthCold: 'Deeper structure (10–18ft)',
+  },
   'Striped Bass': {
     optTempMin: 10, optTempMax: 26,
     baitsWarm: ['Live shad','Umbrella rigs','Surface plugs','Large swimbaits'],
@@ -75,6 +146,22 @@ const SPECIES_DB: Record<string, {
     techniqueWarm: 'Troll near thermocline. Target schooling shad at surface.',
     techniqueCold: 'Deep jigging near dam faces and channel drops.',
     depthWarm: 'Surface to mid-depth chasing shad schools', depthCold: 'Deep (20–60ft)',
+  },
+  'White Bass': {
+    optTempMin: 14, optTempMax: 24,
+    baitsWarm: ['Small spinners','Jigging spoons','Live shad','Tiny crankbaits'],
+    baitsCold: ['Blade baits','Small jigs','Jigging spoons'],
+    techniqueWarm: 'Target schooling fish at surface. Fast retrieves.',
+    techniqueCold: 'Vertical jigging over deep structure near dams.',
+    depthWarm: 'Surface schools (0–10ft)', depthCold: 'Deep structure (15–30ft)',
+  },
+  'Hybrid Striper': {
+    optTempMin: 12, optTempMax: 24,
+    baitsWarm: ['Live shad','Large swimbaits','Topwater plugs','Umbrella rigs'],
+    baitsCold: ['Jigging spoons','Blade baits','Large jigs'],
+    techniqueWarm: 'Troll main lake points. Watch for surface busts.',
+    techniqueCold: 'Deep jigging along main channel ledges.',
+    depthWarm: 'Open water following shad (0–20ft)', depthCold: 'Deep ledges (20–50ft)',
   },
   'Redfish/Red Drum': {
     optTempMin: 16, optTempMax: 28,
@@ -91,6 +178,30 @@ const SPECIES_DB: Record<string, {
     techniqueWarm: 'Drag bait slowly along bottom near structure changes.',
     techniqueCold: 'Drift fishing in channels. Very slow bottom presentations.',
     depthWarm: 'Bottom near structure (3–10ft)', depthCold: 'Channel edges (10–25ft)',
+  },
+  'Sauger': {
+    optTempMin: 8, optTempMax: 16,
+    baitsWarm: ['Live minnows','Jig-and-minnow','Shallow crankbaits'],
+    baitsCold: ['Blade baits','Jigging Raps','Live shiners'],
+    techniqueWarm: 'Drift along river current breaks and rocky structure.',
+    techniqueCold: 'Vertical jigging in deep current seams.',
+    depthWarm: 'River current breaks (5–15ft)', depthCold: 'Deep seams (15–35ft)',
+  },
+  'Common Carp': {
+    optTempMin: 18, optTempMax: 28,
+    baitsWarm: ['Corn','Boilies','Bread balls','Dough bait'],
+    baitsCold: ['Tiger nuts','Worms','Small boilies'],
+    techniqueWarm: 'Bottom fishing with hair rig near weed beds.',
+    techniqueCold: 'Slow bottom presentation in deep wintering areas.',
+    depthWarm: 'Shallow flats and weed edges (2–8ft)', depthCold: 'Deep holes (10–25ft)',
+  },
+  'Northern Pike': {
+    optTempMin: 10, optTempMax: 20,
+    baitsWarm: ['Large swimbaits','Spoons','Topwater gliders','Live suckers'],
+    baitsCold: ['Large jigs','Dead smelt','Tip-ups with sucker'],
+    techniqueWarm: 'Cast to weed edges and ambush points. Fast erratic retrieves.',
+    techniqueCold: 'Slow presentations near weed beds. Deadbait works well.',
+    depthWarm: 'Weed edges (3–12ft)', depthCold: 'Deeper weed lines (10–25ft)',
   },
 };
 
@@ -115,11 +226,11 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
   let activityScore = 50;
   const reasoning: string[] = [];
 
-  if (isOptimalTemp)   { activityScore += 20; reasoning.push(`Water temp ${temp?.toFixed(1)}°C is in optimal range`); }
+  if (isOptimalTemp)      { activityScore += 20; reasoning.push(`Water temp ${temp?.toFixed(1)}°C is in optimal range`); }
   else if (temp !== null) { activityScore -= 15; reasoning.push(`Water temp ${temp.toFixed(1)}°C outside optimal (${db.optTempMin}–${db.optTempMax}°C)`); }
-  if (goodPressure)    { activityScore += 10; reasoning.push('Stable high pressure — feeding activity likely'); }
-  else                 { activityScore -= 10; reasoning.push('Low/falling pressure — fish may be sluggish'); }
-  if (!goodOxygen)     { activityScore -= 20; reasoning.push('Low dissolved oxygen detected'); }
+  if (goodPressure)       { activityScore += 10; reasoning.push('Stable high pressure — feeding activity likely'); }
+  else                    { activityScore -= 10; reasoning.push('Low/falling pressure — fish may be sluggish'); }
+  if (!goodOxygen)        { activityScore -= 20; reasoning.push('Low dissolved oxygen detected'); }
   if (!conditions.is_daytime) { activityScore += 10; reasoning.push('Low-light conditions favor feeding'); }
   activityScore += Math.round((conditions.solunar_score - 50) * 0.2);
   if (conditions.solunar_score >= 75) reasoning.push('Strong solunar period — peak activity window');
@@ -128,9 +239,7 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
   const activityLevel = activityScore >= 65 ? 'high' : activityScore >= 40 ? 'medium' : 'low';
 
   return {
-    species,
-    activityLevel,
-    activityScore,
+    species, activityLevel, activityScore,
     topBaits: isWarm ? db.baitsWarm : db.baitsCold,
     technique: isWarm ? db.techniqueWarm : db.techniqueCold,
     depthAdvice: isWarm ? db.depthWarm : db.depthCold,
@@ -140,19 +249,33 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
 
 export const AVAILABLE_SPECIES = Object.keys(SPECIES_DB);
 
-
+// Wikimedia Commons — public domain fish illustrations
 export const SPECIES_IMAGES: Record<string, string> = {
-  'Largemouth Bass': '/fish/largemouth-bass.jpg',
-  'Smallmouth Bass': '/fish/smallmouth-bass.jpg',
-  'Rainbow Trout': '/fish/rainbow-trout.jpg',
-  'Channel Catfish': '/fish/channel-catfish.jpg',
-  'Black Crappie': '/fish/crappie.jpg',
-  'Crappie': '/fish/crappie.jpg',
-  'Bluegill': '/fish/bluegill.jpg',
-  'Walleye': '/fish/walleye.jpg',
-  'Northern Pike': '/fish/northern-pike.jpg',
+  'Largemouth Bass':  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Largemouth_bass.png/320px-Largemouth_bass.png',
+  'Smallmouth Bass':  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Micropterus_dolomieu.jpg/320px-Micropterus_dolomieu.jpg',
+  'Spotted Bass':     'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Micropterus_punctulatus.jpg/320px-Micropterus_punctulatus.jpg',
+  'Channel Catfish':  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ictalurus_punctatus.jpg/320px-Ictalurus_punctatus.jpg',
+  'Blue Catfish':     'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Ictalurus_furcatus.jpg/320px-Ictalurus_furcatus.jpg',
+  'Flathead Catfish': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Flathead_catfish.jpg/320px-Flathead_catfish.jpg',
+  'Walleye':          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Walleye08.jpg/320px-Walleye08.jpg',
+  'Rainbow Trout':    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rainbow_trout.png/320px-Rainbow_trout.png',
+  'Brown Trout':      'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/BrownTrout.jpg/320px-BrownTrout.jpg',
+  'Crappie':          'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Pomoxis_nigromaculatus.jpg/320px-Pomoxis_nigromaculatus.jpg',
+  'Black Crappie':    'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Pomoxis_nigromaculatus.jpg/320px-Pomoxis_nigromaculatus.jpg',
+  'White Crappie':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Pomoxis_annularis.jpg/320px-Pomoxis_annularis.jpg',
+  'Bluegill':         'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Lepomis_macrochirus.jpg/320px-Lepomis_macrochirus.jpg',
+  'Redear Sunfish':   'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Redear_sunfish.jpg/320px-Redear_sunfish.jpg',
+  'Striped Bass':     'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Striped_bass.jpg/320px-Striped_bass.jpg',
+  'White Bass':       'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Morone_chrysops.jpg/320px-Morone_chrysops.jpg',
+  'Hybrid Striper':   'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Striped_bass.jpg/320px-Striped_bass.jpg',
+  'Redfish/Red Drum': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Red_drum_fish.jpg/320px-Red_drum_fish.jpg',
+  'Flounder':         'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Southern_flounder.jpg/320px-Southern_flounder.jpg',
+  'Sauger':           'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Sander_canadensis.jpg/320px-Sander_canadensis.jpg',
+  'Common Carp':      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Cyprinus_carpio.jpg/320px-Cyprinus_carpio.jpg',
+  'Northern Pike':    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Esox_lucius.jpg/320px-Esox_lucius.jpg',
 };
 
 export function getSpeciesImage(speciesName: string): string {
-  return SPECIES_IMAGES[speciesName] || '/fish/largemouth-bass.jpg';
+  return SPECIES_IMAGES[speciesName]
+    ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Largemouth_bass.png/320px-Largemouth_bass.png';
 }
