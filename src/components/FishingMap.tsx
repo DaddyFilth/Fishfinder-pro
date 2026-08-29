@@ -109,7 +109,6 @@ function DC(l: number | null, f: number | null) {
 
 function Bar({ label, value }: { label: string; value: number }) {
   const c = SC(value);
-
   return (
     <div style={{ marginBottom: '4px' }}>
       <div
@@ -124,14 +123,15 @@ function Bar({ label, value }: { label: string; value: number }) {
         <span>{label}</span>
         <span style={{ color: c }}>{value}</span>
       </div>
-      <div style={{ background: '#1f2937', borderRadius: '4px', height: '5px' }}>
+      <div style={{ background: '#1f2937', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
         <div
           style={{
             width: `${value}%`,
             background: c,
             height: '100%',
             borderRadius: '4px',
-            transition: 'width .4s',
+            transition: 'width .4s ease',
+            boxShadow: `0 0 16px ${c}66`,
           }}
         />
       </div>
@@ -153,7 +153,6 @@ function Row({
   hi?: string;
 }) {
   if (value === null || value === undefined) return null;
-
   return (
     <div
       style={{
@@ -161,7 +160,7 @@ function Row({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '5px 0',
-        borderBottom: '1px solid #1f2937',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
       }}
     >
       <span style={{ fontSize: '11px', color: '#9ca3af' }}>
@@ -182,11 +181,12 @@ function Depth({ l, f }: { l: number | null; f: number | null }) {
   return (
     <div
       style={{
-        background: '#0f172a',
+        background: 'rgba(15,23,42,0.9)',
         border: `1px solid ${c}`,
-        borderRadius: '8px',
+        borderRadius: '10px',
         padding: '10px',
         marginBottom: '10px',
+        boxShadow: `0 0 0 1px ${c}22 inset, 0 12px 30px rgba(0,0,0,0.2)`,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -208,7 +208,7 @@ function Depth({ l, f }: { l: number | null; f: number | null }) {
             background: `linear-gradient(90deg,#dbeafe,${c})`,
             height: '100%',
             borderRadius: '6px',
-            transition: 'width .5s',
+            transition: 'width .5s ease',
           }}
         />
         <span
@@ -235,41 +235,46 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [baseLayer,
-  setBaseLayer]=
-  useState<BaseLayer>('terrain');
-  const baseLayers: Record<
-    BaseLayer,
-  {
-    url: string;
-    attribution: string;
-    label: string;
-    maxZoom?: number;
-    subdomains?: string[];
-  }
-> = {
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution:
-      'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-    label: '🛰️ Satellite',
-    maxZoom: 18,
-  },
-  terrain: {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution:
-      'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
-    label: '⛰️ Terrain',
-    maxZoom: 17,
-    subdomains: ['a', 'b', 'c'],
-  },
-};
+  const [baseLayer, setBaseLayer] = useState<BaseLayer>('terrain');
   const [layers, setLayers] = useState({
     depth: false,
     waterTemp: false,
     waypoints: true,
     clouds: false,
   });
+
+  const baseLayers: Record<
+    BaseLayer,
+    {
+      url: string;
+      attribution: string;
+      label: string;
+      maxZoom?: number;
+    }
+  > = {
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles © Esri',
+      label: '🛰️ Satellite',
+      maxZoom: 18,
+    },
+    terrain: {
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '© OpenStreetMap contributors',
+      label: '🌍 Explorer',
+      maxZoom: 19,
+    },
+  };
+
+  const rankedSpots = useMemo(
+    () =>
+      spots
+        .filter((spot) => conditions[spot.id])
+        .map((spot) => ({ ...spot, score: conditions[spot.id].fishing_score }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3),
+    [spots, conditions]
+  );
 
   const temperaturePoints = useMemo(
     () =>
@@ -285,7 +290,6 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
   const load = async (id: string) => {
     if (conditions[id] || loading[id]) return;
     setLoading((p) => ({ ...p, [id]: true }));
-
     try {
       const res = await fetch(`/api/spots/${id}/conditions`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -319,451 +323,452 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
     setLayers((p) => ({ ...p, [key]: !p[key] }));
   };
 
-
   return (
-    <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden' }}>
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: sidebarOpen ? 0 : '-290px',
-          width: '270px',
-          height: '100%',
-          background: 'rgba(10, 15, 25, 0.94)',
-          backdropFilter: 'blur(12px)',
-          zIndex: 2000,
-          transition: 'left 0.28s ease',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          borderRight: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.45)' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ color: 'white', margin: 0, fontSize: '16px', fontWeight: 'bold' }}>Map Layers</h2>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: '22px',
-              cursor: 'pointer',
-              lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
-        </div>
+    <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>
+      <style>{`
+        .fishing-map-shell .leaflet-container {
+          background: #020617;
+          filter: saturate(1.05) contrast(1.04);
+        }
+        .fishing-map-shell .leaflet-control-zoom,
+        .fishing-map-shell .leaflet-control-attribution {
+          opacity: 0.92;
+        }
+        .fishing-map-shell .leaflet-popup-content-wrapper,
+        .fishing-map-shell .leaflet-popup-tip {
+          background: transparent;
+          box-shadow: none;
+        }
+        .fishing-map-shell .leaflet-tile {
+          transition: filter .3s ease, opacity .3s ease;
+        }
+        .aurora-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 350;
+          background:
+            radial-gradient(circle at 20% 20%, rgba(34,197,94,0.14), transparent 28%),
+            radial-gradient(circle at 80% 18%, rgba(14,165,233,0.14), transparent 24%),
+            radial-gradient(circle at 50% 80%, rgba(59,130,246,0.14), transparent 26%);
+          animation: driftGlow 14s ease-in-out infinite alternate;
+          mix-blend-mode: screen;
+        }
+        .scanline-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 351;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.025), rgba(255,255,255,0));
+          background-size: 100% 6px;
+          opacity: 0.25;
+        }
+        .hud-card {
+          background: rgba(7, 12, 24, 0.72);
+          border: 1px solid rgba(255,255,255,0.12);
+          backdrop-filter: blur(16px);
+          box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+        }
+        .pulse-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #22c55e;
+          box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+          animation: pulse 2.2s infinite;
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+          70% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        @keyframes driftGlow {
+          0% { transform: scale(1) translate3d(0,0,0); opacity: .75; }
+          100% { transform: scale(1.05) translate3d(-1.5%, 1.5%, 0); opacity: 1; }
+        }
+      `}</style>
+
+      <div className="fishing-map-shell" style={{ position: 'absolute', inset: 0 }}>
+        <div className="aurora-overlay" />
+        <div className="scanline-overlay" />
 
         <div
-          style={{
-            fontSize: '11px',
-            color: '#94a3b8',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          Base map
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {(Object.keys(baseLayers) as BaseLayer[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => setBaseLayer(key)}
-              style={{
-                padding: '10px 12px',
-                background: baseLayer === key ? '#0f766e' : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${baseLayer === key ? '#14b8a6' : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: '10px',
-                color: 'white',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '13px',
-                fontWeight: '600',
-              }}
-            >
-              {baseLayers[key].label}
-            </button>
-          ))}
-        </div>
-
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#94a3b8',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginTop: '4px',
-          }}
-        >
-          Overlays
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {([
-            ['depth', '📏 Depth contours'],
-            ['waterTemp', '🌡 Water temperature'],
-            ['clouds', '☁️ Cloud cover'],
-            ['waypoints', '📍 Waypoints'],
-          ] as [keyof typeof layers, string][]).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => toggleLayer(key)}
-              style={{
-                padding: '10px 12px',
-                background: layers[key] ? 'rgba(37, 99, 235, 0.22)' : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${layers[key] ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: '10px',
-                color: 'white',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '13px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <span>{label}</span>
-              <span style={{ fontSize: '10px', color: layers[key] ? '#bfdbfe' : '#64748b' }}>
-                {layers[key] ? 'ON' : 'OFF'}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
+          className="hud-card"
           style={{
             position: 'absolute',
-            top: '16px',
-            left: '16px',
-            zIndex: 1500,
-            background: 'rgba(10,15,25,0.88)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            borderRadius: '10px',
-            padding: '10px 14px',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '700',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+            top: '18px',
+            left: '18px',
+            zIndex: 1600,
+            borderRadius: '16px',
+            padding: '14px 16px',
+            minWidth: '240px',
           }}
         >
-          ☰ Layers
-        </button>
-      )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <div className="pulse-dot" />
+            <div>
+              <div style={{ color: 'white', fontWeight: 800, fontSize: '15px', letterSpacing: '0.02em' }}>FishFinder Live</div>
+              <div style={{ color: '#94a3b8', fontSize: '11px' }}>Cinematic fishing intelligence overlay</div>
+            </div>
+          </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          zIndex: 1500,
-          display: 'flex',
-          gap: '8px',
-          background: 'rgba(10,15,25,0.82)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.14)',
-          borderRadius: '12px',
-          padding: '8px',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-        }}
-      >
-        {(Object.keys(baseLayers) as BaseLayer[]).map((key) => (
-          <button
-            key={key}
-            onClick={() => setBaseLayer(key)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: '1px solid',
-              borderColor: baseLayer === key ? '#14b8a6' : 'rgba(255,255,255,0.12)',
-              background: baseLayer === key ? '#0f766e' : 'rgba(255,255,255,0.04)',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {baseLayers[key].label}
-          </button>
-        ))}
-      </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {(Object.keys(baseLayers) as BaseLayer[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setBaseLayer(key)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '999px',
+                  border: `1px solid ${baseLayer === key ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.12)'}`,
+                  background: baseLayer === key ? 'rgba(13,148,136,0.26)' : 'rgba(255,255,255,0.05)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {baseLayers[key].label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <MapContainer center={[35.5, -97.5]} zoom={7} style={{ height: '100%', width: '100%' }} zoomControl>
-        <TileLayer
-          key={baseLayer}
-          attribution={baseLayers[baseLayer].attribution}
-          url={baseLayers[baseLayer].url}
-          maxZoom={baseLayers[baseLayer].maxZoom}
-          subdomains={baseLayers[baseLayer].subdomains}
-        />
-
-        <DepthOverlay enabled={layers.depth} />
-        <WaterTempOverlay points={temperaturePoints} enabled={layers.waterTemp} />
-        {layers.waypoints && <WaypointMarkers />}
-
-        {spots.map((spot) => {
-          const c = conditions[spot.id];
-          const activeTab = tabs[spot.id] || 'score';
-
-          return (
-            <Marker
-              key={spot.id}
-              position={[spot.lat, spot.lng]}
-              eventHandlers={{
-                click: () => load(spot.id),
-              }}
-            >
-              <Popup maxWidth={340} minWidth={300}>
+        <div
+          className="hud-card"
+          style={{
+            position: 'absolute',
+            top: '18px',
+            right: '18px',
+            zIndex: 1600,
+            borderRadius: '16px',
+            padding: '14px 16px',
+            width: '260px',
+          }}
+        >
+          <div style={{ color: 'white', fontSize: '13px', fontWeight: 800, marginBottom: '10px' }}>Top bite zones</div>
+          {rankedSpots.length === 0 ? (
+            <div style={{ color: '#94a3b8', fontSize: '12px' }}>Loading live scoring...</div>
+          ) : (
+            rankedSpots.map((spot, index) => (
+              <div
+                key={spot.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: index === rankedSpots.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <div>
+                  <div style={{ color: 'white', fontSize: '12px', fontWeight: 700 }}>{spot.name}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '10px' }}>{spot.water_type}</div>
+                </div>
                 <div
                   style={{
-                    minWidth: '300px',
-                    maxHeight: '420px',
-                    overflowY: 'auto',
-                    fontFamily: 'system-ui, sans-serif',
-                    background: '#030712',
-                    margin: '-12px',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    color: '#f9fafb',
+                    color: SC(spot.score),
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    textShadow: `0 0 18px ${SC(spot.score)}55`,
                   }}
                 >
-                  <div style={{ marginBottom: '10px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>{spot.name}</h3>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
-                      {spot.water_type} • {spot.spot_type}
-                    </div>
-                  </div>
+                  {spot.score}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
-                  {loading[spot.id] && (
-                    <div style={{ textAlign: 'center', padding: '18px', color: '#9ca3af' }}>
-                      Loading conditions...
-                    </div>
-                  )}
+        <div
+          style={{
+            position: 'absolute',
+            left: sidebarOpen ? 18 : -290,
+            bottom: 18,
+            zIndex: 1700,
+            width: 272,
+            transition: 'left .28s ease',
+          }}
+        >
+          <div className="hud-card" style={{ borderRadius: '18px', padding: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ color: 'white', fontSize: '14px', fontWeight: 800 }}>Overlay controls</div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '18px' }}
+              >
+                ×
+              </button>
+            </div>
 
-                  {errors[spot.id] && (
-                    <div
-                      style={{
-                        background: '#7f1d1d',
-                        border: '1px solid #dc2626',
-                        borderRadius: '8px',
-                        padding: '10px',
-                      }}
-                    >
-                      <div style={{ fontSize: '12px', marginBottom: '8px' }}>
-                        Failed to load: {errors[spot.id]}
+            {([
+              ['depth', '📏 Depth contours'],
+              ['waterTemp', '🌡 Water temperature'],
+              ['clouds', '☁️ Cloud cover'],
+              ['waypoints', '📍 Waypoints'],
+            ] as [keyof typeof layers, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => toggleLayer(key)}
+                style={{
+                  width: '100%',
+                  padding: '11px 12px',
+                  marginBottom: '8px',
+                  background: layers[key] ? 'rgba(37,99,235,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${layers[key] ? 'rgba(96,165,250,0.65)' : 'rgba(255,255,255,0.10)'}`,
+                  borderRadius: '12px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                }}
+              >
+                <span>{label}</span>
+                <span style={{ color: layers[key] ? '#bfdbfe' : '#64748b', fontSize: '10px' }}>{layers[key] ? 'ON' : 'OFF'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="hud-card"
+            style={{
+              position: 'absolute',
+              left: 18,
+              bottom: 18,
+              zIndex: 1700,
+              borderRadius: '999px',
+              padding: '10px 14px',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.14)',
+              cursor: 'pointer',
+              fontWeight: 800,
+              fontSize: '12px',
+            }}
+          >
+            ☰ Controls
+          </button>
+        )}
+
+        <MapContainer center={[35.5, -97.5]} zoom={7} style={{ height: '100%', width: '100%' }} zoomControl>
+          <TileLayer
+            key={baseLayer}
+            attribution={baseLayers[baseLayer].attribution}
+            url={baseLayers[baseLayer].url}
+            maxZoom={baseLayers[baseLayer].maxZoom}
+          />
+
+          <DepthOverlay enabled={layers.depth} />
+          <WaterTempOverlay points={temperaturePoints} enabled={layers.waterTemp} />
+          {layers.waypoints && <WaypointMarkers />}
+
+          {spots.map((spot) => {
+            const c = conditions[spot.id];
+            const activeTab = tabs[spot.id] || 'score';
+
+            return (
+              <Marker
+                key={spot.id}
+                position={[spot.lat, spot.lng]}
+                eventHandlers={{
+                  click: () => load(spot.id),
+                }}
+              >
+                <Popup maxWidth={340} minWidth={300}>
+                  <div
+                    style={{
+                      minWidth: '300px',
+                      maxHeight: '420px',
+                      overflowY: 'auto',
+                      fontFamily: 'system-ui, sans-serif',
+                      background: 'rgba(3,7,18,0.96)',
+                      margin: '-12px',
+                      padding: '12px',
+                      borderRadius: '14px',
+                      color: '#f9fafb',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+                      backdropFilter: 'blur(18px)',
+                    }}
+                  >
+                    <div style={{ marginBottom: '10px' }}>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>{spot.name}</h3>
+                      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
+                        {spot.water_type} • {spot.spot_type}
                       </div>
-                      <button
-                        onClick={() => retry(spot.id)}
+                    </div>
+
+                    {loading[spot.id] && (
+                      <div style={{ textAlign: 'center', padding: '18px', color: '#9ca3af' }}>Loading conditions...</div>
+                    )}
+
+                    {errors[spot.id] && (
+                      <div
                         style={{
-                          background: '#dc2626',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 10px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
+                          background: '#7f1d1d',
+                          border: '1px solid #dc2626',
+                          borderRadius: '8px',
+                          padding: '10px',
                         }}
                       >
-                        Retry
-                      </button>
-                    </div>
-                  )}
-
-                  {c && (
-                    <>
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                        {([
-                          ['score', '🎯'],
-                          ['water', '💧'],
-                          ['atmosphere', '🌤'],
-                          ['marine', '🌊'],
-                          ['bite', '🐟'],
-                          ['forecast', '📅'],
-                          ['log', '📝'],
-                          ['ai', '🤖'],
-                          ['identify', '📷'],
-                        ] as [Tab, string][]).map(([tab, icon]) => (
-                          <button
-                            key={tab}
-                            onClick={() => setTabs((p) => ({ ...p, [spot.id]: tab }))}
-                            style={{
-                              background: activeTab === tab ? '#0f766e' : '#111827',
-                              color: activeTab === tab ? 'white' : '#9ca3af',
-                              border: `1px solid ${activeTab === tab ? '#14b8a6' : '#374151'}`,
-                              borderRadius: '999px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {icon}
-                          </button>
-                        ))}
+                        <div style={{ fontSize: '12px', marginBottom: '8px' }}>Failed to load: {errors[spot.id]}</div>
+                        <button
+                          onClick={() => retry(spot.id)}
+                          style={{
+                            background: '#dc2626',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Retry
+                        </button>
                       </div>
+                    )}
 
-                      {activeTab === 'score' && (
-                        <>
-                          <div
-                            style={{
-                              background: `linear-gradient(135deg,${SC(c.fishing_score)}20,${SC(c.fishing_score)}08)`,
-                              border: `1px solid ${SC(c.fishing_score)}50`,
-                              borderRadius: '10px',
-                              padding: '12px',
-                              marginBottom: '10px',
-                              textAlign: 'center',
-                            }}
-                          >
-                            <div
+                    {c && (
+                      <>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                          {([
+                            ['score', '🎯'],
+                            ['water', '💧'],
+                            ['atmosphere', '🌤'],
+                            ['marine', '🌊'],
+                            ['bite', '🐟'],
+                            ['forecast', '📅'],
+                            ['log', '📝'],
+                            ['ai', '🤖'],
+                            ['identify', '📷'],
+                          ] as [Tab, string][]).map(([tab, icon]) => (
+                            <button
+                              key={tab}
+                              onClick={() => setTabs((p) => ({ ...p, [spot.id]: tab }))}
                               style={{
-                                fontSize: '28px',
-                                fontWeight: '800',
-                                color: SC(c.fishing_score),
-                                lineHeight: 1,
+                                background: activeTab === tab ? '#0f766e' : '#111827',
+                                color: activeTab === tab ? 'white' : '#9ca3af',
+                                border: `1px solid ${activeTab === tab ? '#14b8a6' : '#374151'}`,
+                                borderRadius: '999px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                cursor: 'pointer',
                               }}
                             >
-                              {c.fishing_score}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '13px',
-                                fontWeight: '700',
-                                color: SC(c.fishing_score),
-                              }}
-                            >
-                              {SL(c.fishing_score)}
-                            </div>
-                          </div>
-
-                          <Depth l={c.water_level_m} f={c.flow_rate_cfs} />
-
-                          {Object.entries(c.score_breakdown.components).map(([k, v]) => (
-                            <Bar key={k} label={k.replace(/_/g, ' ')} value={v} />
+                              {icon}
+                            </button>
                           ))}
+                        </div>
 
-                          {c.score_breakdown.recommendations.length > 0 && (
-                            <div style={{ marginTop: '10px' }}>
-                              <div
-                                style={{
-                                  fontSize: '11px',
-                                  color: '#86efac',
-                                  marginBottom: '4px',
-                                  fontWeight: '700',
-                                }}
-                              >
-                                Recommendations
+                        {activeTab === 'score' && (
+                          <>
+                            <div
+                              style={{
+                                background: `linear-gradient(135deg,${SC(c.fishing_score)}20,${SC(c.fishing_score)}08)`,
+                                border: `1px solid ${SC(c.fishing_score)}50`,
+                                borderRadius: '10px',
+                                padding: '12px',
+                                marginBottom: '10px',
+                                textAlign: 'center',
+                              }}
+                            >
+                              <div style={{ fontSize: '28px', fontWeight: '800', color: SC(c.fishing_score), lineHeight: 1 }}>
+                                {c.fishing_score}
                               </div>
-                              {c.score_breakdown.recommendations.map((r, i) => (
-                                <div
-                                  key={i}
-                                  style={{
-                                    fontSize: '11px',
-                                    color: '#d1fae5',
-                                    marginBottom: '3px',
-                                  }}
-                                >
-                                  • {r}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {c.score_breakdown.warnings.length > 0 && (
-                            <div style={{ marginTop: '10px' }}>
-                              <div
-                                style={{
-                                  fontSize: '11px',
-                                  color: '#fca5a5',
-                                  marginBottom: '4px',
-                                  fontWeight: '700',
-                                }}
-                              >
-                                Warnings
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: SC(c.fishing_score) }}>
+                                {SL(c.fishing_score)}
                               </div>
-                              {c.score_breakdown.warnings.map((w, i) => (
-                                <div
-                                  key={i}
-                                  style={{
-                                    fontSize: '11px',
-                                    color: '#fecaca',
-                                    marginBottom: '3px',
-                                  }}
-                                >
-                                  • {w}
-                                </div>
-                              ))}
                             </div>
-                          )}
-                        </>
-                      )}
 
-                      {activeTab === 'water' && (
-                        <>
-                          <Row icon="🌡" label="Water temp" value={c.water_temp_c?.toFixed(1) ?? null} unit="°C" />
-                          <Row
-                            icon="🫧"
-                            label="Dissolved oxygen"
-                            value={c.dissolved_oxygen_mgl?.toFixed(1) ?? null}
-                            unit="mg/L"
-                          />
-                          <Row icon="🌫" label="Turbidity" value={c.turbidity_ntu?.toFixed(1) ?? null} unit="NTU" />
-                          <Row icon="⚗️" label="pH" value={c.ph?.toFixed(1) ?? null} />
-                          <Row icon="📏" label="Water level" value={c.water_level_m?.toFixed(2) ?? null} unit="m" />
-                          <Row icon="🚰" label="Flow rate" value={c.flow_rate_cfs?.toFixed(0) ?? null} unit="cfs" />
-                        </>
-                      )}
+                            <Depth l={c.water_level_m} f={c.flow_rate_cfs} />
 
-                      {activeTab === 'atmosphere' && (
-                        <>
-                          <Row icon="🌤" label="Air temp" value={c.air_temp_c?.toFixed(1) ?? null} unit="°C" />
-                          <Row icon="💨" label="Wind speed" value={c.wind_speed_ms?.toFixed(1) ?? null} unit="m/s" />
-                          <Row icon="🧭" label="Wind direction" value={c.wind_dir_deg?.toFixed(0) ?? null} unit="°" />
-                          <Row icon="🌡" label="Pressure" value={c.pressure_hpa?.toFixed(0) ?? null} unit="hPa" />
-                          <Row icon="💧" label="Humidity" value={c.humidity_pct?.toFixed(0) ?? null} unit="%" />
-                        </>
-                      )}
+                            {Object.entries(c.score_breakdown.components).map(([k, v]) => (
+                              <Bar key={k} label={k.replace(/_/g, ' ')} value={v} />
+                            ))}
 
-                      {activeTab === 'marine' && (
-                        <>
-                          <Row icon="🌊" label="Wave height" value={c.wave_height_m?.toFixed(2) ?? null} unit="m" />
-                          <Row icon="⏱" label="Wave period" value={c.wave_period_s?.toFixed(1) ?? null} unit="s" />
-                          <Row
-                            icon="🧭"
-                            label="Swell direction"
-                            value={c.swell_direction_deg?.toFixed(0) ?? null}
-                            unit="°"
-                          />
-                          <Row icon="🌙" label="Tide height" value={c.tide_height_m?.toFixed(2) ?? null} unit="m" />
-                          <Row icon="🔁" label="Tide type" value={c.tide_type} />
-                        </>
-                      )}
+                            {c.score_breakdown.recommendations.length > 0 && (
+                              <div style={{ marginTop: '10px' }}>
+                                <div style={{ fontSize: '11px', color: '#86efac', marginBottom: '4px', fontWeight: '700' }}>
+                                  Recommendations
+                                </div>
+                                {c.score_breakdown.recommendations.map((r, i) => (
+                                  <div key={i} style={{ fontSize: '11px', color: '#d1fae5', marginBottom: '3px' }}>
+                                    • {r}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
-                      {activeTab === 'bite' && <BiteTimePanel lat={spot.lat} lng={spot.lng} conditions={c} />}
-                      {activeTab === 'forecast' && <SevenDayForecast lat={spot.lat} lng={spot.lng} />}
-                      {activeTab === 'log' && <CatchLogger spotId={spot.id} spotName={spot.name} lat={spot.lat} lng={spot.lng} />}
-                      {activeTab === 'ai' && <FishBot spot={spot} conditions={c} />}
-                      {activeTab === 'identify' && <FishIdentifier />}
+                            {c.score_breakdown.warnings.length > 0 && (
+                              <div style={{ marginTop: '10px' }}>
+                                <div style={{ fontSize: '11px', color: '#fca5a5', marginBottom: '4px', fontWeight: '700' }}>
+                                  Warnings
+                                </div>
+                                {c.score_breakdown.warnings.map((w, i) => (
+                                  <div key={i} style={{ fontSize: '11px', color: '#fecaca', marginBottom: '3px' }}>
+                                    • {w}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
 
-                      <div style={{ marginTop: '10px', fontSize: '10px', color: '#6b7280' }}>
-                        {c.cached ? 'Cached' : 'Live'} • {new Date(c.captured_at).toLocaleString()}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+                        {activeTab === 'water' && (
+                          <>
+                            <Row icon="🌡" label="Water temp" value={c.water_temp_c?.toFixed(1) ?? null} unit="°C" />
+                            <Row icon="🫧" label="Dissolved oxygen" value={c.dissolved_oxygen_mgl?.toFixed(1) ?? null} unit="mg/L" />
+                            <Row icon="🌫" label="Turbidity" value={c.turbidity_ntu?.toFixed(1) ?? null} unit="NTU" />
+                            <Row icon="⚗️" label="pH" value={c.ph?.toFixed(1) ?? null} />
+                            <Row icon="📏" label="Water level" value={c.water_level_m?.toFixed(2) ?? null} unit="m" />
+                            <Row icon="🚰" label="Flow rate" value={c.flow_rate_cfs?.toFixed(0) ?? null} unit="cfs" />
+                          </>
+                        )}
+
+                        {activeTab === 'atmosphere' && (
+                          <>
+                            <Row icon="🌤" label="Air temp" value={c.air_temp_c?.toFixed(1) ?? null} unit="°C" />
+                            <Row icon="💨" label="Wind speed" value={c.wind_speed_ms?.toFixed(1) ?? null} unit="m/s" />
+                            <Row icon="🧭" label="Wind direction" value={c.wind_dir_deg?.toFixed(0) ?? null} unit="°" />
+                            <Row icon="🌡" label="Pressure" value={c.pressure_hpa?.toFixed(0) ?? null} unit="hPa" />
+                            <Row icon="💧" label="Humidity" value={c.humidity_pct?.toFixed(0) ?? null} unit="%" />
+                          </>
+                        )}
+
+                        {activeTab === 'marine' && (
+                          <>
+                            <Row icon="🌊" label="Wave height" value={c.wave_height_m?.toFixed(2) ?? null} unit="m" />
+                            <Row icon="⏱" label="Wave period" value={c.wave_period_s?.toFixed(1) ?? null} unit="s" />
+                            <Row icon="🧭" label="Swell direction" value={c.swell_direction_deg?.toFixed(0) ?? null} unit="°" />
+                            <Row icon="🌙" label="Tide height" value={c.tide_height_m?.toFixed(2) ?? null} unit="m" />
+                            <Row icon="🔁" label="Tide type" value={c.tide_type} />
+                          </>
+                        )}
+
+                        {activeTab === 'bite' && <BiteTimePanel lat={spot.lat} lng={spot.lng} conditions={c} />}
+                        {activeTab === 'forecast' && <SevenDayForecast lat={spot.lat} lng={spot.lng} />}
+                        {activeTab === 'log' && <CatchLogger spotId={spot.id} spotName={spot.name} lat={spot.lat} lng={spot.lng} />}
+                        {activeTab === 'ai' && <FishBot spot={spot} conditions={c} />}
+                        {activeTab === 'identify' && <FishIdentifier />}
+
+                        <div style={{ marginTop: '10px', fontSize: '10px', color: '#6b7280' }}>
+                          {c.cached ? 'Cached' : 'Live'} • {new Date(c.captured_at).toLocaleString()}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
     </div>
   );
 }
