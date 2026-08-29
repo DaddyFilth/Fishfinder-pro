@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { calculateSolunar } from '@/lib/scoring/solunar';
+import { SPECIES_NAMES } from '@/lib/speciesCatalog';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string; }
 interface Advice { error?: string; go_fishing?: boolean; best_time_today?: string; top_bait?: string; top_technique?: string; target_depth?: string; hotspot_tip?: string; caution?: string; }
@@ -54,7 +55,7 @@ export default function FishBot({ spot, conditions }: Props) {
     <div style={{ fontFamily:'system-ui,sans-serif', color:'white' }}>
       <select value={species} onChange={e=>setSpecies(e.target.value)}
         style={{ width:'100%', background:'#1e293b', color:'white', border:'1px solid #334155', borderRadius:'6px', padding:'5px 8px', fontSize:'11px', marginBottom:'8px' }}>
-        {['Largemouth Bass','Channel Catfish','Walleye','Rainbow Trout','Crappie','Striped Bass','Redfish/Red Drum','Flounder'].map(s=>(
+        {SPECIES_NAMES.map((s) => (
           <option key={s}>{s}</option>
         ))}
       </select>
