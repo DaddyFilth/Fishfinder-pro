@@ -1,15 +1,24 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
 import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import SocialTab from "@/components/SocialTab";
+import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
-interface Spot { id: string; name: string; lat: number; lng: number; water_type: string; spot_type: string; }
+interface SpotCondition { fishing_score?: number | null }
+
+const MAP_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'freshwater', label: 'Freshwater' },
+  { id: 'lake', label: 'Lake' },
+  { id: 'reservoir', label: 'Reservoir' },
+  { id: 'river', label: 'River' },
+] as const;
 
 async function getSpots(): Promise<Spot[]> {
   try {
@@ -23,10 +32,49 @@ export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
+  const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
+  const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
+  const scoreFetchInFlight = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     getSpots().then(setSpots);
   }, []);
+
+  useEffect(() => {
+    if (!spots.length) return;
+
+    const visibleSpots = filterSpots(spots, mapFilter);
+    visibleSpots.forEach((spot) => {
+      if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
+
+      scoreFetchInFlight.current[spot.id] = true;
+      setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
+
+      fetch(`/api/spots/${spot.id}/conditions`)
+        .then(async (res) => {
+          if (!res.ok) {
+            setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
+            return;
+          }
+
+          const data = (await res.json()) as SpotCondition;
+          const fishingScore = typeof data.fishing_score === 'number' ? data.fishing_score : 0;
+          setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
+        })
+        .catch(() => {
+          setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
+        })
+        .finally(() => {
+          scoreFetchInFlight.current[spot.id] = false;
+          setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
+        });
+    });
+  }, [spots, mapFilter, conditionScores]);
+
+  const visibleSpots = filterSpots(spots, mapFilter);
+  const rankedSpots = rankSpots(visibleSpots, conditionScores);
+  const topSpots = rankedSpots.slice(0, 8);
 
   const tabs = [
 { id: "map",      icon: "🗺",  label: "Map"      },
@@ -62,18 +110,33 @@ export default function MobilePage() {
         {/* MAP TAB */}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
-            <MapWrapper spots={spots} />
+            <MapWrapper spots={visibleSpots} />
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
-              📍 {spots.length} spots loaded
+              📍 {visibleSpots.length} spots loaded
             </div>
 
-            {/* Floating layer toggle */}
+            {/* Floating filter toggle */}
             <div style={{ position:'absolute', top:'12px', right:'12px', display:'flex', flexDirection:'column', gap:'6px', zIndex:10 }}>
-              {['🗺','📏','🌡','📍'].map((icon, i) => (
-                <button key={i} style={{ width:'36px', height:'36px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'8px', fontSize:'16px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
-                  {icon}
+              {MAP_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => setMapFilter(filter.id)}
+                  style={{
+                    minWidth:'84px',
+                    background: mapFilter === filter.id ? '#0369a1' : 'rgba(10,15,30,0.9)',
+                    border: mapFilter === filter.id ? '1px solid #7dd3fc' : '1px solid #1e293b',
+                    borderRadius:'8px',
+                    fontSize:'10px',
+                    cursor:'pointer',
+                    backdropFilter:'blur(8px)',
+                    color: mapFilter === filter.id ? '#e0f2fe' : '#cbd5e1',
+                    padding:'6px 8px',
+                    fontWeight: mapFilter === filter.id ? '700' : '500',
+                  }}
+                >
+                  {filter.label}
                 </button>
               ))}
             </div>
@@ -96,20 +159,25 @@ export default function MobilePage() {
                     <span>🏆 TOP SPOTS TODAY</span>
                     <span style={{ color:'#0ea5e9' }}>Hide ↓</span>
                   </div>
-                  {spots.slice(0,8).map((s, i) => (
-                    <div key={s.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); }}
-                      style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:'1px solid #0f172a', cursor:'pointer' }}>
-                      <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{s.name}</div>
-                        <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{s.water_type} · {s.spot_type}</div>
+                  {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
+                    const scoreValue = loadingScores[spot.id] ? '…' : score;
+                    return (
+                      <div key={spot.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); }}
+                        style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:'1px solid #0f172a', cursor:'pointer' }}>
+                        <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
+                          <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}</div>
+                        </div>
+                        <div style={{ textAlign:'right' }}>
+                          <div style={{ fontSize:'18px', fontWeight:'bold', color:'#22c55e' }}>{scoreValue}</div>
+                          <div style={{ fontSize:'8px', color:'#475569' }}>SCORE</div>
+                        </div>
                       </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:'18px', fontWeight:'bold', color:'#22c55e' }}>82</div>
-                        <div style={{ fontSize:'8px', color:'#475569' }}>SCORE</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  }) : (
+                    <div style={{ color:'#64748b', fontSize:'12px', padding:'12px 0' }}>No spots match this filter yet.</div>
+                  )}
                 </div>
               )}
             </div>
@@ -145,16 +213,21 @@ export default function MobilePage() {
         {tab === 'top' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>🏆 Top Spots</div>
-            {spots.slice(0,20).map((s, i) => (
-              <div key={s.id} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'12px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px' }}>
-                <span style={{ fontSize:'20px', fontWeight:'bold', color:'#334155', minWidth:'28px' }}>#{i+1}</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{s.name}</div>
-                  <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{s.water_type} · {s.spot_type}</div>
+            {rankedSpots.length > 0 ? rankedSpots.map(({ spot, score }, i) => {
+              const scoreValue = loadingScores[spot.id] ? '…' : score;
+              return (
+                <div key={spot.id} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'12px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px' }}>
+                  <span style={{ fontSize:'20px', fontWeight:'bold', color:'#334155', minWidth:'28px' }}>#{i+1}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
+                    <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}</div>
+                  </div>
+                  <div style={{ background:'#14532d', color:'#4ade80', fontSize:'14px', fontWeight:'bold', padding:'4px 10px', borderRadius:'16px' }}>{scoreValue}</div>
                 </div>
-                <div style={{ background:'#14532d', color:'#4ade80', fontSize:'14px', fontWeight:'bold', padding:'4px 10px', borderRadius:'16px' }}>82</div>
-              </div>
-            ))}
+              );
+            }) : (
+              <div style={{ color:'#64748b', fontSize:'12px', padding:'32px 0', textAlign:'center' }}>No live scores available for the current filter.</div>
+            )}
           </div>
         )}
 
