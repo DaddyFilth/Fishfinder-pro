@@ -1,24 +1,50 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { ChangeEvent, useRef, useState } from 'react';
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 
-export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }: any) {
+interface FishIdentifierResult {
+  is_fish?: boolean;
+  species?: string;
+  scientific_name?: string;
+  confidence?: number;
+  size_estimate?: string;
+  weight_estimate?: string;
+  best_baits?: string[];
+  distinguishing_features?: string[];
+  fun_fact?: string;
+}
+
+interface CatchAutofillData {
+  species?: string;
+  weight_lbs?: string;
+  length_in?: string;
+  bait?: string;
+  notes?: string;
+}
+
+interface FishIdentifierModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onApplyToCatch?: (data: CatchAutofillData) => void;
+}
+
+export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }: FishIdentifierModalProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<FishIdentifierResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleImage = (e: any) => {
+  const handleImage = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null); setResult(null);
     const reader = new FileReader();
-    reader.onload = (evt: any) => {
-      const b64 = evt.target.result;
+    reader.onload = (evt: ProgressEvent<FileReader>) => {
+      const b64 = evt.target?.result as string;
       setImagePreview(b64);
       analyze(b64);
     };
@@ -40,8 +66,8 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
       } else {
         setResult(data);
       }
-    } catch (err: any) {
-      setError(err.message || 'Error connecting to AI model');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error connecting to AI model');
     } finally {
       setLoading(false);
     }
@@ -94,19 +120,19 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
                 <div style={{ fontSize:'11px',color:'#64748b' }}>{result.size_estimate} · {result.weight_estimate}</div>
               </div>
             </div>
-            {result.distinguishing_features?.length > 0 && (
+            {(result.distinguishing_features?.length ?? 0) > 0 && (
               <div style={{ marginBottom:'8px' }}>
                 <div style={{ fontSize:'9px',color:'#64748b',marginBottom:'3px' }}>FEATURES</div>
-                {result.distinguishing_features.map((f: string, i: number) => (
+                {result.distinguishing_features?.map((f: string, i: number) => (
                   <p key={i} style={{ fontSize:'10px',color:'#94a3b8',margin:'1px 0' }}>• {f}</p>
                 ))}
               </div>
             )}
-            {result.best_baits?.length > 0 && (
+            {(result.best_baits?.length ?? 0) > 0 && (
               <div style={{ marginBottom:'8px' }}>
                 <div style={{ fontSize:'9px',color:'#64748b',marginBottom:'3px' }}>TOP BAITS</div>
                 <div style={{ display:'flex',flexWrap:'wrap',gap:'3px' }}>
-                  {result.best_baits.map((b: string, i: number) => (
+                  {result.best_baits?.map((b: string, i: number) => (
                     <span key={i} style={{ background:'#0f3460',color:'#93c5fd',fontSize:'9px',padding:'2px 6px',borderRadius:'10px' }}>{b}</span>
                   ))}
                 </div>

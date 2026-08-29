@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { calculateSolunar, hourlyActivityForecast } from '@/lib/scoring/solunar';
 import { getSpeciesAdvice, AVAILABLE_SPECIES, getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 
@@ -85,7 +85,7 @@ export default function BiteTimePanel({ lat, lng, conditions }: Props) {
     is_daytime: conditions.is_daytime ?? (now.getHours() > 6 && now.getHours() < 20),
   });
 
-  const fetchAIPrediction = useCallback(async (species: string) => {
+  const fetchAIPrediction = async (species: string) => {
     setAILoading(true);
     setAIError(null);
     setAIPrediction(null);
@@ -111,7 +111,7 @@ export default function BiteTimePanel({ lat, lng, conditions }: Props) {
     } finally {
       setAILoading(false);
     }
-  }, [lat, lng, conditions, solunar.solunarScore, solunar.moonPhaseName]);
+  };
 
   const handleSpeciesChange = (species: string) => {
     setSelectedSpecies(species);
@@ -273,7 +273,7 @@ export default function BiteTimePanel({ lat, lng, conditions }: Props) {
             <p style={{ fontSize:'10px',color:'#94a3b8',margin:'0 0 8px',lineHeight:1.4 }}>{aiPrediction.summary}</p>
 
             {/* Bite windows */}
-            <div style={{ fontSize:'9px',color:'#64748b',marginBottom:'4px',fontWeight:'bold' }}>📅 TODAY'S BEST WINDOWS</div>
+            <div style={{ fontSize:'9px',color:'#64748b',marginBottom:'4px',fontWeight:'bold' }}>📅 TODAY&apos;S BEST WINDOWS</div>
             {aiPrediction.windows?.map((w, i) => (
               <div key={i} style={{ background:'#1e293b',borderRadius:'6px',padding:'8px',marginBottom:'6px',
                 borderLeft:`3px solid ${QC(w.quality)}` }}>
@@ -316,7 +316,7 @@ export default function BiteTimePanel({ lat, lng, conditions }: Props) {
           <div style={{ background:'#0c1929',borderRadius:'8px',padding:'12px',textAlign:'center',border:'1px dashed #1e3a5f' }}>
             <div style={{ fontSize:'20px',marginBottom:'4px' }}>🤖</div>
             <p style={{ color:'#475569',fontSize:'10px',margin:0 }}>
-              Tap ⚡ Predict for AI-generated bite windows for {selectedSpecies} based on today's live conditions
+              Tap ⚡ Predict for AI-generated bite windows for {selectedSpecies} based on today&apos;s live conditions
             </p>
           </div>
         )}
