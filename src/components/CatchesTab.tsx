@@ -1,14 +1,14 @@
 'use client';
+import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { useState } from 'react';
 
 const SPECIES_LIST = ['Largemouth Bass','Channel Catfish','Bluegill','Redfish','Speckled Trout','Crappie','Flounder','Striped Bass','Carp','Pike','Walleye','Trout'];
-interface Catch { id:string; species:string; weight:string; length:string; spot:string; date:string; notes:string; emoji:string; }
+interface Catch { id:string; species:string; weight:string; length:string; spot:string; date:string; notes:string; }
 const SAMPLE:Catch[] = [
-  { id:'1', species:'Largemouth Bass', weight:'4.2', length:'18', spot:'Lake Fork North', date:'2026-08-25', notes:'Topwater frog at dawn', emoji:'🐟' },
-  { id:'2', species:'Redfish', weight:'7.8', length:'24', spot:'Galveston Bay Flats', date:'2026-08-22', notes:'Live shrimp on incoming tide', emoji:'🦈' },
-  { id:'3', species:'Crappie', weight:'1.1', length:'11', spot:'Toledo Bend Pier', date:'2026-08-20', notes:'Small jig under bridge', emoji:'🐠' },
+  { id:'1', species:'Largemouth Bass', weight:'4.2', length:'18', spot:'Lake Fork North', date:'2026-08-25', notes:'Topwater frog at dawn' },
+  { id:'2', species:'Redfish', weight:'7.8', length:'24', spot:'Galveston Bay Flats', date:'2026-08-22', notes:'Live shrimp on incoming tide' },
+  { id:'3', species:'Crappie', weight:'1.1', length:'11', spot:'Toledo Bend Pier', date:'2026-08-20', notes:'Small jig under bridge' },
 ];
-const EMOJI_MAP:Record<string,string> = {'Largemouth Bass':'🐟','Channel Catfish':'🐠','Bluegill':'🐡','Redfish':'🦈','Speckled Trout':'🐟','Crappie':'🐠','Flounder':'🦈','Striped Bass':'🐟','Carp':'🐠','Pike':'🐟','Walleye':'🐟','Trout':'🐟'};
 
 export default function CatchesTab() {
   const [catches, setCatches] = useState<Catch[]>(SAMPLE);
@@ -17,7 +17,7 @@ export default function CatchesTab() {
 
   function logCatch() {
     if(!form.weight||!form.spot) return;
-    const c:Catch = { id:Date.now().toString(), species:form.species, weight:form.weight, length:form.length, spot:form.spot, date:new Date().toISOString().split('T')[0], notes:form.notes, emoji:EMOJI_MAP[form.species]||'🐟' };
+    const c:Catch = { id:Date.now().toString(), species:form.species, weight:form.weight, length:form.length, spot:form.spot, date:new Date().toISOString().split('T')[0], notes:form.notes };
     setCatches(prev=>[c,...prev]);
     setForm({ species:'Largemouth Bass', weight:'', length:'', spot:'', notes:'' });
     setLogging(false);
@@ -66,7 +66,7 @@ export default function CatchesTab() {
       <div style={{flex:1,overflowY:'auto',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'8px'}}>
         {catches.map(c=>(
           <div key={c.id} style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'12px',display:'flex',gap:'12px',alignItems:'center'}}>
-            <div style={{fontSize:'32px'}}>{c.emoji}</div>
+            <img src={getSpeciesImage(c.species)} alt={c.species} style={{width:'40px',height:'40px',objectFit:'cover',borderRadius:'8px'}} />
             <div style={{flex:1}}>
               <div style={{fontSize:'13px',fontWeight:'bold',color:'#e2e8f0'}}>{c.species}</div>
               <div style={{fontSize:'10px',color:'#64748b',marginBottom:'4px'}}>{c.spot} · {c.date}</div>

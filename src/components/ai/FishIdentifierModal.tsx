@@ -89,7 +89,7 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
     <div style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px' }}>
       <div style={{ background:'#0f172a',border:'1px solid #334155',borderRadius:'12px',width:'100%',maxWidth:'440px',maxHeight:'85vh',overflowY:'auto',padding:'16px',color:'white' }}>
         <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px' }}>
-          <span style={{ fontWeight:'bold',fontSize:'15px' }}>🐟 AI Fish Species Scanner</span>
+          <span style={{ fontWeight:'bold',fontSize:'15px' }}>AI Fish Species Scanner</span>
           <button onClick={onClose} style={{ background:'transparent',border:'none',color:'#94a3b8',fontSize:'18px',cursor:'pointer' }}>✕</button>
         </div>
 

@@ -251,31 +251,40 @@ export const AVAILABLE_SPECIES = Object.keys(SPECIES_DB);
 
 // Wikimedia Commons — public domain fish illustrations
 export const SPECIES_IMAGES: Record<string, string> = {
-  'Largemouth Bass':  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Largemouth_bass.png/320px-Largemouth_bass.png',
-  'Smallmouth Bass':  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Micropterus_dolomieu.jpg/320px-Micropterus_dolomieu.jpg',
-  'Spotted Bass':     'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Micropterus_punctulatus.jpg/320px-Micropterus_punctulatus.jpg',
-  'Channel Catfish':  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ictalurus_punctatus.jpg/320px-Ictalurus_punctatus.jpg',
-  'Blue Catfish':     'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Ictalurus_furcatus.jpg/320px-Ictalurus_furcatus.jpg',
-  'Flathead Catfish': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Flathead_catfish.jpg/320px-Flathead_catfish.jpg',
-  'Walleye':          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Walleye08.jpg/320px-Walleye08.jpg',
-  'Rainbow Trout':    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rainbow_trout.png/320px-Rainbow_trout.png',
-  'Brown Trout':      'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/BrownTrout.jpg/320px-BrownTrout.jpg',
-  'Crappie':          'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Pomoxis_nigromaculatus.jpg/320px-Pomoxis_nigromaculatus.jpg',
-  'Black Crappie':    'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Pomoxis_nigromaculatus.jpg/320px-Pomoxis_nigromaculatus.jpg',
-  'White Crappie':    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Pomoxis_annularis.jpg/320px-Pomoxis_annularis.jpg',
-  'Bluegill':         'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Lepomis_macrochirus.jpg/320px-Lepomis_macrochirus.jpg',
-  'Redear Sunfish':   'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Redear_sunfish.jpg/320px-Redear_sunfish.jpg',
-  'Striped Bass':     'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Striped_bass.jpg/320px-Striped_bass.jpg',
-  'White Bass':       'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Morone_chrysops.jpg/320px-Morone_chrysops.jpg',
-  'Hybrid Striper':   'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Striped_bass.jpg/320px-Striped_bass.jpg',
-  'Redfish/Red Drum': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Red_drum_fish.jpg/320px-Red_drum_fish.jpg',
-  'Flounder':         'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Southern_flounder.jpg/320px-Southern_flounder.jpg',
-  'Sauger':           'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Sander_canadensis.jpg/320px-Sander_canadensis.jpg',
-  'Common Carp':      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Cyprinus_carpio.jpg/320px-Cyprinus_carpio.jpg',
-  'Northern Pike':    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Esox_lucius.jpg/320px-Esox_lucius.jpg',
+  'Largemouth Bass': '/species/largemouth-bass.jpg',
+  'Smallmouth Bass': '/species/smallmouth-bass.jpg',
+  'Spotted Bass': '/species/spotted-bass.jpg',
+  'Channel Catfish': '/species/channel-catfish.jpg',
+  'Blue Catfish': '/species/blue-catfish.jpg',
+  'Flathead Catfish': '/species/flathead-catfish.jpg',
+  'Walleye': '/species/walleye.jpg',
+  'Rainbow Trout': '/species/rainbow-trout.jpg',
+  'Brown Trout': '/species/brown-trout.jpg',
+  'Crappie': '/species/crappie.jpg',
+  'Black Crappie': '/species/black-crappie.jpg',
+  'White Crappie': '/species/white-crappie.jpg',
+  'Bluegill': '/species/bluegill.jpg',
+  'Redear Sunfish': '/species/redear-sunfish.jpg',
+  'Striped Bass': '/species/striped-bass.jpg',
+  'White Bass': '/species/white-bass.jpg',
+  'Hybrid Striper': '/species/hybrid-striper.jpg',
+  'Redfish/Red Drum': '/species/redfish-red-drum.jpg',
+  'Flounder': '/species/flounder.jpg',
+  'Sauger': '/species/sauger.jpg',
+  'Common Carp': '/species/common-carp.jpg',
+  'Northern Pike': '/species/northern-pike.jpg',
+};
+
+const SPECIES_ALIASES: Record<string, string> = {
+  'Redfish': 'Redfish/Red Drum',
+  'Red Drum': 'Redfish/Red Drum',
+  'Trout': 'Rainbow Trout',
+  'Speckled Trout': 'Rainbow Trout',
+  'Carp': 'Common Carp',
+  'Pike': 'Northern Pike',
 };
 
 export function getSpeciesImage(speciesName: string): string {
-  return SPECIES_IMAGES[speciesName]
-    ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Largemouth_bass.png/320px-Largemouth_bass.png';
+  const resolved = SPECIES_ALIASES[speciesName] || speciesName;
+  return SPECIES_IMAGES[resolved] ?? SPECIES_IMAGES['Largemouth Bass'];
 }
