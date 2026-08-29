@@ -235,11 +235,8 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [baseLayer,
-  setBaseLayer]=
-  useState<BaseLayer>('terrain');
   const baseLayers: Record<
-    BaseLayer,
+  BaseLayer,
   {
     url: string;
     attribution: string;
@@ -319,6 +316,37 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
     setLayers((p) => ({ ...p, [key]: !p[key] }));
   };
 
+  const baseLayers: Record<
+    BaseLayer,
+    {
+      url: string;
+      attribution: string;
+      label: string;
+      maxZoom?: number;
+      subdomains?: string[];
+    }
+  > = {
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri',
+      label: '🛰️ Satellite',
+      maxZoom: 18,
+    },
+    terrain: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+      label: '⛰️ Terrain',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c'],
+    },
+    street: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+      label: '🗺️ Street',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c'],
+    },
+  };
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden' }}>
