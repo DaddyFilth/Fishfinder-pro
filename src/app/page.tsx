@@ -110,19 +110,6 @@ export default function MobilePage() {
     { id: "social",   icon: "👥",  label: "Social"    },
     { id: "settings", icon: "⚙️",  label: "Settings"  },
   ] as const;
-
-=======
-{ id: "map",      icon: "🗺",  label: "Map"      },
-{ id: "log",      icon: "📓",  label: "Logbook"  },
-{ id: "ai",       icon: "🤖",  label: "AI"       },
-{ id: "top",      icon: "🏆",  label: "Top Spots"},
-{ id: "species",  icon: "◎",   label: "Species"  },
-{ id: "settings", icon: "⚙️", label: "Settings" },
-{ id: "bitetime", icon: "⏱",  label: "Bite Time"},
-{ id: "weather",  icon: "🌤",  label: "Weather"  },
-{ id: "social",   icon: "👥",  label: "Social"   },
-{ id: "catches",  icon: "◈",   label: "Catches"  },
-] as const;
 >>>>>>> a110a9328e5d62d1fa726120585ff89bc9f61fcd
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:'#030712', color:'white', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>
