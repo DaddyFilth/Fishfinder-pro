@@ -288,3 +288,4 @@ export function getSpeciesImage(speciesName: string): string {
   const resolved = SPECIES_ALIASES[speciesName] || speciesName;
   return SPECIES_IMAGES[resolved] ?? SPECIES_IMAGES['Largemouth Bass'];
 }
+
