@@ -1,0 +1,37 @@
+npm notice run fishfinder-pro@0.1.0 build
+npm notice run next build --webpack
+▲ Next.js 16.3.3 (webpack)
+- Environments: .env.local
+✓ Running next.config.ts took 991ms
+  Skipping creating a lockfile at /data/data/com.termux/files/home/fishfinder-pro/.next/lock because we're using WASM bindings
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.7s
+  Running TypeScript ...
+  Finished TypeScript in 8.9s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/12) ...
+  Generating static pages using 1 worker (3/12) 
+  Generating static pages using 1 worker (6/12) 
+  Generating static pages using 1 worker (9/12) 
+✓ Generating static pages using 1 worker (12/12) in 2.1s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/ai/advisor
+├ ƒ /api/ai/analyze
+├ ƒ /api/ai/bite-times
+├ ƒ /api/ai/chat
+├ ƒ /api/ai/identify
+├ ƒ /api/ai/suggest-spots
+├ ƒ /api/catches
+├ ƒ /api/spots
+└ ƒ /api/spots/[spotId]/conditions
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
