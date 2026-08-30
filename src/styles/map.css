@@ -1,0 +1,46 @@
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.fish-map-shell {
+  position: fixed;
+  z-index: 0;
+  top: 72px;
+  right: 0;
+  bottom: 72px;
+  left: 0;
+  width: 100%;
+  min-height: 320px;
+  background: #06101e;
+}
+
+.fish-map,
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  background: #06101e;
+  font: inherit;
+}
+
+.leaflet-control-container {
+  z-index: 20;
+}
+
+@media (max-width: 480px) {
+  .fish-map-shell {
+    top: 64px;
+    bottom: 86px;
+  }
+}
