@@ -1,7 +1,6 @@
 'use client';
-import dynamic from 'next/dynamic';
 
-const FishingMap = dynamic(() => import('@/components/FishingMap'), { ssr: false });
+import dynamic from 'next/dynamic';
 
 interface Spot {
   id: string;
@@ -12,6 +11,33 @@ interface Spot {
   spot_type: string;
 }
 
-export default function MapWrapper({ spots }: { spots: Spot[] }) {
-  return <div style={{width:"100%",height:"100%",minHeight:"400px"}}><FishingMap spots={spots} /></div>;
+interface FishingMapProps {
+  spots: Spot[];
+}
+
+const FishingMap = dynamic<FishingMapProps>(() => import('./FishingMap'), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        minHeight: '500px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
+        color: '#cbd5e1',
+        fontSize: '14px',
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+      }}
+    >
+      Loading fishing map...
+    </div>
+  ),
+});
+
+export default function MapWrapper({ spots }: FishingMapProps) {
+  return <FishingMap spots={spots} />;
 }
