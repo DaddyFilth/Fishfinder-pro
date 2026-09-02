@@ -61,13 +61,11 @@ for line in lines:
         new_lines.append("      setError(err instanceof Error ? err.message : 'Error connecting to AI model');")
     else:
         new_lines.append(line)
-p.write_text("
-".join(new_lines))
+p.write_text("\n".join(new_lines))
 print("FishIdentifierModal fixed")
 
 p = Path("src/components/logbook/CatchLogger.tsx")
 lines = p.read_text().splitlines()
 lines = [l for l in lines if "import FishIdentifierModal" not in l]
-p.write_text("
-".join(lines))
+p.write_text("\n".join(lines))
 print("CatchLogger fixed")
