@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "installCommand": "npm install --no-fund --no-audit",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev -- --hostname 0.0.0.0 --port 3000"
+}
