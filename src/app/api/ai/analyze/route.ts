@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       model: OLLAMA_MODEL,
       max_tokens: 400,
       temperature: 0.3,
+      response_format: { type: 'json_object' },
       messages: [{
         role: 'user',
         content: `You are a fishing conditions analyst. Given these water/weather conditions at "${spotData.name}", write a 3-sentence plain-English summary for an angler. Be specific, practical, and conversational. Mention what the conditions mean for fish behavior.
