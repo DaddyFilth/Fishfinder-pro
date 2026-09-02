@@ -30,6 +30,8 @@ interface FishIdentifierModalProps {
   onApplyToCatch?: (data: CatchAutofillData) => void;
 }
 
+const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
 export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }: FishIdentifierModalProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,12 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null); setResult(null);
+    if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+      setImagePreview(null);
+      setError('Use a JPEG, PNG, or WebP image.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (evt: ProgressEvent<FileReader>) => {
       const b64 = evt.target?.result as string;
@@ -94,7 +102,7 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
           <button onClick={onClose} style={{ background:'transparent',border:'none',color:'#94a3b8',fontSize:'18px',cursor:'pointer' }}>✕</button>
         </div>
 
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={handleImage} />
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style={{ display:'none' }} onChange={handleImage} />
 
         {!imagePreview && (
           <div onClick={() => fileInputRef.current?.click()} style={{ border:'2px dashed #38bdf8',borderRadius:'8px',padding:'24px 16px',textAlign:'center',cursor:'pointer',background:'#0b1329',marginBottom:'12px' }}>
