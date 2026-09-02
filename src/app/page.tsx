@@ -117,29 +117,7 @@ export default function MobilePage() {
               📍 {visibleSpots.length} spots loaded
             </div>
 
-            {/* Floating filter toggle */}
-            <div style={{ position:'absolute', top:'12px', right:'12px', display:'flex', flexDirection:'column', gap:'6px', zIndex:10 }}>
-              {MAP_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  onClick={() => setMapFilter(filter.id)}
-                  style={{
-                    minWidth:'84px',
-                    background: mapFilter === filter.id ? '#0369a1' : 'rgba(10,15,30,0.9)',
-                    border: mapFilter === filter.id ? '1px solid #7dd3fc' : '1px solid #1e293b',
-                    borderRadius:'8px',
-                    fontSize:'10px',
-                    cursor:'pointer',
-                    backdropFilter:'blur(8px)',
-                    color: mapFilter === filter.id ? '#e0f2fe' : '#cbd5e1',
-                    padding:'6px 8px',
-                    fontWeight: mapFilter === filter.id ? '700' : '500',
-                  }}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
+
 
             {/* Slide-up sheet handle */}
             <div
@@ -247,6 +225,32 @@ export default function MobilePage() {
         {tab === 'settings' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+            
+            {/* Map Filters */}
+            <div style={{ marginBottom:'20px' }}>
+              <div style={{ fontSize:'12px', fontWeight:'bold', color:'#64748b', marginBottom:'8px' }}>🗺 Map Filters</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {MAP_FILTERS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setMapFilter(filter.id as SpotFilter)}
+                    style={{
+                      background: mapFilter === filter.id ? '#0369a1' : '#0a0f1e',
+                      border: mapFilter === filter.id ? '1px solid #7dd3fc' : '1px solid #1e293b',
+                      borderRadius:'8px',
+                      fontSize:'11px',
+                      cursor:'pointer',
+                      color: mapFilter === filter.id ? '#e0f2fe' : '#cbd5e1',
+                      padding:'6px 12px',
+                      fontWeight: mapFilter === filter.id ? '700' : '500',
+                    }}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             {[['🔎','Notifications','Push alerts for hot bites'],['📍','Location','Use GPS for nearby spots'],['🌡','Units','Imperial (lbs, ft, °F)'],['🗺','Map Style','Dark (default)'],['🔁','Auto-refresh','Every 30 minutes']].map(([icon,title,sub]) => (
               <div key={title as string} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px', justifyContent:'space-between' }}>
                 <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
