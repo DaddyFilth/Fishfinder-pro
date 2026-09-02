@@ -10,6 +10,7 @@ export const OLLAMA_MODEL = process.env.OLLAMA_MODEL?.trim() || 'llama3.1';
 export const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL?.trim() || 'llama3.2-vision';
 
 export function getOllama() {
-  const baseURL = (process.env.OLLAMA_BASE_URL?.trim() || 'http://localhost:11434/v1');
+  const configuredBaseURL = process.env.OLLAMA_BASE_URL?.trim() || 'http://localhost:11434';
+  const baseURL = `${configuredBaseURL.replace(/\/+$/, '').replace(/\/v1$/, '')}/v1`;
   return new OpenAI({ apiKey: 'ollama', baseURL });
 }

@@ -54,6 +54,7 @@ Respond with ONLY valid JSON:
       model: OLLAMA_MODEL,
       max_tokens: 700,
       temperature: 0.4,
+      response_format: { type: 'json_object' },
       messages: [{ role: 'user', content: prompt }]
     });
     const raw = response.choices[0].message.content ?? '{}';

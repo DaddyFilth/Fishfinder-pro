@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -179,7 +179,7 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
   const recentPins = rankedSpots.slice(0, 18);
   const liveFeeds = rankedSpots.length;
 
-  const load = async (id: string) => {
+  const load = useCallback(async (id: string) => {
     if (conditions[id] || loading[id]) return;
     setLoading((p) => ({ ...p, [id]: true }));
     try {
@@ -193,7 +193,7 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
     } finally {
       setLoading((p) => ({ ...p, [id]: false }));
     }
-  };
+  }, [conditions, loading]);
 
   const retry = (id: string) => {
     setErrors((p) => ({ ...p, [id]: '' }));
@@ -207,7 +207,7 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
 
   useEffect(() => {
     spots.forEach((spot) => load(spot.id));
-  }, [spots]);
+  }, [load, spots]);
 
   const toggleLayer = (key: keyof typeof layers) => {
     setLayers((p) => ({ ...p, [key]: !p[key] }));

@@ -1,0 +1,22 @@
+{
+  "name": "Fishfinder Pro",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "remoteEnv": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "updateContentCommand": "npm ci",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Fishfinder Pro",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}

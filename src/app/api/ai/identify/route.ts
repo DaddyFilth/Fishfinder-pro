@@ -5,12 +5,20 @@ import { SPECIES } from '@/lib/speciesCatalog';
 const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) =>
   `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
 ).join('\n');
+const SUPPORTED_IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 
 const openai = getOllama();
 
 export async function POST(req: NextRequest) {
-  const { image_base64 } = await req.json();
-  if (!image_base64) return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+  let image_base64: unknown;
+  try {
+    ({ image_base64 } = await req.json());
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  if (typeof image_base64 !== 'string' || !SUPPORTED_IMAGE_DATA_URL.test(image_base64)) {
+    return NextResponse.json({ error: 'Use a JPEG, PNG, or WebP image' }, { status: 400 });
+  }
 
   try {
     const response = await openai.chat.completions.create({
