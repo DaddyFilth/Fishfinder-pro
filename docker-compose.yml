@@ -1,0 +1,41 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: fishfinder-ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fishfinder-app
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - .env.container
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://example.supabase.co}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-example-anon-key}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-example-service-role-key}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-llama3.2-vision}
+      NWS_BASE: ${NWS_BASE:-https://api.weather.gov}
+      USGS_BASE: ${USGS_BASE:-https://api.waterdata.usgs.gov}
+      OPEN_METEO_MARINE: ${OPEN_METEO_MARINE:-https://marine-api.open-meteo.com/v1/marine}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+
+volumes:
+  ollama_data:

@@ -66,6 +66,28 @@ OPEN_METEO_MARINE=https://marine-api.open-meteo.com/v1/marine
 
 For the AI routes to work, make sure a local Ollama server is running and that the configured model names are available in your Ollama installation.
 
+## Container deployment
+
+The repo includes a single helper script that runs the app and Ollama together in Docker:
+
+```bash
+chmod +x deploy-container.sh
+./deploy-container.sh
+```
+
+This creates a private/local container deployment with:
+
+- app on http://localhost:3000
+- Ollama on http://localhost:11434
+
+To prepare for a later public deployment, run:
+
+```bash
+./deploy-container.sh --public https://fishfinder.example.com https://ollama.example.com
+```
+
+That keeps the app and AI API pointed at a public host while still using the same containerized stack.
+
 ## Vercel deployment
 
 The project includes a Vercel config at `vercel.json` so it is ready to deploy as a standard Next.js application. In Vercel, add the same environment variables from `.env.example` to the project settings before the first deployment.
