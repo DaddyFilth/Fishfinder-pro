@@ -1,7 +1,8 @@
 {
   "name": "Fishfinder Pro",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "context": ".."
   },
   "remoteEnv": {
     "NEXT_TELEMETRY_DISABLED": "1"
