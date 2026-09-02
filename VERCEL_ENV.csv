@@ -1,0 +1,8 @@
+Variable Name,Value,Environment,Required,Description
+NEXT_PUBLIC_SUPABASE_URL,https://your-project-id.supabase.co,Production/Preview,YES,Supabase project URL - from https://app.supabase.com/project/_/settings/api
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,[your-anon-key],Production/Preview,YES,Supabase anon public key - from https://app.supabase.com/project/_/settings/api
+SUPABASE_SERVICE_ROLE_KEY,[your-service-role-key],Production Only,YES,Supabase service role secret - from https://app.supabase.com/project/_/settings/api - KEEP SECRET
+OLLAMA_BASE_URL,http://localhost:11434/v1,Any,NO,Base URL for Ollama AI - only if using Ollama instead of OpenAI
+OLLAMA_MODEL,llama3.1,Any,NO,Ollama model name - only if using Ollama
+OLLAMA_VISION_MODEL,llama3.2-vision,Any,NO,Ollama vision model for image analysis - only if using Ollama
+OPENAI_API_KEY,[your-openai-key],Production Only,NO,OpenAI API key (sk-...) - only if NOT using Ollama

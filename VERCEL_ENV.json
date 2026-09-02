@@ -1,0 +1,140 @@
+{
+  "description": "Fishfinder-Pro Vercel Environment Variables Reference",
+  "date": "2026-09-02",
+  "environmentVariables": {
+    "required": {
+      "NEXT_PUBLIC_SUPABASE_URL": {
+        "value": "https://your-project-id.supabase.co",
+        "type": "URL (Public)",
+        "environments": ["Production", "Preview"],
+        "description": "Supabase project URL",
+        "howToGet": "https://app.supabase.com → Project → Settings → API → Project URL",
+        "security": "Safe to expose (public)",
+        "example": "https://abcdefghij.supabase.co"
+      },
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": {
+        "value": "[your-anon-key]",
+        "type": "JWT Token (Public)",
+        "environments": ["Production", "Preview"],
+        "description": "Supabase anonymous public API key",
+        "howToGet": "https://app.supabase.com → Project → Settings → API → anon public",
+        "security": "Safe to expose (public anon key)",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "SUPABASE_SERVICE_ROLE_KEY": {
+        "value": "[your-service-role-key]",
+        "type": "JWT Token (Secret)",
+        "environments": ["Production"],
+        "description": "Supabase service role secret key",
+        "howToGet": "https://app.supabase.com → Project → Settings → API → service_role secret",
+        "security": "⚠️ SECRET - Production only, never expose in Preview/Dev",
+        "warning": "Keep this key confidential - never commit to Git",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    },
+    "optional": {
+      "OLLAMA_BASE_URL": {
+        "value": "http://localhost:11434/v1",
+        "type": "URL",
+        "environments": ["Any"],
+        "description": "Base URL for Ollama AI inference",
+        "required": "Only if using Ollama (not OpenAI)",
+        "default": "http://localhost:11434/v1",
+        "examples": [
+          "http://localhost:11434/v1",
+          "https://ollama.example.com/v1"
+        ]
+      },
+      "OLLAMA_MODEL": {
+        "value": "llama3.1",
+        "type": "String",
+        "environments": ["Any"],
+        "description": "Default Ollama model for text generation",
+        "required": "Only if using Ollama",
+        "default": "llama3.1",
+        "examples": ["llama3.1", "llama2", "mistral", "neural-chat"]
+      },
+      "OLLAMA_VISION_MODEL": {
+        "value": "llama3.2-vision",
+        "type": "String",
+        "environments": ["Any"],
+        "description": "Ollama model for image analysis and identification",
+        "required": "Only if using Ollama for image features",
+        "default": "llama3.2-vision",
+        "examples": ["llama3.2-vision", "llava", "llava-phi"]
+      },
+      "OPENAI_API_KEY": {
+        "value": "[your-openai-key]",
+        "type": "API Key (Secret)",
+        "environments": ["Production"],
+        "description": "OpenAI API key for GPT models",
+        "required": "Only if NOT using Ollama",
+        "howToGet": "https://platform.openai.com/api-keys",
+        "security": "⚠️ SECRET - Production only",
+        "warning": "Never expose in Preview/Dev or commit to Git",
+        "format": "Starts with 'sk-'",
+        "example": "sk-..."
+      }
+    }
+  },
+  "deploymentFlow": {
+    "step1": "Go to https://vercel.com/dashboard",
+    "step2": "Select fishfinder-pro project",
+    "step3": "Click Settings → Environment Variables",
+    "step4": "Add each variable from 'required' section",
+    "step5": "Add optional variables as needed",
+    "step6": "Vercel automatically redeploys with new variables",
+    "step7": "Verify deployment succeeds and app works"
+  },
+  "securityNotes": {
+    "rule1": "Never commit .env files to Git",
+    "rule2": "Use Vercel's built-in secret management",
+    "rule3": "Keep service role keys Production only",
+    "rule4": "Rotate API keys every 3 months",
+    "rule5": "Monitor API usage regularly",
+    "rule6": "Use unique keys for each project"
+  },
+  "vercelEnvironmentScopes": {
+    "Development": {
+      "usage": "Local npm run dev",
+      "recommendation": "Skip - use local .env.local instead"
+    },
+    "Preview": {
+      "usage": "Pull request previews",
+      "recommendation": "Add public keys only (safe to expose)"
+    },
+    "Production": {
+      "usage": "Live deployment",
+      "recommendation": "Add all required variables including secrets"
+    }
+  },
+  "troubleshooting": {
+    "invalidUrl": {
+      "error": "Invalid supabaseUrl: Must be valid HTTP or HTTPS URL",
+      "cause": "Wrong format for NEXT_PUBLIC_SUPABASE_URL",
+      "solution": "Use format: https://project-id.supabase.co"
+    },
+    "failedInitialize": {
+      "error": "Failed to initialize Supabase client",
+      "cause": "Credentials not set correctly",
+      "solution": "Double-check values in Vercel Settings → Environment Variables"
+    },
+    "unauthorized": {
+      "error": "unauthorized API request",
+      "cause": "Wrong API key or invalid service role",
+      "solution": "Verify key from https://app.supabase.com/project/_/settings/api"
+    },
+    "previewFails": {
+      "error": "Preview deployments fail but production works",
+      "cause": "Missing environment variables in Preview scope",
+      "solution": "Add public Supabase variables to Preview environment"
+    }
+  },
+  "documentation": {
+    "vercelGuide": "https://vercel.com/docs/projects/environment-variables",
+    "supabaseGuide": "https://supabase.com/docs",
+    "projectSetup": "See PROJECT_SETUP.md",
+    "deploymentGuide": "See DEPLOYMENT.md",
+    "vercelSetupGuide": "See VERCEL_ENV_SETUP.md"
+  }
+}
