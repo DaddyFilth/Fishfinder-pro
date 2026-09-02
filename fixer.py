@@ -1,17 +1,17 @@
 from pathlib import Path
 
-p = Path("src/components/BiteTimePanel.tsx")
-s = p.read_text()
+path = Path("src/components/BiteTimePanel.tsx")
+s = path.read_text()
 s = s.replace("import { useState, useCallback } from 'react';", "import { useState } from 'react';")
 s = s.replace("const fetchAIPrediction = useCallback(async (species: string) => {", "const fetchAIPrediction = async (species: string) => {")
 s = s.replace("}, [lat, lng, conditions, solunar.solunarScore, solunar.moonPhaseName]);", "};")
 s = s.replace("Today's", "Today&apos;s")
 s = s.replace("today's", "today&apos;s")
-p.write_text(s)
+path.write_text(s)
 print("BiteTimePanel fixed")
 
-p = Path("src/components/ai/FishIdentifierModal.tsx")
-lines = p.read_text().splitlines()
+path = Path("src/components/ai/FishIdentifierModal.tsx")
+lines = path.read_text().splitlines()
 new_lines = []
 for line in lines:
     if line == "import { useRef, useState } from 'react';":
@@ -61,11 +61,11 @@ for line in lines:
         new_lines.append("      setError(err instanceof Error ? err.message : 'Error connecting to AI model');")
     else:
         new_lines.append(line)
-p.write_text("\n".join(new_lines))
+path.write_text("\n".join(new_lines))
 print("FishIdentifierModal fixed")
 
-p = Path("src/components/logbook/CatchLogger.tsx")
-lines = p.read_text().splitlines()
+path = Path("src/components/logbook/CatchLogger.tsx")
+lines = path.read_text().splitlines()
 lines = [l for l in lines if "import FishIdentifierModal" not in l]
-p.write_text("\n".join(lines))
+path.write_text("\n".join(lines))
 print("CatchLogger fixed")
