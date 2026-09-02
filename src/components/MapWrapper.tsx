@@ -68,7 +68,15 @@ type Tab =
   | 'ai'
   | 'identify';
 
-type BaseLayer = 'satellite' | 'explore';
+export type BaseLayer = 'satellite' | 'explore';
+
+export interface MapLayers {
+  hotspots: boolean;
+  depth: boolean;
+  waterTemp: boolean;
+  catchPins: boolean;
+  waypoints: boolean;
+}
 
 const scoreColor = (s: number) => (s >= 75 ? '#22c55e' : s >= 50 ? '#eab308' : s >= 25 ? '#f97316' : '#ef4444');
 const scoreLabel = (s: number) => (s >= 75 ? 'Excellent' : s >= 50 ? 'Good' : s >= 25 ? 'Fair' : 'Poor');
@@ -126,20 +134,19 @@ function scoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function FishingMap({ spots }: { spots: Spot[] }) {
+export default function FishingMap({
+  spots,
+  baseLayer,
+  layers,
+}: {
+  spots: Spot[];
+  baseLayer: BaseLayer;
+  layers: MapLayers;
+}) {
   const [conditions, setConditions] = useState<Record<string, Cond>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
-  const [baseLayer, setBaseLayer] = useState<BaseLayer>('explore');
-  const [layers, setLayers] = useState({
-    hotspots: true,
-    depth: false,
-    waterTemp: false,
-    catchPins: true,
-    waypoints: true,
-  });
-
   const baseLayers: Record<BaseLayer, { url: string; attribution: string; label: string; maxZoom?: number }> = {
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -208,27 +215,6 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
   useEffect(() => {
     spots.forEach((spot) => load(spot.id));
   }, [load, spots]);
-
-  const toggleLayer = (key: keyof typeof layers) => {
-    setLayers((p) => ({ ...p, [key]: !p[key] }));
-  };
-
-  const layerCount = (key: keyof typeof layers) => {
-    switch (key) {
-      case 'hotspots':
-        return hotSpots.length;
-      case 'depth':
-        return rankedSpots.filter((x) => x.score >= 0).length;
-      case 'waterTemp':
-        return temperaturePoints.filter((x) => x.temperature !== null).length;
-      case 'catchPins':
-        return recentPins.length;
-      case 'waypoints':
-        return spots.length;
-      default:
-        return 0;
-    }
-  };
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>
@@ -302,27 +288,6 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-            {(Object.keys(baseLayers) as BaseLayer[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setBaseLayer(key)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 999,
-                  border: `1px solid ${baseLayer === key ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.12)'}`,
-                  background: baseLayer === key ? 'rgba(13,148,136,0.24)' : 'rgba(255,255,255,0.04)',
-                  color: 'white',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {baseLayers[key].label}
-              </button>
-            ))}
-          </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#cbd5e1' }}>
             <span>Spots tracked</span>
             <span style={{ color: 'white', fontWeight: 700 }}>{spots.length}</span>
@@ -359,86 +324,6 @@ export default function FishingMap({ spots }: { spots: Spot[] }) {
               </div>
             ))
           )}
-        </div>
-
-        <div className="hud" style={{ position: 'absolute', right: 18, bottom: 18, zIndex: 1700, width: 320, borderRadius: 18, padding: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ color: 'white', fontSize: 14, fontWeight: 800 }}>Layers & legend</div>
-            <div style={{ color: '#94a3b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pro map</div>
-          </div>
-
-          <div style={{ display: 'grid', gap: 10 }}>
-            {([
-              ['hotspots', '🔥 Hotspots'],
-              ['depth', '📏 Depth contours'],
-              ['waterTemp', '🌡 Water temperature'],
-              ['catchPins', '🎣 Catch pins'],
-              ['waypoints', '📍 Waypoints'],
-            ] as [keyof typeof layers, string][]).map(([key, label]) => (
-              <div
-                key={key}
-                style={{
-                  border: `1px solid ${layers[key] ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                  borderRadius: 14,
-                  padding: 10,
-                  background: layers[key] ? 'rgba(37,99,235,0.12)' : 'rgba(255,255,255,0.03)',
-                }}
-              >
-                <button
-                  onClick={() => toggleLayer(key)}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'white',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    padding: 0,
-                  }}
-                >
-                  <span>{label}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: '#cbd5e1', fontSize: 10 }}>{layerCount(key)} pts</span>
-                    <span style={{ color: layers[key] ? '#bfdbfe' : '#64748b', fontSize: 10 }}>{layers[key] ? 'ON' : 'OFF'}</span>
-                  </span>
-                </button>
-
-                {layers[key] && (
-                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 6 }}>
-                    {key === 'hotspots' && (
-                      <>
-                        <div style={{ fontSize: 10, color: '#cbd5e1' }}>Green = top bite score, amber = medium confidence, red = lower confidence.</div>
-                      </>
-                    )}
-                    {key === 'depth' && (
-                      <>
-                        <div style={{ fontSize: 10, color: '#cbd5e1' }}>Contours reflect available depth or flow-derived structure zones.</div>
-                      </>
-                    )}
-                    {key === 'waterTemp' && (
-                      <>
-                        <div style={{ fontSize: 10, color: '#cbd5e1' }}>Cool blue to warm orange gradient highlights temperature change.</div>
-                      </>
-                    )}
-                    {key === 'catchPins' && (
-                      <>
-                        <div style={{ fontSize: 10, color: '#cbd5e1' }}>Pins simulate recent public activity and high-interest catches.</div>
-                      </>
-                    )}
-                    {key === 'waypoints' && (
-                      <>
-                        <div style={{ fontSize: 10, color: '#cbd5e1' }}>Waypoints show saved areas, ramps, and repeated targets.</div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
 
         <MapContainer center={[35.5, -97.5]} zoom={7} style={{ height: '100%', width: '100%' }} zoomControl>
