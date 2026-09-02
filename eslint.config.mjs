@@ -1,10 +1,7 @@
-// ESLint configuration for Next.js project
-// Using flat config format with ESLint 9+
+import nextConfig from "eslint-config-next";
+import nextTypeScriptConfig from "eslint-config-next/typescript";
 
-import js from "@eslint/js";
-import globals from "globals";
-
-export default [
+const config = [
   {
     ignores: [
       ".next/**",
@@ -16,24 +13,8 @@ export default [
       "dist/**",
     ],
   },
-  {
-    files: ["**/*.{js,jsx,ts,tsx}"],
-    languageOptions: {
-      ecmaVersion: 2020,
-      sourceType: "module",
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    rules: {
-      "no-unused-vars": "warn",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
-    },
-  },
+  ...nextConfig,
+  ...nextTypeScriptConfig,
 ];
+
+export default config;
