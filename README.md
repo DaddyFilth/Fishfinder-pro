@@ -35,6 +35,10 @@ npm start
 
 To deploy from the Codespaces terminal, import the repository into Vercel and configure the same environment variables there. Vercel detects the Next.js build automatically; do not add `.env.local` or any credentials to the repository.
 
+## AI smoke tests
+
+To manually smoke-test the AI routes in GitHub Actions, add a repository Actions secret named `OLLAMA_BASE_URL` with a network-reachable Ollama server URL (for example, `https://ollama.example.com`). Run **AI route smoke tests** from the Actions tab. It checks the Ollama model endpoint, then exercises the bite-times, spot-suggestion, and fish-identification routes against a local production build.
+
 This project uses local system font stacks and does not load fonts from third-party providers.
 
 ## Learn More
