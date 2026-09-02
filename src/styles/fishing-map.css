@@ -2,36 +2,36 @@ html,
 body,
 #root {
   height: 100%;
-  min-height: 100%;
   margin: 0;
+  min-height: 100%;
 }
 
 body {
-  overflow: hidden;
   background:
     radial-gradient(circle at 50% 60%, rgba(24,79,138,0.22), transparent 30%),
     linear-gradient(180deg, #020816 0%, #031126 42%, #04101d 100%);
+  overflow: hidden;
 }
 
 .ff-map-layer {
-  position: fixed;
-  inset: 0;
-  top: 72px;
   bottom: 78px;
-  z-index: 0;
-  overflow: hidden;
   background:
     radial-gradient(circle at 50% 58%, rgba(36,105,181,0.16), transparent 32%),
     linear-gradient(180deg, #04101d 0%, #071a2e 45%, #06101d 100%);
+  inset: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 72px;
+  z-index: 0;
 }
 
 .ff-map-canvas,
 .ff-map-layer .leaflet-container {
-  width: 100%;
-  height: 100%;
-  min-height: 320px;
   background: #06101d;
   filter: saturate(1.05) contrast(1.02) brightness(0.9);
+  height: 100%;
+  min-height: 320px;
+  width: 100%;
 }
 
 .ff-map-layer .leaflet-pane,
@@ -42,38 +42,38 @@ body {
 }
 
 .ff-map-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
   background:
     radial-gradient(circle at 50% 48%, transparent 0%, transparent 42%, rgba(1,6,16,0.20) 70%, rgba(1,6,16,0.46) 100%),
     linear-gradient(180deg, rgba(2,8,22,0.34) 0%, rgba(2,8,22,0.02) 24%, rgba(2,8,22,0.02) 76%, rgba(2,8,22,0.36) 100%);
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
   z-index: 2;
 }
 
 .ff-map-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
   background:
     radial-gradient(circle at 50% 68%, rgba(44,123,255,0.12), transparent 22%),
     radial-gradient(circle at 18% 16%, rgba(63,177,255,0.08), transparent 20%);
+  inset: 0;
   mix-blend-mode: screen;
+  pointer-events: none;
+  position: absolute;
   z-index: 1;
 }
 
 .leaflet-control-zoom {
+  backdrop-filter: blur(14px);
   border: 1px solid rgba(111, 180, 255, 0.18) !important;
   border-radius: 16px !important;
-  overflow: hidden;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.30);
-  backdrop-filter: blur(14px);
+  overflow: hidden;
 }
 
 .leaflet-control-zoom a {
   background: rgba(7, 18, 36, 0.72) !important;
-  color: #d9ecff !important;
   border-bottom: 1px solid rgba(111, 180, 255, 0.12) !important;
+  color: #d9ecff !important;
 }
 
 .leaflet-control-zoom a:hover {
@@ -82,7 +82,7 @@ body {
 
 @media (max-width: 640px) {
   .ff-map-layer {
-    top: 68px;
     bottom: 86px;
+    top: 68px;
   }
 }
