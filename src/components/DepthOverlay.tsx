@@ -21,13 +21,5 @@ export default function DepthOverlay({ enabled }: { enabled: boolean }) {
   }, [enabled, map]);
 
   if (!enabled) return null;
-  return (
-    <div style={{ position:'absolute',bottom:'10px',left:'10px',zIndex:1000,background:'rgba(15,23,42,0.9)',borderRadius:'6px',padding:'7px 8px',fontFamily:'system-ui',backdropFilter:'blur(4px)' }}>
-      <div style={{ fontSize:'9px',color:'#cbd5e1',marginBottom:'5px',fontWeight:'bold' }}>DEPTH · USGS + NOAA</div>
-      <div style={{ display:'flex',gap:'3px',alignItems:'center' }}>
-        {['#0c4a6e','#0369a1','#0891b2','#22c55e','#eab308','#f97316'].map(c=><span key={c} style={{ width:'14px',height:'7px',background:c,display:'block' }}/>)}
-      </div>
-      <div style={{ display:'flex',justifyContent:'space-between',color:'#94a3b8',fontSize:'8px' }}><span>deep</span><span>shallow</span></div>
-    </div>
-  );
+  return null;
 }

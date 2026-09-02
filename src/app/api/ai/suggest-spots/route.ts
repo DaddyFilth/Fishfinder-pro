@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 
 interface Spot { id: string; name: string; lat: number; lng: number; water_type: string; spot_type: string; }
+interface RankedSpot {
+  spot_name: string;
+  fishing_score: number;
+  miles_away: number | null;
+  primary_species: string[];
+  best_technique: string;
+  best_time_today: string;
+  reason: string;
+  rating: 'Hot' | 'Good' | 'Fair';
+}
 
 function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3958.8;
@@ -9,6 +19,29 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function generateRankings(spots: Array<Spot & { miles: number | null }>, hour: number): RankedSpot[] {
+  return spots.slice(0, 5).map((spot, index) => {
+    const score = Math.max(55, 88 - index * 7 + (hour < 10 || hour > 16 ? 4 : 0));
+    const rating = score >= 80 ? 'Hot' : score >= 65 ? 'Good' : 'Fair';
+    const primarySpecies = spot.water_type.toLowerCase() === 'saltwater'
+      ? ['Redfish', 'Speckled Trout']
+      : spot.spot_type.toLowerCase() === 'river'
+        ? ['Smallmouth Bass', 'Catfish']
+        : ['Largemouth Bass', 'Crappie'];
+
+    return {
+      spot_name: spot.name,
+      fishing_score: score,
+      miles_away: spot.miles,
+      primary_species: primarySpecies,
+      best_technique: spot.spot_type.toLowerCase() === 'river' ? 'Work current seams and deeper pools.' : 'Fish structure along the first break.',
+      best_time_today: hour < 10 ? 'Now through late morning' : hour > 16 ? 'Now through sunset' : 'Late afternoon through sunset',
+      reason: `${spot.spot_type} conditions and the current time favor a focused presentation.`,
+      rating,
+    };
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -23,8 +56,10 @@ export async function POST(req: NextRequest) {
     ...s,
     miles: uLat !== null && uLng !== null ? Math.round(haversineMiles(uLat, uLng, s.lat, s.lng)*10)/10 : null,
   }));
-  const nearby = uLat !== null ? spotsWithDist.filter(s => s.miles !== null && s.miles <= 25) : spotsWithDist;
-  if (nearby.length === 0) return NextResponse.json({ error: 'No fishing spots found within 25 miles of your location.' }, { status: 404 });
+  const withinRadius = uLat !== null ? spotsWithDist.filter(s => s.miles !== null && s.miles <= 25) : spotsWithDist;
+  const nearby = withinRadius.length > 0
+    ? withinRadius
+    : [...spotsWithDist].sort((a, b) => (a.miles ?? Infinity) - (b.miles ?? Infinity)).slice(0, 5);
   const now = new Date();
   const month = now.toLocaleString('en-US', { month: 'long' });
   const hour = now.getHours();
@@ -69,13 +104,20 @@ export async function POST(req: NextRequest) {
     });
     const raw = res.choices[0].message.content ?? '[]';
     const cleaned = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-    const ranked = JSON.parse(cleaned);
+    const ranked = JSON.parse(cleaned) as RankedSpot[];
+    if (!Array.isArray(ranked) || ranked.length === 0) throw new Error('Empty AI ranking');
     const withIds = ranked.map((r: { spot_name: string }) => ({
       ...r,
       spot_id: nearby.find(s => s.name === r.spot_name)?.id ?? null,
       spot_lat: nearby.find(s => s.name === r.spot_name)?.lat ?? null,
       spot_lng: nearby.find(s => s.name === r.spot_name)?.lng ?? null,
     }));
-    return NextResponse.json({ results: withIds, total_nearby: nearby.length, radius_miles: 25 });
-  } catch { return NextResponse.json({ error: 'AI ranking failed' }, { status: 500 }); }
+    return NextResponse.json({ results: withIds, total_nearby: withinRadius.length, radius_miles: 25 });
+  } catch {
+    const generated = generateRankings(nearby, hour).map((ranking) => {
+      const spot = nearby.find((candidate) => candidate.name === ranking.spot_name);
+      return { ...ranking, spot_id: spot?.id ?? null, spot_lat: spot?.lat ?? null, spot_lng: spot?.lng ?? null };
+    });
+    return NextResponse.json({ results: generated, total_nearby: withinRadius.length, radius_miles: 25, generated: true });
+  }
 }

@@ -6,6 +6,7 @@ import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import SocialTab from "@/components/SocialTab";
+import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 
@@ -129,6 +130,16 @@ export default function MobilePage() {
               📍 {visibleSpots.length} spots loaded
             </div>
 
+            {mapLayers.depth && (
+              <div style={{ position:'absolute', right:'12px', bottom: sheetOpen ? 'calc(45dvh + 12px)' : '64px', width:'132px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'8px', padding:'9px', zIndex:10, backdropFilter:'blur(8px)', transition:'bottom 0.3s ease' }}>
+                <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'700', marginBottom:'6px' }}>DEPTH REFERENCE</div>
+                <div style={{ display:'flex', gap:'3px', alignItems:'center' }}>
+                  {['#0c4a6e','#0369a1','#0891b2','#22c55e','#eab308','#f97316'].map((color) => <span key={color} style={{ flex:1, height:'8px', background:color }} />)}
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', color:'#64748b', fontSize:'9px', marginTop:'3px' }}><span>Deep</span><span>Shallow</span></div>
+              </div>
+            )}
+
 
 
             {/* Slide-up sheet handle */}
@@ -191,11 +202,7 @@ export default function MobilePage() {
         {/* AI TAB */}
         {tab === 'ai' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
-            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>🤖 AI Assistant</div>
-            <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'12px', padding:'16px', textAlign:'center' }}>
-              <div style={{ fontSize:'32px', marginBottom:'8px' }}>🤖</div>
-              <div style={{ color:'#64748b', fontSize:'13px' }}>Select a spot on the map to get AI fishing advice</div>
-            </div>
+            <SpotSuggester spots={visibleSpots} />
           </div>
         )}
 
