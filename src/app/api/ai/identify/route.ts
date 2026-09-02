@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOllama, OLLAMA_VISION_MODEL } from '@/lib/ollama';
 import { SPECIES } from '@/lib/speciesCatalog';
 
 const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) =>
   `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
 ).join('\n');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = getOllama();
 
 export async function POST(req: NextRequest) {
   const { image_base64 } = await req.json();
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: OLLAMA_VISION_MODEL,
       max_tokens: 600,
       messages: [{
         role: 'user',
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 }
 Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`
           },
-          { type: 'image_url', image_url: { url: image_base64, detail: 'low' } }
+          { type: 'image_url', image_url: { url: image_base64 } }
         ]
       }]
     });

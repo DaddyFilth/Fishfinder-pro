@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAI } from '@/lib/openai';
+import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 
 export async function POST(req: NextRequest) {
-  const openai = getOpenAI();
-  if (!openai) return NextResponse.json({ error: 'AI service is not configured' }, { status: 503 });
+  const openai = getOllama();
 
   let body: { message?: unknown; spot?: unknown; conditions?: unknown; solunar?: unknown; species?: unknown };
   try {
@@ -21,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: OLLAMA_MODEL,
       max_tokens: 300,
       temperature: 0.5,
       messages: [

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAI } from '@/lib/openai';
+import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 
 interface Spot { id: string; name: string; lat: number; lng: number; water_type: string; spot_type: string; }
 
@@ -12,8 +12,7 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 export async function POST(req: NextRequest) {
-  const openai = getOpenAI();
-  if (!openai) return NextResponse.json({ error: 'AI not configured' }, { status: 503 });
+  const openai = getOllama();
   let body: { spots?: unknown; userLat?: unknown; userLng?: unknown };
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const { spots, userLat, userLng } = body;
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
   ].join('');
   try {
     const res = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model: OLLAMA_MODEL,
       max_tokens: 800,
       temperature: 0.3,
       messages: [{ role: 'user', content: prompt }],
