@@ -6,6 +6,7 @@ import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import SocialTab from "@/components/SocialTab";
+import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
@@ -35,6 +36,14 @@ export default function MobilePage() {
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
+  const [baseLayer, setBaseLayer] = useState<BaseLayer>('explore');
+  const [mapLayers, setMapLayers] = useState<MapLayers>({
+    hotspots: true,
+    depth: false,
+    waterTemp: false,
+    catchPins: true,
+    waypoints: true,
+  });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -75,6 +84,9 @@ export default function MobilePage() {
   const visibleSpots = filterSpots(spots, mapFilter);
   const rankedSpots = rankSpots(visibleSpots, conditionScores);
   const topSpots = rankedSpots.slice(0, 8);
+  const toggleMapLayer = (key: keyof MapLayers) => {
+    setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
+  };
 
   const tabs = [
 { id: "map",      icon: "🗺",  label: "Map"      },
@@ -110,7 +122,7 @@ export default function MobilePage() {
         {/* MAP TAB */}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
-            <MapWrapper spots={visibleSpots} />
+            <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
@@ -247,6 +259,26 @@ export default function MobilePage() {
         {tab === 'settings' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+            <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'8px' }}>
+              <div style={{ fontSize:'13px', color:'#e2e8f0', marginBottom:'10px' }}>🗺 Map layers</div>
+              {([
+                ['hotspots', '🔥 Hotspots'],
+                ['depth', '📏 Depth contours'],
+                ['waterTemp', '🌡 Water temperature'],
+                ['catchPins', '🎣 Catch pins'],
+                ['waypoints', '📍 Waypoints'],
+              ] as [keyof MapLayers, string][]).map(([key, label]) => (
+                <button key={key} onClick={() => toggleMapLayer(key)} style={{ width:'100%', background:'none', border:'none', borderTop:'1px solid #1e293b', color:'#cbd5e1', padding:'10px 0', display:'flex', justifyContent:'space-between', cursor:'pointer', fontSize:'12px', textAlign:'left' }}>
+                  <span>{label}</span><span style={{ color:mapLayers[key] ? '#22d3ee' : '#64748b' }}>{mapLayers[key] ? 'ON' : 'OFF'}</span>
+                </button>
+              ))}
+              <div style={{ fontSize:'13px', color:'#e2e8f0', margin:'12px 0 10px' }}>Base map</div>
+              <div style={{ display:'flex', gap:'8px' }}>
+                {(['explore', 'satellite'] as BaseLayer[]).map((layer) => (
+                  <button key={layer} onClick={() => setBaseLayer(layer)} style={{ flex:1, background:baseLayer === layer ? '#0369a1' : '#0f172a', border:'1px solid #1e293b', borderRadius:'8px', color:'#e2e8f0', padding:'8px', cursor:'pointer', fontSize:'11px', textTransform:'capitalize' }}>{layer}</button>
+                ))}
+              </div>
+            </div>
             {[['🔎','Notifications','Push alerts for hot bites'],['📍','Location','Use GPS for nearby spots'],['🌡','Units','Imperial (lbs, ft, °F)'],['🗺','Map Style','Dark (default)'],['🔁','Auto-refresh','Every 30 minutes']].map(([icon,title,sub]) => (
               <div key={title as string} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px', justifyContent:'space-between' }}>
                 <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
