@@ -1,10 +1,13 @@
 {
   "name": "Fishfinder Pro",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "remoteEnv": {
     "NEXT_TELEMETRY_DISABLED": "1"
   },
-  "updateContentCommand": "npm ci",
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
   "forwardPorts": [3000],
   "portsAttributes": {
     "3000": {

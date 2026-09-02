@@ -1,0 +1,16 @@
+{
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "args": [
+        "-l"
+      ],
+      "icon": "terminal-bash"
+    }
+  },
+  "terminal.integrated.shellIntegration.enabled": true,
+  "terminal.integrated.env.linux": {
+    "PATH": "/usr/local/share/nvm/current/bin:/usr/local/share/npm-global/bin:${env:PATH}"
+  }
+}
