@@ -33,6 +33,7 @@ export default function MobilePage() {
   const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
@@ -117,28 +118,55 @@ export default function MobilePage() {
               📍 {visibleSpots.length} spots loaded
             </div>
 
-            {/* Floating filter toggle */}
-            <div style={{ position:'absolute', top:'12px', right:'12px', display:'flex', flexDirection:'column', gap:'6px', zIndex:10 }}>
-              {MAP_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  onClick={() => setMapFilter(filter.id)}
-                  style={{
-                    minWidth:'84px',
-                    background: mapFilter === filter.id ? '#0369a1' : 'rgba(10,15,30,0.9)',
-                    border: mapFilter === filter.id ? '1px solid #7dd3fc' : '1px solid #1e293b',
-                    borderRadius:'8px',
-                    fontSize:'10px',
-                    cursor:'pointer',
-                    backdropFilter:'blur(8px)',
-                    color: mapFilter === filter.id ? '#e0f2fe' : '#cbd5e1',
-                    padding:'6px 8px',
-                    fontWeight: mapFilter === filter.id ? '700' : '500',
-                  }}
-                >
-                  {filter.label}
-                </button>
-              ))}
+            {/* Floating filter toggle menu */}
+            <div style={{ position:'absolute', top:'12px', right:'12px', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'6px', zIndex:20 }}>
+              <button
+                type="button"
+                onClick={() => setFilterMenuOpen((open) => !open)}
+                style={{
+                  minWidth:'92px',
+                  background:'rgba(10,15,30,0.9)',
+                  border:'1px solid #1e293b',
+                  borderRadius:'10px',
+                  fontSize:'10px',
+                  cursor:'pointer',
+                  backdropFilter:'blur(8px)',
+                  color:'#e0f2fe',
+                  padding:'7px 10px',
+                  fontWeight:'700',
+                  boxShadow:'0 8px 20px rgba(2,6,23,0.35)',
+                }}
+              >
+                {filterMenuOpen ? 'Hide filters' : `Filter: ${MAP_FILTERS.find((filter) => filter.id === mapFilter)?.label ?? 'All'}`}
+              </button>
+
+              {filterMenuOpen && (
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px', background:'rgba(2,6,23,0.78)', border:'1px solid #1e293b', borderRadius:'12px', padding:'8px', boxShadow:'0 8px 20px rgba(2,6,23,0.4)', backdropFilter:'blur(10px)' }}>
+                  {MAP_FILTERS.map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      onClick={() => {
+                        setMapFilter(filter.id);
+                        setFilterMenuOpen(false);
+                      }}
+                      style={{
+                        minWidth:'94px',
+                        background: mapFilter === filter.id ? '#0369a1' : 'rgba(10,15,30,0.9)',
+                        border: mapFilter === filter.id ? '1px solid #7dd3fc' : '1px solid #1e293b',
+                        borderRadius:'8px',
+                        fontSize:'10px',
+                        cursor:'pointer',
+                        color: mapFilter === filter.id ? '#e0f2fe' : '#cbd5e1',
+                        padding:'6px 8px',
+                        fontWeight: mapFilter === filter.id ? '700' : '500',
+                      }}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Slide-up sheet handle */}
