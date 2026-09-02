@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- preview and species images are dynamic user uploads and catalog assets */
 
 import { ChangeEvent, useRef, useState } from 'react';
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';

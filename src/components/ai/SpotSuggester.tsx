@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- spot cards use local catalog image assets */
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { useState, useCallback } from 'react';
 
