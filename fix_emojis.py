@@ -3,7 +3,7 @@ from pathlib import Path
 NL = chr(10)
 
 sa = Path("src/lib/scoring/speciesAdvisor.ts")
-t = sa.read_text()
+TEXT = sa.read_text()
 
 alias_lines = [
     "const SPECIES_ALIASES: Record<string, string> = {",
@@ -16,78 +16,79 @@ alias_lines = [
     "};",
     "",
 ]
-alias_block = NL.join(alias_lines) + NL
+ALIAS_BLOCK = NL.join(alias_lines) + NL
 
-old_fn_lines = [
+OLD_FN_LINES = [
     "export function getSpeciesImage(speciesName: string): string {",
     "  return SPECIES_IMAGES[speciesName]",
-    "    ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Largemouth_bass.png/320px-Largemouth_bass.png';",
+    "    ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/"
+    "Largemouth_bass.png/320px-Largemouth_bass.png';",
     "}",
 ]
-old_fn = NL.join(old_fn_lines)
+OLD_FN = NL.join(OLD_FN_LINES)
 
-new_fn_lines = [
+NEW_FN_LINES = [
     "export function getSpeciesImage(speciesName: string): string {",
     "  const resolved = SPECIES_ALIASES[speciesName] || speciesName;",
     "  return SPECIES_IMAGES[resolved] ?? SPECIES_IMAGES['Largemouth Bass'];",
     "}",
 ]
-new_fn = NL.join(new_fn_lines)
+NEW_FN = NL.join(NEW_FN_LINES)
 
-if old_fn in t:
-    t = t.replace(old_fn, alias_block + new_fn)
+if OLD_FN in TEXT:
+    TEXT = TEXT.replace(OLD_FN, ALIAS_BLOCK + NEW_FN)
 else:
     pat = "export function getSpeciesImage.*?" + NL + "\\}"
-    t = re.sub(pat, alias_block + new_fn, t, flags=re.DOTALL)
+    TEXT = re.sub(pat, ALIAS_BLOCK + NEW_FN, TEXT, flags=re.DOTALL)
 
-sa.write_text(t)
+sa.write_text(TEXT)
 print("speciesAdvisor.ts: aliases added")
 
 ct = Path("src/components/CatchesTab.tsx")
-t = ct.read_text()
-t = t.replace(", emoji:'\U0001F41F' },", " },")
-t = t.replace(", emoji:'\U0001F988' },", " },")
-t = t.replace(", emoji:'\U0001F420' },", " },")
-t = re.sub(r", emoji:EMOJI_MAP\[form\.species\]\|\|'\U0001F41F'", "", t)
-t = re.sub(r"const EMOJI_MAP:Record<string,string> = \{[^}]*\};" + NL + "?", "", t)
-t = t.replace("emoji:string; }", "}")
+TEXT = ct.read_text()
+TEXT = TEXT.replace(", emoji:'\U0001F41F' },", " },")
+TEXT = TEXT.replace(", emoji:'\U0001F988' },", " },")
+TEXT = TEXT.replace(", emoji:'\U0001F420' },", " },")
+TEXT = re.sub(r", emoji:EMOJI_MAP\[form\.species\]\|\|'\U0001F41F'", "", TEXT)
+TEXT = re.sub(r"const EMOJI_MAP:Record<string,string> = \{[^}]*\};" + NL + "?", "", TEXT)
+TEXT = TEXT.replace("emoji:string; }", "}")
 old_div = "<div style={{fontSize:'32px'}}>{c.emoji}</div>"
-new_img = (
+NEW_IMG = (
     "<img src={getSpeciesImage(c.species)} alt={c.species} "
     "style={{width:'40px',height:'40px',objectFit:'cover',"
     "borderRadius:'8px'}} />"
 )
-t = t.replace(old_div, new_img)
-if "getSpeciesImage" in t and "import { getSpeciesImage }" not in t:
-    imp = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
-    t = imp + NL + t
-ct.write_text(t)
+TEXT = TEXT.replace(old_div, NEW_IMG)
+if "getSpeciesImage" in TEXT and "import { getSpeciesImage }" not in TEXT:
+    IMP = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
+    TEXT = IMP + NL + TEXT
+ct.write_text(TEXT)
 print("CatchesTab.tsx: updated")
 
 st = Path("src/components/SocialTab.tsx")
-t = st.read_text()
-t = re.sub(r",emoji:'[^']*'", "", t)
+TEXT = st.read_text()
+TEXT = re.sub(r",emoji:'[^']*'", "", TEXT)
 old_div2 = "<div style={{fontSize:'28px'}}>{post.emoji}</div>"
-new_img2 = (
+NEW_IMG2 = (
     "<img src={getSpeciesImage(post.species)} alt={post.species} "
     "style={{width:'36px',height:'36px',objectFit:'cover',"
     "borderRadius:'8px'}} />"
 )
-t = t.replace(old_div2, new_img2)
-if "getSpeciesImage" in t and "import { getSpeciesImage }" not in t:
-    imp = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
-    t = imp + NL + t
-st.write_text(t)
+TEXT = TEXT.replace(old_div2, NEW_IMG2)
+if "getSpeciesImage" in TEXT and "import { getSpeciesImage }" not in TEXT:
+    IMP = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
+    TEXT = IMP + NL + TEXT
+st.write_text(TEXT)
 print("SocialTab.tsx: updated")
 
 sp = Path("src/components/ai/SpotSuggester.tsx")
-t = sp.read_text()
+TEXT = sp.read_text()
 old_chip = (
     "<span key={j} style={{ background:'#0f3460',"
     "color:'#93c5fd',fontSize:'9px',padding:'2px 7px',"
     "borderRadius:'10px' }}>\U0001F41F {sp}</span>"
 )
-new_chip = (
+NEW_CHIP = (
     "<span key={j} style={{ background:'#0f3460',"
     "color:'#93c5fd',fontSize:'9px',padding:'2px 7px',"
     "borderRadius:'10px',display:'inline-flex',"
@@ -96,15 +97,15 @@ new_chip = (
     "style={{width:'14px',height:'14px',objectFit:'cover',"
     "borderRadius:'50%'}} /> {sp}</span>"
 )
-t = t.replace(old_chip, new_chip)
-if "getSpeciesImage" in t and "import { getSpeciesImage }" not in t:
-    imp = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
-    t = imp + NL + t
-sp.write_text(t)
+TEXT = TEXT.replace(old_chip, NEW_CHIP)
+if "getSpeciesImage" in TEXT and "import { getSpeciesImage }" not in TEXT:
+    IMP = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
+    TEXT = IMP + NL + TEXT
+sp.write_text(TEXT)
 print("SpotSuggester.tsx: updated")
 
 fm = Path("src/components/ai/FishIdentifierModal.tsx")
-t = fm.read_text()
-t = t.replace("\U0001F41F AI Fish Species Scanner", "AI Fish Species Scanner")
-fm.write_text(t)
+TEXT = fm.read_text()
+TEXT = TEXT.replace("\U0001F41F AI Fish Species Scanner", "AI Fish Species Scanner")
+fm.write_text(TEXT)
 print("FishIdentifierModal.tsx: updated")
