@@ -1,10 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const temp = searchParams.get('temp') === 'true';
-  const depth = searchParams.get('depth') === 'true';
-  
+export async function GET() {
   const mockData = {
     points: [
       { lat: 40.0, lng: -90.0, temp: 72, depth: 15 },
