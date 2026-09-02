@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { useState, useCallback } from 'react';
 
@@ -101,7 +102,7 @@ export default function SpotSuggester({ spots }: Props) {
           {r.primary_species?.length > 0 && (
             <div style={{ display:'flex',flexWrap:'wrap',gap:'4px' }}>
               {r.primary_species.map((sp, j) => (
-                <span key={j} style={{ background:'#0f3460',color:'#93c5fd',fontSize:'9px',padding:'2px 7px',borderRadius:'10px',display:'inline-flex',alignItems:'center',gap:'4px' }}><img src={getSpeciesImage(sp)} alt={sp} style={{width:'14px',height:'14px',objectFit:'cover',borderRadius:'50%'}} /> {sp}</span>
+                <span key={j} style={{ background:'#0f3460',color:'#93c5fd',fontSize:'9px',padding:'2px 7px',borderRadius:'10px',display:'inline-flex',alignItems:'center',gap:'4px' }}><Image src={getSpeciesImage(sp)} alt={sp} width={14} height={14} unoptimized style={{ objectFit:'cover', borderRadius:'50%' }} /> {sp}</span>
               ))}
             </div>
           )}

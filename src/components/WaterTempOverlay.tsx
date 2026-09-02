@@ -15,13 +15,6 @@ export function getRadiusForZoom(zoom: number): number {
   if (zoom < 8) return 15000; if (zoom <= 11) return 8000; return 3000;
 }
 
-function blend(a: string, b: string, t: number): string {
-  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16));
-  const pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
-  const m = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
-  return '#' + m.map(v => v.toString(16).padStart(2, '0')).join('');
-}
-
 function nearestTemp(lat: number, lng: number, pts: TemperaturePoint[]): number | null {
   let best: number | null = null; let bd = Infinity;
   for (const p of pts) {
