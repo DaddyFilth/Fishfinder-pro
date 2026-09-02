@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @next/next/no-img-element -- preview and species images are dynamic user uploads and catalog assets */
 
 import Image from 'next/image';
 import { ChangeEvent, useRef, useState } from 'react';
