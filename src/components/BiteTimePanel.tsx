@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- species info cards use local catalog images */
 import { useState } from 'react';
 import { calculateSolunar, hourlyActivityForecast } from '@/lib/scoring/solunar';
 import { getSpeciesAdvice } from '@/lib/scoring/speciesAdvisor';
