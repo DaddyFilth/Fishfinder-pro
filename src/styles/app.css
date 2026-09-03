@@ -2,17 +2,17 @@ html,
 body,
 #root {
   height: 100%;
-  margin: 0;
   min-height: 100%;
+  margin: 0;
 }
 
 body {
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 45%, rgba(25, 92, 173, 0.16), transparent 28%),
     linear-gradient(180deg, #020816 0%, #04101f 55%, #020814 100%);
   color: #e8f3ff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overflow: hidden;
 }
 
 * {
@@ -34,26 +34,26 @@ body {
 }
 
 .top-bar {
-  height: 72px;
-  display: flex;
   align-items: center;
-  padding: 0 16px;
   background: linear-gradient(180deg, rgba(3, 10, 24, 0.92), rgba(3, 10, 24, 0.45));
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(109, 169, 255, 0.12);
+  display: flex;
+  height: 72px;
+  padding: 0 16px;
 }
 
 .map-shell {
+  position: fixed;
+  top: 72px;
+  right: 0;
   bottom: 76px;
+  left: 0;
+  z-index: 0;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 60%, rgba(45, 128, 255, 0.12), transparent 22%),
     linear-gradient(180deg, #04101d 0%, #07182b 50%, #05101d 100%);
-  left: 0;
-  overflow: hidden;
-  position: fixed;
-  right: 0;
-  top: 72px;
-  z-index: 0;
 }
 
 .map-canvas,
@@ -73,8 +73,8 @@ body {
   background:
     radial-gradient(circle at 50% 70%, rgba(46, 122, 255, 0.10), transparent 22%),
     radial-gradient(circle at 20% 18%, rgba(57, 186, 255, 0.07), transparent 18%);
-  mix-blend-mode: screen;
   inset: 0;
+  mix-blend-mode: screen;
   pointer-events: none;
   position: absolute;
   z-index: 1;
@@ -105,31 +105,31 @@ body {
 }
 
 .map-overlay h3 {
-  font-size: 18px;
   margin: 0 0 6px;
+  font-size: 18px;
 }
 
 .map-overlay p {
-  color: rgba(223, 238, 255, 0.78);
-  font-size: 14px;
   margin: 0;
+  font-size: 14px;
+  color: rgba(223, 238, 255, 0.78);
 }
 
 .bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 76px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 16px;
   background: linear-gradient(180deg, rgba(5, 11, 24, 0.38), rgba(5, 11, 24, 0.96));
   backdrop-filter: blur(12px);
   border-top: 1px solid rgba(109, 169, 255, 0.10);
+  bottom: 0;
   color: rgba(230, 240, 255, 0.90);
+  display: flex;
   font-size: 14px;
+  height: 76px;
+  justify-content: center;
+  left: 0;
+  padding: 0 16px;
+  position: fixed;
+  right: 0;
 }
 
 @media (max-width: 640px) {
@@ -138,8 +138,8 @@ body {
   }
 
   .map-shell {
-    top: 68px;
     bottom: 82px;
+    top: 68px;
   }
 
   .bottom-nav {
