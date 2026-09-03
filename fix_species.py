@@ -1,36 +1,39 @@
+"""Update the species image map in the advisor source."""
+
 import re
 from pathlib import Path
 
 NL = chr(10)
 
-species = [
-    "Largemouth Bass","Smallmouth Bass","Spotted Bass",
-    "Channel Catfish","Blue Catfish","Flathead Catfish",
-    "Walleye","Rainbow Trout","Brown Trout",
-    "Crappie","Black Crappie","White Crappie",
-    "Bluegill","Redear Sunfish","Striped Bass",
-    "White Bass","Hybrid Striper","Redfish/Red Drum",
-    "Flounder","Sauger","Common Carp","Northern Pike"
+SPECIES = [
+    "Largemouth Bass", "Smallmouth Bass", "Spotted Bass",
+    "Channel Catfish", "Blue Catfish", "Flathead Catfish",
+    "Walleye", "Rainbow Trout", "Brown Trout",
+    "Crappie", "Black Crappie", "White Crappie",
+    "Bluegill", "Redear Sunfish", "Striped Bass",
+    "White Bass", "Hybrid Striper", "Redfish/Red Drum",
+    "Flounder", "Sauger", "Common Carp", "Northern Pike"
 ]
 
-def slug(s):
-    return s.lower().replace(" ", "-").replace("/", "-")
+def slug(species_name):
+    """Convert a species name into a URL slug."""
+    return species_name.lower().replace(" ", "-").replace("/", "-")
 
-lines = []
-for sp in species:
-    slugged = slug(sp)
-    line = "  '" + sp + "': '/species/" + slugged + ".jpg'"
-    lines.append(line)
+LINES = []
+for sp in SPECIES:
+    SLUGGED = slug(sp)
+    LINE = "  '" + sp + "': '/species/" + SLUGGED + ".jpg'"
+    LINES.append(LINE)
 
-body = ("," + NL).join(lines)
-header = "export const SPECIES_IMAGES: Record<string, string> = {" + NL
-footer = NL + "};"
-new_map = header + body + "," + footer
+BODY = ("," + NL).join(LINES)
+HEADER = "export const SPECIES_IMAGES: Record<string, string> = {" + NL
+FOOTER = NL + "};"
+NEW_MAP = HEADER + BODY + "," + FOOTER
 
-sa_path = Path("src/lib/scoring/speciesAdvisor.ts")
-text = sa_path.read_text()
-pattern = "export const SPECIES_IMAGES: Record<string, string> = \\{.*?\
+SA_PATH = Path("src/lib/scoring/speciesAdvisor.ts")
+TEXT = SA_PATH.read_text()
+PATTERN = "export const SPECIES_IMAGES: Record<string, string> = \\{.*?\
 \\};"
-text = re.sub(pattern, new_map, text, flags=re.DOTALL)
-sa_path.write_text(text)
+TEXT = re.sub(PATTERN, NEW_MAP, TEXT, flags=re.DOTALL)
+SA_PATH.write_text(TEXT)
 print("SPECIES_IMAGES map updated to local paths")
