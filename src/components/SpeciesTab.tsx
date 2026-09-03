@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- catalog images are local static field-guide assets. */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import {
   SPECIES,
   SPECIES_FILTERS,
@@ -14,7 +15,7 @@ import {
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
-export default function SpeciesTab() {
+export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates | null }) {
   const [filter, setFilter] = useState<SpeciesFilter>('All');
   const [groupFilter, setGroupFilter] = useState<SpeciesGroupFilter>('All');
   const [stateFilter, setStateFilter] = useState<SpeciesStateFilter>('All');
@@ -22,7 +23,8 @@ export default function SpeciesTab() {
   const [selected, setSelected] = useState<Species | null>(null);
 
   const normalizedSearch = search.trim().toLocaleLowerCase();
-  const filtered = SPECIES.filter((species) => {
+  const regionalSpecies = useMemo(() => speciesForCoordinates(SPECIES, coordinates), [coordinates]);
+  const filtered = regionalSpecies.filter((species) => {
     const matchesFilter = filter === 'All' || species.habitat === filter;
     const matchesGroup = groupFilter === 'All' || species.group === groupFilter;
     const matchesState = stateFilter === 'All' || species.states.includes(stateFilter);

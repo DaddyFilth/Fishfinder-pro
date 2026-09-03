@@ -9,6 +9,7 @@ import SocialTab from "@/components/SocialTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
+import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -32,6 +33,7 @@ async function getSpots(): Promise<Spot[]> {
 
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
@@ -49,6 +51,7 @@ export default function MobilePage() {
 
   useEffect(() => {
     getSpots().then(setSpots);
+    return requestDeviceLocation(setCoordinates);
   }, []);
 
   useEffect(() => {
@@ -238,7 +241,7 @@ export default function MobilePage() {
 {/* SOCIAL TAB */}
 {tab === 'social' && <SocialTab />}
         {tab === 'species' && (
-          <SpeciesTab />
+          <SpeciesTab coordinates={coordinates} />
         )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
