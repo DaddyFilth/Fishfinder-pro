@@ -72,14 +72,36 @@ function loadTrips(): LogbookTrip[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry): entry is LogbookTrip => {
-      return (
-        typeof entry === 'object' &&
-        entry !== null &&
-        typeof (entry as LogbookTrip).id === 'string' &&
-        typeof (entry as LogbookTrip).title === 'string'
-      );
-    });
+
+    const now = new Date().toISOString();
+
+    return parsed
+      .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+      .map((entry) => {
+        const id = typeof entry.id === 'string' ? entry.id : '';
+        const title = typeof entry.title === 'string' ? entry.title : '';
+        const catchesCountRaw =
+          typeof entry.catchesCount === 'number' && Number.isFinite(entry.catchesCount) ? entry.catchesCount : 0;
+
+        return {
+          id,
+          title,
+          waterBody: typeof entry.waterBody === 'string' ? entry.waterBody : '',
+          date: typeof entry.date === 'string' && entry.date ? entry.date : today(),
+          weather: typeof entry.weather === 'string' ? entry.weather : '',
+          species: typeof entry.species === 'string' ? entry.species : '',
+          catchesCount: Math.max(0, Math.round(catchesCountRaw)),
+          notes: typeof entry.notes === 'string' ? entry.notes : '',
+          photos: Array.isArray(entry.photos)
+            ? entry.photos.filter((p): p is string => typeof p === 'string')
+            : [],
+          lat: typeof entry.lat === 'number' && Number.isFinite(entry.lat) ? entry.lat : null,
+          lng: typeof entry.lng === 'number' && Number.isFinite(entry.lng) ? entry.lng : null,
+          createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : now,
+          updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : now,
+        };
+      })
+      .filter((t) => t.id && t.title);
   } catch {
     return [];
   }
