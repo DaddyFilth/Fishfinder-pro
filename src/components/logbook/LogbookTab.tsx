@@ -22,6 +22,8 @@ const STORAGE_KEY = 'fishfinder.logbook.trips.v1';
 const MAX_PHOTOS_PER_TRIP = 4;
 const MAX_PHOTO_DIMENSION = 1280;
 const JPEG_QUALITY = 0.8;
+const MASKED_COORD_DIGITS = 2; // ~1 km precision shown by default
+const PRECISE_COORD_DIGITS = 5; // ~1 m precision behind the reveal toggle
 
 const EMPTY_FORM = {
   title: '',
@@ -170,6 +172,10 @@ async function fileToResizedDataUrl(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', JPEG_QUALITY);
 }
 
+function formatCoords(lat: number, lng: number, digits: number): string {
+  return `${lat.toFixed(digits)}, ${lng.toFixed(digits)}`;
+}
+
 export default function LogbookTab() {
   const trips = useSyncExternalStore(subscribeToStorage, loadTrips, () => EMPTY_TRIPS);
   const [showForm, setShowForm] = useState(false);
@@ -177,6 +183,7 @@ export default function LogbookTab() {
   const [form, setForm] = useState({ ...EMPTY_FORM, date: today() });
   const [photos, setPhotos] = useState<string[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showPreciseCoords, setShowPreciseCoords] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'ok' | 'error'>('idle');
   const [gpsError, setGpsError] = useState('');
   const [photoError, setPhotoError] = useState('');
@@ -202,6 +209,7 @@ export default function LogbookTab() {
     setForm({ ...EMPTY_FORM, date: today() });
     setPhotos([]);
     setCoords(null);
+    setShowPreciseCoords(false);
     setGpsStatus('idle');
     setGpsError('');
     setPhotoError('');
@@ -297,6 +305,7 @@ export default function LogbookTab() {
     });
     setPhotos(trip.photos);
     setCoords(trip.lat !== null && trip.lng !== null ? { lat: trip.lat, lng: trip.lng } : null);
+    setShowPreciseCoords(false);
     setGpsStatus(trip.lat !== null && trip.lng !== null ? 'ok' : 'idle');
     setGpsError('');
     setPhotoError('');
@@ -375,8 +384,19 @@ export default function LogbookTab() {
               </button>
             </div>
             {coords && (
-              <div style={{ fontSize: '10px', color: '#7dd3fc', marginTop: '6px' }}>
-                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                <button
+                  onClick={() => setShowPreciseCoords(!showPreciseCoords)}
+                  title={showPreciseCoords ? 'Hide exact location' : 'Show exact location'}
+                  style={{ background: 'none', border: 'none', color: '#7dd3fc', fontSize: '10px', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                >
+                  {showPreciseCoords
+                    ? formatCoords(coords.lat, coords.lng, PRECISE_COORD_DIGITS)
+                    : `${formatCoords(coords.lat, coords.lng, MASKED_COORD_DIGITS)}…`}
+                </button>
+                <span style={{ fontSize: '9px', color: '#475569' }}>
+                  {showPreciseCoords ? 'exact' : 'approximate — tap to reveal'}
+                </span>
               </div>
             )}
             {gpsStatus === 'error' && (
@@ -455,7 +475,8 @@ export default function LogbookTab() {
 
           {trip.lat !== null && trip.lng !== null && (
             <div style={{ fontSize: '10px', color: '#475569', marginTop: '8px' }}>
-              📍 {trip.lat.toFixed(5)}, {trip.lng.toFixed(5)}
+              📍 {formatCoords(trip.lat, trip.lng, MASKED_COORD_DIGITS)}…
+              <span style={{ color: '#334155' }}> (approximate)</span>
             </div>
           )}
 

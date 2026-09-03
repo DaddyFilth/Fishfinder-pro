@@ -13,7 +13,8 @@ the existing map-popup `CatchLogger` (per-spot catch entries), which is unchange
   stored, keeping browser storage usage reasonable.
 - **GPS** — one-tap capture of the device's current coordinates via the
   Geolocation API. Denial, timeout, and unsupported-browser states are all
-  surfaced in the UI; GPS is optional.
+  surfaced in the UI; GPS is optional. Coordinates are stored at full
+  precision but **displayed masked by default** (see below).
 - **Edit / delete** — trips can be edited (form is re-populated, photos and
   coordinates included) or deleted with a confirmation prompt.
 
@@ -31,12 +32,25 @@ Implications:
   failing silently.
 - Data is per-browser and per-device; there is no sync yet.
 
-## GPS behavior
+## GPS and privacy
 
 `navigator.geolocation.getCurrentPosition` is called only when the user taps
 "Use current location" — no background or automatic location access. The
-browser prompts for permission on first use. Coordinates are stored on the
-trip and displayed at 5-decimal precision (~1 m).
+browser prompts for permission on first use.
+
+Coordinates are stored in localStorage at full precision (~1 m), so the data
+is there if you need it for map links or later export. However, they are
+**never shown at full precision on screen by default**:
+
+- Trip cards show coordinates at 2 decimal places (~1 km) with an
+  "(approximate)" label.
+- In the form, tapping the coordinate text reveals the exact value; tapping
+  again hides it. This keeps precise spots out of casual screenshots and
+  shoulder-surfing while keeping the data accessible to you.
+
+Coordinates are user data, not app secrets — they are never sent to any
+server in the current local-first build, and when Supabase sync is wired up
+the `logbook_trips` RLS policies keep rows visible only to their owner.
 
 ## Supabase sync path (planned)
 
