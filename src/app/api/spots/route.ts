@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import { OKLAHOMA_SPOTS as DEFAULT_SPOTS } from '@/lib/spots/seedSpots';
 
 
 

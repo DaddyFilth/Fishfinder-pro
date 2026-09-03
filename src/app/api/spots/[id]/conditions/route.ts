@@ -2,24 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchNWSConditions, fetchUSGSWaterData, fetchMarineConditions, fetchTideData } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { OKLAHOMA_SPOTS } from '@/lib/spots/seedSpots';
 import { z } from 'zod';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return NextResponse.json({ error: 'Database is not configured' }, { status: 503 });
-  const parsed = z.object({ id: z.string().uuid() }).safeParse(await params);
+  const parsed = z.object({ id: z.string().min(1).max(120) }).safeParse(await params);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid spot ID' }, { status: 400 });
 
-  const { id: id } = parsed.data;
-  const { data: spot, error: spotErr } = await supabase
-    .from('fishing_spots').select('*').eq('id', id).single();
-  if (spotErr || !spot) return NextResponse.json({ error: 'Spot not found' }, { status: 404 });
+  const { id } = parsed.data;
+  const { data: databaseSpot } = supabase
+    ? await supabase.from('fishing_spots').select('*').eq('id', id).maybeSingle()
+    : { data: null };
+  const spot = databaseSpot ?? OKLAHOMA_SPOTS.find((candidate) => candidate.id === id);
+  if (!spot) return NextResponse.json({ error: 'Spot not found' }, { status: 404 });
 
   // Return cache if fresher than 30 min
-  const { data: cached } = await supabase
-    .from('environmental_snapshots').select('*').eq('spot_id', id)
-    .gte('captured_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
-    .order('captured_at', { ascending: false }).limit(1).single();
+  const { data: cached } = supabase
+    ? await supabase.from('environmental_snapshots').select('*').eq('spot_id', id)
+        .gte('captured_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+        .order('captured_at', { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
   if (cached) return NextResponse.json({ ...cached, cached: true }, { headers: { 'Cache-Control': 'public, max-age=1800' } });
 
   // Fetch all sources in parallel — failures don't block other sources
@@ -69,6 +72,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     score_breakdown:      scoreResult,
     data_sources:         dataSources,
   };
+
+  if (!supabase) {
+    return NextResponse.json({ ...snapshot, cached: false, captured_at: new Date().toISOString() }, {
+      headers: { 'Cache-Control': 'public, max-age=1800' },
+    });
+  }
 
   const { data: inserted, error: insertErr } = await supabase
     .from('environmental_snapshots').insert(snapshot).select().single();
