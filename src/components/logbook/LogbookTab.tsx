@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- trip photos are stored as local data URLs from user uploads. */
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
@@ -367,9 +368,8 @@ export default function LogbookTab() {
               <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                 {photos.map((photo, i) => (
                   <div key={i} style={{ position: 'relative' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo} alt={`Trip photo ${i + 1}`} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e293b' }} />
-                    <button onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
+                    <button type='button' aria-label={`Remove trip photo ${i + 1}`} onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -416,7 +416,6 @@ export default function LogbookTab() {
           {trip.photos.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
               {trip.photos.map((photo, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img key={i} src={photo} alt={`${trip.title} photo ${i + 1}`} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e293b' }} />
               ))}
             </div>
