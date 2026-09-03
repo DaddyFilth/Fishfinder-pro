@@ -10,6 +10,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -26,9 +27,10 @@ const MAP_FILTERS = [
 async function getSpots(): Promise<Spot[]> {
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
-    if (!res.ok) return [];
-    return res.json();
-  } catch { return []; }
+    if (!res.ok) return [...DEFAULT_SPOTS];
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0 ? data : [...DEFAULT_SPOTS];
+  } catch { return [...DEFAULT_SPOTS]; }
 }
 
 export default function MobilePage() {
