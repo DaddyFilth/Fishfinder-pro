@@ -6,6 +6,7 @@ import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import SocialTab from "@/components/SocialTab";
+import LogbookTab from '@/components/logbook/LogbookTab';
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
@@ -189,18 +190,7 @@ export default function MobilePage() {
         )}
 
         {/* LOGBOOK TAB */}
-        {tab === 'log' && (
-          <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
-            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>📓 My Logbook</div>
-            <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'12px', padding:'16px', textAlign:'center' }}>
-              <div style={{ fontSize:'32px', marginBottom:'8px' }}>🎣</div>
-              <div style={{ color:'#64748b', fontSize:'13px' }}>No catches logged yet</div>
-              <button style={{ marginTop:'12px', background:'linear-gradient(135deg,#0369a1,#7c3aed)', color:'white', border:'none', padding:'10px 20px', borderRadius:'20px', fontSize:'12px', fontWeight:'bold', cursor:'pointer' }}>
-                + Log a Catch
-              </button>
-            </div>
-          </div>
-        )}
+        {tab === 'log' && <LogbookTab />}
 
         {/* AI TAB */}
         {tab === 'ai' && (
