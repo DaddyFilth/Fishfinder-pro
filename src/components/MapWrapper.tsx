@@ -298,34 +298,6 @@ export default function FishingMap({
           </div>
         </div>
 
-        <div className="hud" style={{ position: 'absolute', top: 18, right: 18, zIndex: 1600, borderRadius: 18, padding: '14px 16px', width: 285 }}>
-          <div style={{ color: 'white', fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Top bite zones</div>
-          {hotSpots.length === 0 ? (
-            <div style={{ color: '#94a3b8', fontSize: 12 }}>Loading live hotspots...</div>
-          ) : (
-            hotSpots.map(({ spot, score }, idx) => (
-              <div
-                key={spot.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: idx === hotSpots.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                }}
-              >
-                <div>
-                  <div style={{ color: 'white', fontSize: 12, fontWeight: 700 }}>{spot.name}</div>
-                  <div style={{ color: '#94a3b8', fontSize: 10 }}>{spot.water_type}</div>
-                </div>
-                <div style={{ color: scoreColor(score), fontSize: 13, fontWeight: 800, textShadow: `0 0 18px ${scoreColor(score)}55` }}>
-                  {score}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
         <MapContainer center={[35.5, -97.5]} zoom={7} style={{ height: '100%', width: '100%' }} zoomControl>
           <TileLayer
             key={baseLayer}
