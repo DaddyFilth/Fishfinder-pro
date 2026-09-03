@@ -1,12 +1,14 @@
+"""Print a quick map of the application's routes and component imports."""
+
 from pathlib import Path
 import re
 
 print("=== page.tsx tab/route map ===")
-p = Path("src/app/page.tsx")
-if p.exists():
-    t = p.read_text()
-    imports = re.findall(r"import\s+\{?\s*(\w+)\s*\}?\s+from\s+'([^']+)'", t)
-    for name, src in imports:
+P = Path("src/app/page.tsx")
+if P.exists():
+    T = P.read_text()
+    IMPORTS = re.findall(r"import\s+\{?\s*(\w+)\s*\}?\s+from\s+'([^']+)'", T)
+    for name, src in IMPORTS:
         if "components" in src or "app" in src:
             print(name, "<-", src)
 else:
@@ -14,21 +16,29 @@ else:
 
 print()
 print("=== API routes ===")
-api_dir = Path("src/app/api")
-if api_dir.exists():
-    for f in api_dir.rglob("route.ts"):
+API_DIR = Path("src/app/api")
+if API_DIR.exists():
+    for f in API_DIR.rglob("route.ts"):
         print(f)
 else:
     print("no src/app/api directory")
 
 print()
 print("=== components missing loading/error/empty handling (heuristic) ===")
-comp_dir = Path("src/components")
-for f in comp_dir.rglob("*.tsx"):
-    t = f.read_text()
-    uses_fetch = "fetch(" in t or "useEffect" in t
-    has_loading = "loading" in t.lower()
-    has_error = "error" in t.lower()
-    has_empty = "length === 0" in t or "length===0" in t or ".length ?" in t
+COMP_DIR = Path("src/components")
+for f in COMP_DIR.rglob("*.tsx"):
+    T = f.read_text()
+    uses_fetch = "fetch(" in T or "useEffect" in T
+    has_loading = "loading" in T.lower()
+    has_error = "error" in T.lower()
+    has_empty = "length === 0" in T or "length===0" in T or ".length ?" in T
     if uses_fetch and not (has_loading and has_error):
-        print(str(f) + " -> loading:" + str(has_loading) + " error:" + str(has_error) + " empty:" + str(has_empty))
+        print(
+            str(f)
+            + " -> loading:"
+            + str(has_loading)
+            + " error:"
+            + str(has_error)
+            + " empty:"
+            + str(has_empty)
+        )

@@ -20,10 +20,10 @@ body {
 }
 
 .app {
-  position: relative;
+  background: transparent;
   height: 100dvh;
   overflow: hidden;
-  background: transparent;
+  position: relative;
 }
 
 .top-bar,
@@ -34,13 +34,13 @@ body {
 }
 
 .top-bar {
-  height: 72px;
-  display: flex;
   align-items: center;
-  padding: 0 16px;
   background: linear-gradient(180deg, rgba(3, 10, 24, 0.92), rgba(3, 10, 24, 0.45));
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(109, 169, 255, 0.12);
+  display: flex;
+  height: 72px;
+  padding: 0 16px;
 }
 
 .map-shell {
@@ -58,50 +58,50 @@ body {
 
 .map-canvas,
 .map-shell .leaflet-container {
-  width: 100%;
+  background: #06101d;
   height: 100%;
   min-height: 320px;
-  background: #06101d;
+  width: 100%;
 }
 
 .map-shell .leaflet-tile-pane {
-  opacity: 0.92;
   filter: saturate(0.95) contrast(1.05) brightness(0.82);
+  opacity: 0.92;
 }
 
 .map-cinematic-glow {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
   background:
-    radial-gradient(circle at 50% 70%, rgba(46, 122, 255, 0.1), transparent 22%),
+    radial-gradient(circle at 50% 70%, rgba(46, 122, 255, 0.10), transparent 22%),
     radial-gradient(circle at 20% 18%, rgba(57, 186, 255, 0.07), transparent 18%);
+  inset: 0;
   mix-blend-mode: screen;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
 }
 
 .map-cinematic-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
   background:
     radial-gradient(circle at center, transparent 0 38%, rgba(1, 6, 16, 0.12) 65%, rgba(1, 6, 16, 0.42) 100%),
     linear-gradient(180deg, rgba(2, 8, 20, 0.30) 0%, rgba(2, 8, 20, 0.02) 25%, rgba(2, 8, 20, 0.02) 78%, rgba(2, 8, 20, 0.34) 100%);
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
 }
 
 .map-overlay {
-  position: absolute;
-  top: 92px;
-  left: 16px;
-  right: 16px;
-  max-width: 320px;
-  padding: 16px 18px;
-  border-radius: 20px;
+  backdrop-filter: blur(14px);
   background: rgba(9, 18, 36, 0.72);
   border: 1px solid rgba(109, 169, 255, 0.16);
+  border-radius: 20px;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(14px);
+  left: 16px;
+  max-width: 320px;
+  padding: 16px 18px;
+  position: absolute;
+  right: 16px;
+  top: 92px;
 }
 
 .map-overlay h3 {
@@ -116,20 +116,20 @@ body {
 }
 
 .bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 76px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 16px;
   background: linear-gradient(180deg, rgba(5, 11, 24, 0.38), rgba(5, 11, 24, 0.96));
   backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(109, 169, 255, 0.1);
-  color: rgba(230, 240, 255, 0.9);
+  border-top: 1px solid rgba(109, 169, 255, 0.10);
+  bottom: 0;
+  color: rgba(230, 240, 255, 0.90);
+  display: flex;
   font-size: 14px;
+  height: 76px;
+  justify-content: center;
+  left: 0;
+  padding: 0 16px;
+  position: fixed;
+  right: 0;
 }
 
 @media (max-width: 640px) {
@@ -138,8 +138,8 @@ body {
   }
 
   .map-shell {
-    top: 68px;
     bottom: 82px;
+    top: 68px;
   }
 
   .bottom-nav {
