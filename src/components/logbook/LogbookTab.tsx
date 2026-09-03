@@ -1,7 +1,6 @@
 'use client';
-/* eslint-disable @next/next/no-img-element -- trip photos are stored as local data URLs from user uploads. */
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useSyncExternalStore, useRef, useState, type CSSProperties } from 'react';
 
 export interface LogbookTrip {
   id: string;
@@ -67,16 +66,33 @@ function newId(): string {
   return `trip-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+let cachedRaw: string | null = null;
+let cachedParsed: LogbookTrip[] = [];
+const EMPTY_TRIPS: LogbookTrip[] = [];
+
 function loadTrips(): LogbookTrip[] {
+  if (typeof window === 'undefined') return EMPTY_TRIPS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      cachedRaw = null;
+      cachedParsed = EMPTY_TRIPS;
+      return EMPTY_TRIPS;
+    }
+    if (raw === cachedRaw) {
+      return cachedParsed;
+    }
+
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      cachedRaw = raw;
+      cachedParsed = EMPTY_TRIPS;
+      return EMPTY_TRIPS;
+    }
 
     const now = new Date().toISOString();
 
-    return parsed
+    const result = parsed
       .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
       .map((entry) => {
         const id = typeof entry.id === 'string' ? entry.id : '';
@@ -103,9 +119,27 @@ function loadTrips(): LogbookTrip[] {
         };
       })
       .filter((t) => t.id && t.title);
+
+    cachedRaw = raw;
+    cachedParsed = result;
+    return result;
   } catch {
-    return [];
+    return EMPTY_TRIPS;
   }
+}
+
+function subscribeToStorage(callback: () => void) {
+  if (typeof window === 'undefined') return () => {};
+  const handler = (e: StorageEvent | CustomEvent) => {
+    if ('key' in e && e.key !== STORAGE_KEY && e.key !== null) return;
+    callback();
+  };
+  window.addEventListener('storage', handler as EventListener);
+  window.addEventListener('logbook-updated', handler as EventListener);
+  return () => {
+    window.removeEventListener('storage', handler as EventListener);
+    window.removeEventListener('logbook-updated', handler as EventListener);
+  };
 }
 
 async function fileToResizedDataUrl(file: File): Promise<string> {
@@ -137,7 +171,7 @@ async function fileToResizedDataUrl(file: File): Promise<string> {
 }
 
 export default function LogbookTab() {
-  const [trips, setTrips] = useState<LogbookTrip[]>([]);
+  const trips = useSyncExternalStore(subscribeToStorage, loadTrips, () => EMPTY_TRIPS);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM, date: today() });
@@ -150,15 +184,11 @@ export default function LogbookTab() {
   const [storageError, setStorageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setTrips(loadTrips());
-  }, []);
-
   const persist = (next: LogbookTrip[]) => {
-    setTrips(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setStorageError('');
+      window.dispatchEvent(new CustomEvent('logbook-updated'));
     } catch {
       setStorageError(
         'Browser storage is full — this change may not persist. Remove a trip or some photos and try again.'
@@ -368,8 +398,9 @@ export default function LogbookTab() {
               <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                 {photos.map((photo, i) => (
                   <div key={i} style={{ position: 'relative' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo} alt={`Trip photo ${i + 1}`} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e293b' }} />
-                    <button type='button' aria-label={`Remove trip photo ${i + 1}`} onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -416,6 +447,7 @@ export default function LogbookTab() {
           {trip.photos.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
               {trip.photos.map((photo, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img key={i} src={photo} alt={`${trip.title} photo ${i + 1}`} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e293b' }} />
               ))}
             </div>
