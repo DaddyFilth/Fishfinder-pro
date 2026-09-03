@@ -1,22 +1,36 @@
+"""Apply small source fixes that are not convenient to perform manually."""
+
 from pathlib import Path
 
-p = Path("src/components/BiteTimePanel.tsx")
-s = p.read_text()
-s = s.replace("import { useState, useCallback } from 'react';", "import { useState } from 'react';")
-s = s.replace("const fetchAIPrediction = useCallback(async (species: string) => {", "const fetchAIPrediction = async (species: string) => {")
-s = s.replace("}, [lat, lng, conditions, solunar.solunarScore, solunar.moonPhaseName]);", "};")
-s = s.replace("Today's", "Today&apos;s")
-s = s.replace("today's", "today&apos;s")
-p.write_text(s)
+P = Path("src/components/BiteTimePanel.tsx")
+S = P.read_text()
+S = S.replace(
+    "import { useState, useCallback } from 'react';",
+    "import { useState } from 'react';",
+)
+S = S.replace(
+    "const fetchAIPrediction = useCallback(async (species: string) => {",
+    "const fetchAIPrediction = async (species: string) => {",
+)
+S = S.replace(
+    "}, [lat, lng, conditions, solunar.solunarScore, solunar.moonPhaseName]);",
+    "};",
+)
+S = S.replace("Today's", "Today&apos;s")
+S = S.replace("today's", "today&apos;s")
+P.write_text(S)
 print("BiteTimePanel fixed")
 
-p = Path("src/components/ai/FishIdentifierModal.tsx")
-lines = p.read_text().splitlines()
-new_lines = []
-for line in lines:
+P = Path("src/components/ai/FishIdentifierModal.tsx")
+LINES = P.read_text().splitlines()
+NEW_LINES = []
+for line in LINES:
     if line == "import { useRef, useState } from 'react';":
-        new_lines.append("import { ChangeEvent, useRef, useState } from 'react';")
-    elif line == "export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }: any) {":
+        NEW_LINES.append("import { ChangeEvent, useRef, useState } from 'react';")
+    elif line == (
+        "export default function FishIdentifierModal("
+        "{ isOpen, onClose, onApplyToCatch }: any) {"
+    ):
         block = [
             "interface FishIdentifierResult {",
             "  is_fish?: boolean;",
@@ -44,28 +58,35 @@ for line in lines:
             "  onApplyToCatch?: (data: CatchAutofillData) => void;",
             "}",
             "",
-            "export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }: FishIdentifierModalProps) {",
+            "export default function FishIdentifierModal("
+            "{ isOpen, onClose, onApplyToCatch }: FishIdentifierModalProps) {",
         ]
-        new_lines.extend(block)
+        NEW_LINES.extend(block)
     elif line.strip() == "const [result, setResult] = useState<any>(null);":
-        new_lines.append("  const [result, setResult] = useState<FishIdentifierResult | null>(null);")
+        NEW_LINES.append(
+            "  const [result, setResult] = "
+            "useState<FishIdentifierResult | null>(null);"
+        )
     elif line.strip() == "const handleImage = (e: any) => {":
-        new_lines.append("  const handleImage = (e: ChangeEvent<HTMLInputElement>) => {")
+        NEW_LINES.append("  const handleImage = (e: ChangeEvent<HTMLInputElement>) => {")
     elif line.strip() == "reader.onload = (evt: any) => {":
-        new_lines.append("    reader.onload = (evt: ProgressEvent<FileReader>) => {")
+        NEW_LINES.append("    reader.onload = (evt: ProgressEvent<FileReader>) => {")
     elif line.strip() == "const b64 = evt.target.result;":
-        new_lines.append("      const b64 = evt.target?.result as string;")
+        NEW_LINES.append("      const b64 = evt.target?.result as string;")
     elif line.strip() == "} catch (err: any) {":
-        new_lines.append("    } catch (err: unknown) {")
+        NEW_LINES.append("    } catch (err: unknown) {")
     elif "setError(err.message" in line:
-        new_lines.append("      setError(err instanceof Error ? err.message : 'Error connecting to AI model');")
+        NEW_LINES.append(
+            "      setError(err instanceof Error ? err.message : "
+            "'Error connecting to AI model');"
+        )
     else:
-        new_lines.append(line)
-p.write_text("\n".join(new_lines))
+        NEW_LINES.append(line)
+P.write_text("\n".join(NEW_LINES))
 print("FishIdentifierModal fixed")
 
-p = Path("src/components/logbook/CatchLogger.tsx")
-lines = p.read_text().splitlines()
-lines = [l for l in lines if "import FishIdentifierModal" not in l]
-p.write_text("\n".join(lines))
+P = Path("src/components/logbook/CatchLogger.tsx")
+LINES = P.read_text().splitlines()
+LINES = [line for line in LINES if "import FishIdentifierModal" not in line]
+P.write_text("\n".join(LINES))
 print("CatchLogger fixed")
