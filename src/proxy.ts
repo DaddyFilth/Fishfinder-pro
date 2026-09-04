@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
 const CANONICAL_HOST = 'fishfinder-pro.online';
 const WWW_HOST = `www.${CANONICAL_HOST}`;
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 
@@ -20,7 +21,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  return NextResponse.next();
+  return updateSession(request);
 }
 
 export const config = {

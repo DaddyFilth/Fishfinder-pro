@@ -11,6 +11,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
+import { createClient } from '@/lib/supabase/client';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -35,6 +36,7 @@ async function getSpots(): Promise<Spot[]> {
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
@@ -53,6 +55,13 @@ export default function MobilePage() {
   useEffect(() => {
     getSpots().then(setSpots);
     return requestDeviceLocation(setCoordinates);
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUserEmail(session?.user.email ?? null));
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -237,6 +246,12 @@ export default function MobilePage() {
         {tab === 'settings' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+
+            <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'20px' }}>
+              <div style={{ fontSize:'12px', color:'#64748b', marginBottom:'6px' }}>ACCOUNT</div>
+              <div style={{ fontSize:'13px', color:'#e2e8f0', marginBottom:'10px' }}>{userEmail ?? 'Signed in'}</div>
+              <button onClick={async () => { await createClient().auth.signOut(); setUserEmail(null); }} style={{ background:'#0f172a', border:'1px solid #334155', borderRadius:'8px', color:'#cbd5e1', padding:'8px 12px', cursor:'pointer', fontSize:'11px' }}>Sign out</button>
+            </div>
 
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>
