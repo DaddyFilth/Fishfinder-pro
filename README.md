@@ -33,6 +33,19 @@ npm run build
 npm start
 ```
 
+## User accounts
+
+FishFinder Pro uses Supabase Auth for persistent email-and-password accounts. The login screen is available at `/auth/login`, and the main header shows the current account or a login link. New accounts can optionally require email confirmation, and authenticated sessions are refreshed through the Next.js proxy so users remain signed in across visits.
+
+Configure these public variables in local development and production:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key
+```
+
+Run `db/supabase-schema.sql` in the Supabase SQL editor to create the profile table and new-user trigger. In Supabase **Authentication → URL Configuration**, add the deployed site URL and the callback URL `https://your-domain.example/auth/callback`; for local development, add `http://localhost:3000/auth/callback`. Do not commit `.env.local` or service-role keys.
+
 To deploy from the Codespaces terminal, import the repository into Vercel and configure the same environment variables there. Vercel detects the Next.js build automatically; do not add `.env.local` or any credentials to the repository.
 
 ## AI smoke tests
