@@ -35,6 +35,8 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   { id: '00000000-0000-4000-8000-000000000028', name: 'Lake of the Ozarks', lat: 38.180, lng: -92.650, water_type: 'freshwater', spot_type: 'reservoir' },
   { id: '00000000-0000-4000-8000-000000000029', name: 'Yellowstone Lake', lat: 44.500, lng: -110.300, water_type: 'freshwater', spot_type: 'lake' },
   { id: '00000000-0000-4000-8000-000000000030', name: 'Lake Champlain', lat: 44.530, lng: -73.330, water_type: 'freshwater', spot_type: 'lake' },
+  { id: '00000000-0000-4000-8000-000000000031', name: 'Purcell Lake', lat: 34.990139, lng: -97.389444, water_type: 'freshwater', spot_type: 'lake' },
+  { id: '00000000-0000-4000-8000-000000000032', name: 'Pauls Valley City Lake', lat: 34.782694, lng: -97.204444, water_type: 'freshwater', spot_type: 'lake' },
 ];
 
 export function getDefaultCondition(spot: Spot) {
