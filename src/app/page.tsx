@@ -12,6 +12,7 @@ import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import AuthAccountButton from '@/components/AuthAccountButton';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -120,6 +121,7 @@ export default function MobilePage() {
         <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
           <span style={{ fontSize:'10px', color:'#22c55e' }}>● LIVE</span>
           <span style={{ fontSize:'18px', cursor:'pointer' }}>🔔</span>
+          <AuthAccountButton />
         </div>
       </header>
 
