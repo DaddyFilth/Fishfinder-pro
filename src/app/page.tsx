@@ -135,7 +135,7 @@ export default function MobilePage() {
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
-              📍 {visibleSpots.length} spots loaded
+              📍 {visibleSpots.length} spots nationwide
             </div>
 
             {mapLayers.depth && (
