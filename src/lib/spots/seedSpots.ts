@@ -1,113 +1,13 @@
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+
 /**
- * Run once to seed Oklahoma fishing spots into Supabase:
- *   npx ts-node --project tsconfig.json -e "require('./src/lib/spots/seedSpots')"
- * Or paste the SQL below directly into your Supabase SQL editor.
+ * Nationwide starter catalog for Supabase seeding.
+ * The local fallback and database seed intentionally share stable IDs so the
+ * API can merge database rows without creating duplicate map pins.
  */
-export const OKLAHOMA_SPOTS = [
-  {
-    id: 'purcell-lake-ok',
-    name: 'Purcell Lake',
-    lat: 34.9773,
-    lng: -97.3614,
-    water_type: 'freshwater',
-    spot_type: 'lake',
-  },
-  {
-    id: 'lake-thunderbird-ok',
-    name: 'Lake Thunderbird',
-    lat: 35.2384,
-    lng: -97.2467,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'lake-hefner-ok',
-    name: 'Lake Hefner',
-    lat: 35.5614,
-    lng: -97.6042,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'lake-stanley-draper-ok',
-    name: 'Lake Stanley Draper',
-    lat: 35.3648,
-    lng: -97.3986,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'lake-texoma-ok',
-    name: 'Lake Texoma',
-    lat: 33.8837,
-    lng: -96.8960,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'eufaula-lake-ok',
-    name: 'Lake Eufaula',
-    lat: 35.2898,
-    lng: -95.5771,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'fort-gibson-lake-ok',
-    name: 'Fort Gibson Lake',
-    lat: 35.8748,
-    lng: -95.2441,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'tenkiller-lake-ok',
-    name: 'Lake Tenkiller',
-    lat: 35.6445,
-    lng: -95.0688,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'canton-lake-ok',
-    name: 'Canton Lake',
-    lat: 36.0820,
-    lng: -98.5848,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'arcadia-lake-ok',
-    name: 'Arcadia Lake',
-    lat: 35.6592,
-    lng: -97.3303,
-    water_type: 'freshwater',
-    spot_type: 'reservoir',
-  },
-  {
-    id: 'north-canadian-river-purcell',
-    name: 'North Canadian River – Purcell',
-    lat: 35.0134,
-    lng: -97.3598,
-    water_type: 'freshwater',
-    spot_type: 'river',
-  },
-  {
-    id: 'washita-river-ok', name: 'Washita River – Chickasha', lat: 35.0526, lng: -97.9442, water_type: 'freshwater', spot_type: 'river',
-  },
-  { id: 'grand-lake-ok', name: 'Grand Lake O’ the Cherokees', lat: 36.4776, lng: -95.0338, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'keystone-lake-ok', name: 'Keystone Lake', lat: 36.1426, lng: -96.3034, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'kaw-lake-ok', name: 'Kaw Lake', lat: 36.7401, lng: -97.0117, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'ologah-lake-ok', name: 'Oologah Lake', lat: 36.5698, lng: -95.7055, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'broken-bow-lake-ok', name: 'Broken Bow Lake', lat: 34.1722, lng: -94.7377, water_type: 'freshwater', spot_type: 'lake' },
-  { id: 'beavers-bend-ok', name: 'Mountain Fork River – Beavers Bend', lat: 34.1457, lng: -94.7144, water_type: 'freshwater', spot_type: 'river' },
-  { id: 'arbuckle-lake-ok', name: 'Lake of the Arbuckles', lat: 34.4576, lng: -97.0003, water_type: 'freshwater', spot_type: 'lake' },
-  { id: 'sardis-lake-ok', name: 'Sardis Lake', lat: 34.7128, lng: -96.9687, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'robert-s-kerr-ok', name: 'Robert S. Kerr Reservoir', lat: 35.3562, lng: -95.0103, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'skiatook-lake-ok', name: 'Skiatook Lake', lat: 36.3495, lng: -96.1721, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'foss-lake-ok', name: 'Foss Lake', lat: 35.5257, lng: -99.1706, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'altus-lugert-ok', name: 'Altus-Lugert Lake', lat: 34.9246, lng: -99.2978, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'western-wallis-ok', name: 'Lake Ellsworth', lat: 34.8318, lng: -98.3638, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'fort-cobb-lake-ok', name: 'Fort Cobb Lake', lat: 35.1589, lng: -98.4724, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: 'eastern-willow-ok', name: 'Lake Eucha', lat: 36.3998, lng: -94.9431, water_type: 'freshwater', spot_type: 'reservoir' },
-];
+export const NATIONWIDE_SPOTS = DEFAULT_SPOTS.map((spot) => ({ ...spot }));
+
+// Kept as a compatibility alias for existing seed scripts.
+export const OKLAHOMA_SPOTS = NATIONWIDE_SPOTS;
+
+export default NATIONWIDE_SPOTS;
