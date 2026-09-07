@@ -13,6 +13,7 @@ import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFil
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
+import SpotDiscovery from '@/components/SpotDiscovery';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -241,6 +242,8 @@ export default function MobilePage() {
         {tab === 'settings' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+
+            <SpotDiscovery coordinates={coordinates} onAccepted={() => getSpots().then(setSpots)} />
 
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>
