@@ -242,7 +242,7 @@ export function validatePublicAccessData(
     if (!point.sourceUrl.startsWith('https://')) {
       errors.push(`${point.id}: sourceUrl must use https`);
     }
-    if (!/^d{4}-d{2}-d{2}$/.test(point.verifiedAt)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(point.verifiedAt)) {
       errors.push(`${point.id}: verifiedAt must be YYYY-MM-DD`);
     }
     if (point.latitude < 33.5 || point.latitude > 37.2) {
