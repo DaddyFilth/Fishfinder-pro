@@ -23,7 +23,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Frogbot credentials
+        id: frogbot-credentials
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+          JF_USER: ${{ secrets.JF_USER }}
+          JF_PASSWORD: ${{ secrets.JF_PASSWORD }}
+        run: |
+          if [[ -n "$JF_URL" && ( -n "$JF_ACCESS_TOKEN" || ( -n "$JF_USER" && -n "$JF_PASSWORD" ) ) ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Skipping Frogbot because the required JFrog credentials are not configured."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: jfrog/frogbot@5d9c42c30f1169d8be4ba5510b40e75ffcbbc2a9  # v2.21.2
+        if: steps.frogbot-credentials.outputs.configured == 'true'
         env:
           # [Mandatory if the two conditions below are met]
           # 1. The project uses npm, yarn 2, NuGet or .NET to download its dependencies
@@ -42,11 +58,11 @@ jobs:
 
           # [Mandatory if JF_ACCESS_TOKEN is not provided]
           # JFrog username with 'read' permissions for Xray. Must be provided with JF_PASSWORD
-          # JF_USER: ${{ secrets.JF_USER }}
+          JF_USER: ${{ secrets.JF_USER }}
 
           # [Mandatory if JF_ACCESS_TOKEN is not provided]
           # JFrog password. Must be provided with JF_USER
-          # JF_PASSWORD: ${{ secrets.JF_PASSWORD }}
+          JF_PASSWORD: ${{ secrets.JF_PASSWORD }}
 
           # [Mandatory]
           # The GitHub token automatically generated for the job
