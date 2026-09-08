@@ -60,9 +60,11 @@ export default function PublicAccessPanel({
       ) : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-        <span style={{ ...badgeStyle, background: '#064e3b', color: '#6ee7b7' }}>
-          🎣 Public fishing
-        </span>
+        {access.publicAccess ? (
+          <span style={{ ...badgeStyle, background: '#064e3b', color: '#6ee7b7' }}>
+            🎣 Public fishing
+          </span>
+        ) : null}
 
         {access.adaFishing === 'confirmed' ? (
           <span style={{ ...badgeStyle, background: '#14532d', color: '#bbf7d0' }}>
