@@ -14,6 +14,8 @@ import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import SpotDiscovery from '@/components/SpotDiscovery';
+import PublicAccessPanel from '@/components/PublicAccessPanel';
+import { PUBLIC_FISHING_ACCESS_POINTS } from '@/lib/publicAccess';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -287,6 +289,14 @@ export default function MobilePage() {
               <div style={{ display:'flex', gap:'8px' }}>
                 {(['explore', 'satellite'] as BaseLayer[]).map((layer) => (
                   <button key={layer} onClick={() => setBaseLayer(layer)} style={{ flex:1, background:baseLayer === layer ? '#0369a1' : '#0f172a', border:'1px solid #1e293b', borderRadius:'8px', color:'#e2e8f0', padding:'8px', cursor:'pointer', fontSize:'11px', textTransform:'capitalize' }}>{layer}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontSize:'12px', fontWeight:'bold', color:'#64748b', marginBottom:'8px' }}>🎣 Oklahoma public access</div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {PUBLIC_FISHING_ACCESS_POINTS.map((access) => (
+                  <PublicAccessPanel key={access.id} access={access} />
                 ))}
               </div>
             </div>
