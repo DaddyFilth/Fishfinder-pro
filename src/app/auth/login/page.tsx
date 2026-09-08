@@ -2,12 +2,14 @@
 
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getSafeNextPath } from '@/lib/supabase/redirect'
 
 type AuthMode = 'login' | 'signup'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [mode, setMode] = useState<AuthMode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,7 +68,7 @@ export default function LoginPage() {
         if (!data.session) {
           setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
         } else {
-          window.location.assign(nextPath)
+          router.replace(nextPath)
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -75,7 +77,7 @@ export default function LoginPage() {
         })
 
         if (error) throw error
-        window.location.assign(nextPath)
+        router.replace(nextPath)
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.')

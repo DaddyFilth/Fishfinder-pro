@@ -51,15 +51,16 @@ text_content = text_content.replace(", emoji:'\U0001F41F' },", " },")
 text_content = text_content.replace(", emoji:'\U0001F988' },", " },")
 text_content = text_content.replace(", emoji:'\U0001F420' },", " },")
 text_content = re.sub(r", emoji:EMOJI_MAP\[form\.species\]\|\|'\U0001F41F'", "", text_content)
-text_content = re.sub(r"const EMOJI_MAP:Record<string,string> = \{[^}]*\};" + NL + "?", "", text_content)
+emoji_map_pattern = r"const EMOJI_MAP:Record<string,string> = \{[^}]*\};" + NL + "?"
+text_content = re.sub(emoji_map_pattern, "", text_content)
 text_content = text_content.replace("emoji:string; }", "}")
 old_div = "<div style={{fontSize:'32px'}}>{c.emoji}</div>"
-new_img = (
+NEW_IMG = (
     "<img src={getSpeciesImage(c.species)} alt={c.species} "
     "style={{width:'40px',height:'40px',objectFit:'cover',"
     "borderRadius:'8px'}} />"
 )
-text_content = text_content.replace(old_div, new_img)
+text_content = text_content.replace(old_div, NEW_IMG)
 if "getSpeciesImage" in text_content and "import { getSpeciesImage }" not in text_content:
     imp = "import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';"
     text_content = imp + NL + text_content
