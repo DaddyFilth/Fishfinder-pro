@@ -425,10 +425,10 @@ export default function LogbookTab() {
             {photos.length > 0 && (
               <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                 {photos.map((photo, i) => (
-                  <div key={i} style={{ position: 'relative' }}>
+                  <div key={photo} style={{ position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo} alt={`Trip photo ${i + 1}`} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e293b' }} />
-                    <button onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#7f1d1d', color: 'white', border: 'none', fontSize: '10px', lineHeight: '18px', padding: 0, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}
               </div>
