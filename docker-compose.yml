@@ -21,7 +21,8 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     env_file:
-      - .env.container
+      - path: .env.container
+        required: false
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000

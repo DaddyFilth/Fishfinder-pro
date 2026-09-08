@@ -11,6 +11,9 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import AuthAccountButton from '@/components/AuthAccountButton';
+import SpotDiscovery from '@/components/SpotDiscovery';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -27,9 +30,10 @@ const MAP_FILTERS = [
 async function getSpots(): Promise<Spot[]> {
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
-    if (!res.ok) return [];
-    return res.json();
-  } catch { return []; }
+    if (!res.ok) return [...DEFAULT_SPOTS];
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0 ? data : [...DEFAULT_SPOTS];
+  } catch { return [...DEFAULT_SPOTS]; }
 }
 
 export default function MobilePage() {
@@ -118,6 +122,7 @@ export default function MobilePage() {
         <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
           <span style={{ fontSize:'10px', color:'#22c55e' }}>● LIVE</span>
           <span style={{ fontSize:'18px', cursor:'pointer' }}>🔔</span>
+          <AuthAccountButton />
         </div>
       </header>
 
@@ -131,7 +136,7 @@ export default function MobilePage() {
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
-              📍 {visibleSpots.length} spots loaded
+              📍 {visibleSpots.length} spots nationwide
             </div>
 
             {mapLayers.depth && (
@@ -237,6 +242,8 @@ export default function MobilePage() {
         {tab === 'settings' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+
+            <SpotDiscovery coordinates={coordinates} onAccepted={() => getSpots().then(setSpots)} />
 
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>
