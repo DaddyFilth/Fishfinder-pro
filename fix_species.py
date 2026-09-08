@@ -19,6 +19,7 @@ def slug(species_name):
     """Convert a species name into a URL slug."""
     return species_name.lower().replace(" ", "-").replace("/", "-")
 
+
 LINES = []
 for sp in SPECIES:
     SLUGGED = slug(sp)
