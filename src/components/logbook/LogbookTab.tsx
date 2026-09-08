@@ -191,9 +191,17 @@ export default function LogbookTab() {
   const [storageError, setStorageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const coarsenCoord = (value: number | null) =>
+    value === null ? null : Math.round(value * 100) / 100;
+
   const persist = (next: LogbookTrip[]) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      const sanitized = next.map((trip) => ({
+        ...trip,
+        lat: coarsenCoord(trip.lat),
+        lng: coarsenCoord(trip.lng),
+      }));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
       setStorageError('');
       window.dispatchEvent(new CustomEvent('logbook-updated'));
     } catch {
