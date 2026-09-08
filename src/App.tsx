@@ -10,7 +10,7 @@ export default function App() {
       <FishingMap />
 
       <section className="map-overlay">
-        <h3>Top bite zones</h3>
+        <h3 className="map-overlay-title">Top bite zones</h3>
         <p>Loading live scoring...</p>
       </section>
 
