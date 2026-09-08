@@ -96,7 +96,7 @@ export default function PublicAccessPanel({
         <p style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.5, margin: '7px 0 0' }}>
           ADA fishing: {statusLabel(access.adaFishing)} · ADA parking:{' '}
           {statusLabel(access.adaParking)} · Parking:{' '}
-          {access.parking.available === true ? 'Available' : 'Verify before travel'}
+          {access.parking.available === true ? 'Available' : access.parking.available === false ? 'Not available' : 'Verify before travel'}
         </p>
         {access.parking.notes ? (
           <p style={{ color: '#94a3b8', fontSize: 12, lineHeight: 1.45, margin: '7px 0 0' }}>
