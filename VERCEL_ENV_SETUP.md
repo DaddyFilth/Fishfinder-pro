@@ -5,7 +5,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 ## How to Use This File
 
 1. **Visit Vercel Dashboard:**
-   - Go to https://vercel.com/dashboard
+   - Go to <https://vercel.com/dashboard>
    - Select your Fishfinder-pro project
    - Click "Settings"
    - Select "Environment Variables"
@@ -26,7 +26,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Value Type:** URL (Public - safe to expose)
 - **Format:** `https://your-project-id.supabase.co`
 - **How to Get:**
-  1. Go to https://app.supabase.com
+  1. Go to <https://app.supabase.com>
   2. Select your project
   3. Click Settings → API
   4. Copy "Project URL"
@@ -36,7 +36,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Value Type:** API Key (Public anon key)
 - **Format:** Usually starts with `eyJ` (JWT token)
 - **How to Get:**
-  1. Go to https://app.supabase.com/project/[your-project]/settings/api
+  1. Go to <https://app.supabase.com/project/[your-project]/settings/api>
   2. Find "anon public" key
   3. Copy the full key value
 - **Vercel Environment:** Development, Preview, Production
@@ -45,7 +45,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Value Type:** Secret API Key (Keep confidential!)
 - **Format:** Usually starts with `eyJ` (JWT token)
 - **How to Get:**
-  1. Go to https://app.supabase.com/project/[your-project]/settings/api
+  1. Go to <https://app.supabase.com/project/[your-project]/settings/api>
   2. Find "service_role secret" key
   3. Copy the full key value
 - **Vercel Environment:** Production ONLY (do not expose in preview/dev)
@@ -77,7 +77,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Value Type:** Secret API Key
 - **Format:** Starts with `sk-`
 - **How to Get:**
-  1. Go to https://platform.openai.com/api-keys
+  1. Go to <https://platform.openai.com/api-keys>
   2. Create a new API key
   3. Copy the value (you can only see it once!)
 - **Only needed if:** NOT using Ollama for AI
@@ -217,7 +217,7 @@ curl https://your-vercel-url.vercel.app/api/catches
 
 ### Error: "unauthorized API request"
 - **Cause:** Wrong API key or invalid service role
-- **Fix:** Verify you're using the correct key from https://app.supabase.com/project/_/settings/api
+- **Fix:** Verify you're using the correct key from <https://app.supabase.com/project/_/settings/api>
 
 ### Preview deployments fail but production works
 - **Cause:** Missing environment variables in Preview scope
@@ -257,8 +257,8 @@ OLLAMA_VISION_MODEL = llama3.2-vision
 
 ## Support
 
-- **Vercel Docs:** https://vercel.com/docs/projects/environment-variables
-- **Supabase Docs:** https://supabase.com/docs
+- **Vercel Docs:** <https://vercel.com/docs/projects/environment-variables>
+- **Supabase Docs:** <https://supabase.com/docs>
 - **Project Setup:** See PROJECT_SETUP.md
 - **Deployment Guide:** See DEPLOYMENT.md
 
