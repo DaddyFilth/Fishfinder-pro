@@ -19,7 +19,7 @@
 
 ## 🔗 Connect to Vercel
 
-- [ ] Visit https://vercel.com/new
+- [ ] Visit <https://vercel.com/new>
 - [ ] Sign in with GitHub
 - [ ] Select repository: DaddyFilth/Fishfinder-pro
 - [ ] Click Import Project
@@ -163,10 +163,10 @@
 
 ## 📝 Useful Links
 
-- **Vercel Dashboard:** https://vercel.com/dashboard
-- **Supabase Console:** https://app.supabase.com
-- **Repository:** https://github.com/DaddyFilth/Fishfinder-pro
-- **Vercel Docs:** https://vercel.com/docs
+- **Vercel Dashboard:** <https://vercel.com/dashboard>
+- **Supabase Console:** <https://app.supabase.com>
+- **Repository:** <https://github.com/DaddyFilth/Fishfinder-pro>
+- **Vercel Docs:** <https://vercel.com/docs>
 - **Deployment Guide:** See DEPLOYMENT.md
 - **Environment Setup:** See VERCEL_ENV_SETUP.md
 
