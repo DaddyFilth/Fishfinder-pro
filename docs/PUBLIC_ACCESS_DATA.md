@@ -41,5 +41,6 @@ Every record must include:
 Review official permit, access, ADA, and parking data before each fishing season and whenever a
 managing agency publishes a closure, construction update, or regulation update.
 
-## Local validation 
-eof
+## Local validation
+
+Run `validatePublicAccessData()` (src/lib/publicAccess.ts) in a dev check or unit test to ensure records stay consistent.
