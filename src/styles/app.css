@@ -1,6 +1,5 @@
 html,
-body,
-#root {
+body {
   height: 100%;
   min-height: 100%;
   margin: 0;
@@ -37,6 +36,7 @@ body {
   align-items: center;
   background: linear-gradient(180deg, rgba(3, 10, 24, 0.92), rgba(3, 10, 24, 0.45));
   backdrop-filter: blur(10px);
+  border-bottom: 1px solid #1b2f4d;
   border-bottom: 1px solid rgba(109, 169, 255, 0.12);
   display: flex;
   height: 72px;
@@ -92,7 +92,9 @@ body {
 
 .map-overlay {
   backdrop-filter: blur(14px);
+  background: #091224;
   background: rgba(9, 18, 36, 0.72);
+  border: 1px solid #2d4a70;
   border: 1px solid rgba(109, 169, 255, 0.16);
   border-radius: 20px;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
@@ -104,7 +106,7 @@ body {
   top: 92px;
 }
 
-.map-overlay h3 {
+.map-overlay-title {
   margin: 0 0 6px;
   font-size: 18px;
 }
@@ -112,6 +114,7 @@ body {
 .map-overlay p {
   margin: 0;
   font-size: 14px;
+  color: #dfeeff;
   color: rgba(223, 238, 255, 0.78);
 }
 
@@ -119,8 +122,10 @@ body {
   align-items: center;
   background: linear-gradient(180deg, rgba(5, 11, 24, 0.38), rgba(5, 11, 24, 0.96));
   backdrop-filter: blur(12px);
+  border-top: 1px solid #1a2d4a;
   border-top: 1px solid rgba(109, 169, 255, 0.10);
   bottom: 0;
+  color: #e6f0ff;
   color: rgba(230, 240, 255, 0.90);
   display: flex;
   font-size: 14px;
