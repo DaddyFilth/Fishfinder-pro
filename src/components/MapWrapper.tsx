@@ -298,7 +298,7 @@ export default function FishingMap({
           </div>
         </div>
 
-        <MapContainer center={[39.5, -98.5]} zoom={4} style={{ height: '100%', width: '100%' }} zoomControl>
+        <MapContainer center={[35.5, -97.5]} zoom={7} minZoom={6} style={{ height: '100%', width: '100%' }} zoomControl>
           <TileLayer
             key={baseLayer}
             attribution={baseLayers[baseLayer].attribution}
