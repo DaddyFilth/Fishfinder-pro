@@ -231,15 +231,36 @@ export default function MobilePage() {
 
         {/* SPECIES TAB */}
 {/* CATCHES TAB */}
-{tab === 'catches' && <CatchesTab />}
-{/* BITE TIMES TAB */}
-{tab === 'bitetime' && <BiteTimesTab />}
-{/* WEATHER TAB */}
-{tab === 'weather' && <WeatherTab />}
-{/* SOCIAL TAB */}
-{tab === 'social' && <SocialTab />}
+        {tab === 'catches' && (
+          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+            <CatchesTab />
+          </div>
+        )}
+
+        {/* BITE TIMES TAB */}
+        {tab === 'bitetime' && (
+          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+            <BiteTimesTab />
+          </div>
+        )}
+
+        {/* WEATHER TAB */}
+        {tab === 'weather' && (
+          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+            <WeatherTab />
+          </div>
+        )}
+
+        {/* SOCIAL TAB */}
+        {tab === 'social' && (
+          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+            <SocialTab />
+          </div>
+        )}
         {tab === 'species' && (
-          <SpeciesTab coordinates={coordinates} />
+          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+            <SpeciesTab coordinates={coordinates} />
+          </div>
         )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
@@ -310,13 +331,13 @@ export default function MobilePage() {
       </main>
 
       {/* BOTTOM NAV */}
-      <nav style={{ background:'#0a0f1e', borderTop:'1px solid #1e293b', display:'flex', height:'60px', flexShrink:0, zIndex:40, paddingBottom:'env(safe-area-inset-bottom)' }}>
+      <nav style={{ background:'#0a0f1e', borderTop:'1px solid #1e293b', display:'flex', height:'60px', flexShrink:0, zIndex:40, paddingBottom:'env(safe-area-inset-bottom)', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none' }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); setSheetOpen(false); }}
-            style={{ flex:1, background:'none', border:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2px', cursor:'pointer', color: tab === t.id ? '#22d3ee' : '#475569', transition:'color 0.15s' }}>
+            style={{ flex:'0 0 68px', minWidth:'68px', position:'relative', background:'none', border:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2px', cursor:'pointer', color: tab === t.id ? '#22d3ee' : '#64748b', transition:'color 0.15s' }}>
             <span style={{ fontSize:'20px' }}>{t.icon}</span>
-            <span style={{ fontSize:'9px', fontWeight: tab === t.id ? 'bold' : 'normal' }}>{t.label}</span>
-            {tab === t.id && <div style={{ position:'absolute', bottom:'58px', width:'24px', height:'2px', background:'#22d3ee', borderRadius:'1px' }} />}
+            <span style={{ fontSize:'10px', fontWeight: tab === t.id ? 'bold' : 'normal', whiteSpace:'nowrap' }}>{t.label}</span>
+            {tab === t.id && <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'32px', height:'2px', background:'#22d3ee', borderRadius:'1px' }} />}
           </button>
         ))}
       </nav>
