@@ -91,10 +91,12 @@ APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && printf '%s\n' "$PWD" ) || exi
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD=maximum
 
+# Write a warning message to standard error.
 warn () {
     echo "$*"
 } >&2
 
+# Write an error message to standard error and terminate the script.
 die () {
     echo
     echo "$*"
