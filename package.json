@@ -8,10 +8,14 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "android:sync": "npx cap sync android",
+    "android:debug": "npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.102.6",
@@ -41,6 +45,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
