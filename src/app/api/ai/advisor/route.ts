@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
 A user wants to fish at "${spotData.name ?? 'this spot'}" (${spotData.water_type}, ${spotData.spot_type}).
 
 Current conditions:
-- Water temp: ${conditionData.water_temp_c ?? 'unknown'}°C
-- Air temp: ${conditionData.air_temp_c ?? 'unknown'}°C  
+- Water temp: ${conditionData.water_temp_c != null ? Math.round(Number(conditionData.water_temp_c) * 9 / 5 + 32) : 'unknown'}°F
+- Air temp: ${conditionData.air_temp_c != null ? Math.round(Number(conditionData.air_temp_c) * 9 / 5 + 32) : 'unknown'}°F  
 - Wind: ${conditionData.wind_speed_ms ?? 'unknown'} m/s
 - Pressure: ${conditionData.pressure_hpa ?? 'unknown'} hPa
 - Dissolved oxygen: ${conditionData.dissolved_oxygen_mgl ?? 'unknown'} mg/L

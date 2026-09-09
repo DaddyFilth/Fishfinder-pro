@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 Given these real-time conditions for ${species} at coordinates (${lat}, ${lng}):
 - Season: ${season} (${month})
 - Current time: ${localHour}:00
-- Water temp: ${water_temp_c ?? 'unknown'}°C
+- Water temp: ${water_temp_c != null ? Math.round(Number(water_temp_c) * 9 / 5 + 32) : 'unknown'}°F
 - Barometric pressure: ${pressure_hpa ?? 'unknown'} hPa
 - Wind speed: ${wind_speed_ms ?? 'unknown'} m/s
 - Dissolved oxygen: ${dissolved_oxygen_mgl ?? 'unknown'} mg/L

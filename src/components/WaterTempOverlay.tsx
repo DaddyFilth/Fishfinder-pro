@@ -63,7 +63,7 @@ export default function WaterTempOverlay({ points, enabled }: { points: Temperat
 
       spotRef.current = points.map(pt => {
         const color = pt.temperature !== null ? colorForTemperature(pt.temperature) : '#6b7280';
-        const tip = pt.temperature !== null ? `${pt.name}: ${pt.temperature.toFixed(1)}°C` : `${pt.name}: No temp data`;
+        const tip = pt.temperature !== null ? `${pt.name}: ${(pt.temperature * 9 / 5 + 32).toFixed(1)}°F` : `${pt.name}: No temp data`;
         return L.circle([pt.lat, pt.lng], {
           radius: getRadiusForZoom(map.getZoom()) * 0.35,
           color, fillColor: color, fillOpacity: 0.55, opacity: 0.9, weight: 1,

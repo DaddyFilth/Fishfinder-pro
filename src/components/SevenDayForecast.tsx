@@ -75,7 +75,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
       <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
         {forecast.map((day, i) => {
           const rating = fishingRatingFromWeather(day.shortForecast ?? '', day.wind ?? '');
-          const tempC  = Math.round(((day.temp - 32) * 5) / 9);
+          const tempF  = Math.round(day.temp);
           return (
             <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px', background:'#0f172a', borderRadius:'6px', padding:'6px 8px' }}>
               <span style={{ fontSize:'16px', minWidth:'22px' }}>{weatherEmoji(day.shortForecast)}</span>
@@ -86,7 +86,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
                 </div>
               </div>
               <div style={{ textAlign:'right', minWidth:'60px' }}>
-                <div style={{ fontSize:'11px', color:'#94a3b8' }}>{tempC}°C</div>
+                <div style={{ fontSize:'11px', color:'#94a3b8' }}>{tempF}°F</div>
                 <div style={{ fontSize:'10px', fontWeight:'bold', color: rating.color }}>{rating.label}</div>
               </div>
               <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:`conic-gradient(${rating.color} ${rating.rating * 3.6}deg, #1e293b 0)`, display:'flex', alignItems:'center', justifyContent:'center' }}>

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         role: 'user',
         content: `You are a fishing conditions analyst. Given these water/weather conditions at "${spotData.name}", write a 3-sentence plain-English summary for an angler. Be specific, practical, and conversational. Mention what the conditions mean for fish behavior.
 
-Conditions: water_temp=${conditionData.water_temp_c}°C, air_temp=${conditionData.air_temp_c}°C, wind=${conditionData.wind_speed_ms}m/s, pressure=${conditionData.pressure_hpa}hPa, DO=${conditionData.dissolved_oxygen_mgl}mg/L, flow=${conditionData.flow_rate_cfs}cfs, score=${conditionData.fishing_score}/100, water_type=${spotData.water_type}.
+Conditions: water_temp=${conditionData.water_temp_c != null ? Math.round(Number(conditionData.water_temp_c) * 9 / 5 + 32) : 'unknown'}°F, air_temp=${conditionData.air_temp_c != null ? Math.round(Number(conditionData.air_temp_c) * 9 / 5 + 32) : 'unknown'}°F, wind=${conditionData.wind_speed_ms}m/s, pressure=${conditionData.pressure_hpa}hPa, DO=${conditionData.dissolved_oxygen_mgl}mg/L, flow=${conditionData.flow_rate_cfs}cfs, score=${conditionData.fishing_score}/100, water_type=${spotData.water_type}.
 
 Respond with ONLY a JSON object: { "summary": "your 3-sentence summary here", "emoji_rating": "🟢 Excellent" }`
       }]
