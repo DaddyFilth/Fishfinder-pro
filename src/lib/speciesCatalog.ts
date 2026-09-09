@@ -1,5 +1,6 @@
 export type SpeciesHabitat = 'Freshwater' | 'Saltwater' | 'Anadromous';
 export type SpeciesDifficulty = 'Easy' | 'Medium' | 'Hard';
+export type OklahomaSpeciesStatus = 'Game fish' | 'Other encounter' | 'Special concern';
 
 export interface SpeciesAdviceConfig {
   optTempMin: number;
@@ -30,6 +31,7 @@ export interface Species {
   depth: string;
   habitatNotes: string;
   tips: string;
+  oklahomaStatus?: OklahomaSpeciesStatus;
   activity: readonly number[];
   advice: SpeciesAdviceConfig;
 }
@@ -66,12 +68,11 @@ export const STATE_FILTERS: readonly { code: NorthAmericanState; name: string }[
 export type SpeciesFilter = 'All' | SpeciesHabitat;
 export type SpeciesGroup = 'Bass' | 'Panfish' | 'Trout' | 'Catfish' | 'Pike' | 'Walleye' | 'Inshore' | 'Anadromous';
 export type SpeciesGroupFilter = 'All' | SpeciesGroup;
+export type OklahomaSpeciesStatusFilter = 'All' | OklahomaSpeciesStatus;
 
 export const SPECIES_FILTERS: readonly SpeciesFilter[] = [
   'All',
   'Freshwater',
-  'Saltwater',
-  'Anadromous',
 ];
 
 export const SPECIES_GROUP_FILTERS: readonly SpeciesGroupFilter[] = [
@@ -82,11 +83,16 @@ export const SPECIES_GROUP_FILTERS: readonly SpeciesGroupFilter[] = [
   'Catfish',
   'Pike',
   'Walleye',
-  'Inshore',
-  'Anadromous',
 ];
 
-export const SPECIES: readonly Species[] = [
+export const OKLAHOMA_STATUS_FILTERS: readonly OklahomaSpeciesStatusFilter[] = [
+  'All',
+  'Game fish',
+  'Other encounter',
+  'Special concern',
+];
+
+const ALL_SPECIES: readonly Species[] = [
   {
     id: 'largemouth-bass',
     name: 'Largemouth Bass',
@@ -930,6 +936,38 @@ export const SPECIES: readonly Species[] = [
     },
   },
 ] as const satisfies readonly Species[];
+
+const ADDITIONAL_OKLAHOMA_SPECIES: readonly Species[] = [
+  {
+    id: 'saugeye', name: 'Saugeye', aliases: ['Walleye Hybrid'], scientificName: 'Sander vitreus × Sander canadensis', habitat: 'Freshwater', group: 'Walleye', states: ['OK'], difficulty: 'Medium', record: 'Local record varies', image: '/fish/sauger.jpg', imageAlt: 'Saugeye with gold-brown sides and a spotted dorsal fin in an Oklahoma reservoir.', season: ['Spring', 'Fall', 'Winter'], bestBait: ['Jigs', 'Minnows', 'Blade baits'], bestTime: 'Dawn & dusk', depth: '8–30 ft', habitatNotes: 'Reservoir points, tailwaters, and current breaks', tips: 'Fish low-light windows near structure and keep a jig close to bottom.', oklahomaStatus: 'Game fish', activity: [3, 5, 8, 7, 5, 4, 4, 5, 8, 8, 6, 5], advice: { optTempMin: 7, optTempMax: 18, baitsWarm: ['Jigs', 'Minnows', 'Blade baits'], baitsCold: ['Jigs', 'Minnows', 'Blade baits'], techniqueWarm: 'Work a jig near rocky points and current seams.', techniqueCold: 'Slow-bounce a tipped jig along deep structure.', depthWarm: 'Mid-depth structure (8–20 ft)', depthCold: 'Deep structure (18–35 ft)' },
+  },
+  {
+    id: 'striped-bass-hybrid', name: 'Striped Bass Hybrid', aliases: ['Hybrid Striper', 'Wiper'], scientificName: 'Morone saxatilis × Morone chrysops', habitat: 'Freshwater', group: 'Bass', states: ['OK'], difficulty: 'Medium', record: 'Local record varies', image: '/fish/striped-bass.jpg', imageAlt: 'Hybrid striped bass with broken dark stripes schooling in an Oklahoma reservoir.', season: ['Spring', 'Summer', 'Fall'], bestBait: ['Live shad', 'Spoons', 'Swimbaits'], bestTime: 'Dawn & dusk', depth: '5–35 ft', habitatNotes: 'Reservoir points, open water, and dam faces', tips: 'Follow shad schools and vary retrieve speed until the fish commit.', oklahomaStatus: 'Game fish', activity: [3, 6, 9, 9, 8, 7, 6, 6, 8, 7, 4, 2], advice: { optTempMin: 14, optTempMax: 25, baitsWarm: ['Live shad', 'Spoons', 'Swimbaits'], baitsCold: ['Blade baits', 'Jigs', 'Live bait'], techniqueWarm: 'Target schooling shad around points and open-water breaks.', techniqueCold: 'Work blade baits near deep structure and dam faces.', depthWarm: 'Mid-depth (8–25 ft)', depthCold: 'Deep (20–40 ft)' },
+  },
+  {
+    id: 'spotted-gar', name: 'Spotted Gar', aliases: ['Gar'], scientificName: 'Lepisosteus punctatus', habitat: 'Freshwater', group: 'Pike', states: ['OK'], difficulty: 'Medium', record: 'Local record varies', image: '/fish/longnose-gar.jpg', imageAlt: 'Spotted gar with dark spots along its body in a quiet Oklahoma backwater.', season: ['Spring', 'Summer', 'Fall'], bestBait: ['Live minnows', 'Cut bait', 'Small plugs'], bestTime: 'Midday', depth: '2–15 ft', habitatNotes: 'Backwaters, oxbows, and quiet reservoir margins', tips: 'Watch for surface-cruising fish and cast beyond their path.', oklahomaStatus: 'Other encounter', activity: [3, 5, 8, 9, 8, 7, 6, 6, 7, 6, 4, 2], advice: { optTempMin: 18, optTempMax: 30, baitsWarm: ['Live minnows', 'Cut bait', 'Small plugs'], baitsCold: ['Slow minnows', 'Jigs', 'Cut bait'], techniqueWarm: 'Lead cruising fish with a single-hook presentation.', techniqueCold: 'Present bait slowly near deeper wintering structure.', depthWarm: 'Shallow to mid-depth (2–12 ft)', depthCold: 'Deep (10–20 ft)' },
+  },
+] as const satisfies readonly Species[];
+
+const OKLAHOMA_RANGE_CORRECTIONS = new Set(['rock-bass', 'brown-bullhead', 'striped-bass']);
+const OKLAHOMA_GAME_FISH = new Set([
+  'largemouth-bass', 'smallmouth-bass', 'striped-bass', 'striped-bass-hybrid', 'white-bass', 'channel-catfish', 'blue-catfish', 'flathead-catfish', 'black-crappie', 'white-crappie', 'rainbow-trout', 'brown-trout', 'walleye', 'sauger', 'saugeye', 'paddlefish',
+]);
+const OKLAHOMA_SPECIAL_CONCERN = new Set(['black-buffalo', 'brown-bullhead', 'alligator-gar']);
+
+export const SPECIES: readonly Species[] = [...ALL_SPECIES, ...ADDITIONAL_OKLAHOMA_SPECIES]
+  .map((species) => {
+    const corrected = OKLAHOMA_RANGE_CORRECTIONS.has(species.id) && !species.states.includes('OK')
+      ? { ...species, states: [...species.states, 'OK'] as NorthAmericanState[] }
+      : species;
+    const oklahomaStatus: OklahomaSpeciesStatus = OKLAHOMA_SPECIAL_CONCERN.has(corrected.id)
+      ? 'Special concern'
+      : OKLAHOMA_GAME_FISH.has(corrected.id)
+        ? 'Game fish'
+        : 'Other encounter';
+    return { ...corrected, oklahomaStatus };
+  })
+  .filter((species) => species.states.includes('OK'));
 
 export type SpeciesName = (typeof SPECIES)[number]['name'];
 

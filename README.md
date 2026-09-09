@@ -44,7 +44,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key
 ```
 
-Run `db/supabase-schema.sql` in the Supabase SQL editor to create the profile table and new-user trigger. In Supabase **Authentication → URL Configuration**, add the deployed site URL and the callback URL `https://your-domain.example/auth/callback`; for local development, add `http://localhost:3000/auth/callback`. Do not commit `.env.local` or service-role keys.
+Run `db/supabase-schema.sql` in the Supabase SQL editor to create the profile table, role constraint, admin policies, and new-user trigger. Existing databases can rerun the script because the role migration is additive and backfills existing profiles as `angler`. The supported roles are `angler`, `moderator`, and `admin`; only administrators can change roles, and the final administrator cannot demote themselves. Profile management is available at `/account`, while `/admin/users` and `/api/admin/users` require the `admin` role. In Supabase **Authentication → URL Configuration**, add the deployed site URL and the callback URL `https://your-domain.example/auth/callback`; for local development, add `http://localhost:3000/auth/callback`. Do not commit `.env.local` or service-role keys.
 
 To deploy from the Codespaces terminal, import the repository into Vercel and configure the same environment variables there. Vercel detects the Next.js build automatically; do not add `.env.local` or any credentials to the repository.
 

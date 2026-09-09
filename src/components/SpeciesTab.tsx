@@ -6,10 +6,11 @@ import {
   SPECIES,
   SPECIES_FILTERS,
   SPECIES_GROUP_FILTERS,
-  STATE_FILTERS,
+  OKLAHOMA_STATUS_FILTERS,
   type Species,
   type SpeciesFilter,
   type SpeciesGroupFilter,
+  type OklahomaSpeciesStatusFilter,
   type SpeciesStateFilter,
 } from '@/lib/speciesCatalog';
 
@@ -18,6 +19,7 @@ const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates | null }) {
   const [filter, setFilter] = useState<SpeciesFilter>('All');
   const [groupFilter, setGroupFilter] = useState<SpeciesGroupFilter>('All');
+  const [statusFilter, setStatusFilter] = useState<OklahomaSpeciesStatusFilter>('All');
   const [stateFilter, setStateFilter] = useState<SpeciesStateFilter>('OK');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Species | null>(null);
@@ -27,13 +29,14 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   const filtered = regionalSpecies.filter((species) => {
     const matchesFilter = filter === 'All' || species.habitat === filter;
     const matchesGroup = groupFilter === 'All' || species.group === groupFilter;
+    const matchesStatus = statusFilter === 'All' || species.oklahomaStatus === statusFilter;
     const matchesState = stateFilter === 'All' || species.states.includes(stateFilter);
     const matchesSearch = !normalizedSearch ||
       species.name.toLocaleLowerCase().includes(normalizedSearch) ||
       species.scientificName.toLocaleLowerCase().includes(normalizedSearch) ||
       species.aliases.some((alias) => alias.toLocaleLowerCase().includes(normalizedSearch));
 
-    return matchesFilter && matchesGroup && matchesState && matchesSearch;
+    return matchesFilter && matchesGroup && matchesStatus && matchesState && matchesSearch;
   });
 
   if (selected) {
@@ -56,6 +59,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ background: '#0c4a6e', color: '#7dd3fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.habitat}</span>
             <span style={{ background: '#312e81', color: '#c4b5fd', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.group}</span>
+            <span style={{ background: selected.oklahomaStatus === 'Game fish' ? '#14532d' : selected.oklahomaStatus === 'Special concern' ? '#7f1d1d' : '#164e63', color: selected.oklahomaStatus === 'Game fish' ? '#86efac' : selected.oklahomaStatus === 'Special concern' ? '#fecaca' : '#a5f3fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.oklahomaStatus}</span>
             <span style={{ background: selected.difficulty === 'Easy' ? '#14532d' : selected.difficulty === 'Medium' ? '#713f12' : '#7f1d1d', color: selected.difficulty === 'Easy' ? '#4ade80' : selected.difficulty === 'Medium' ? '#fbbf24' : '#f87171', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.difficulty}</span>
             <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>Record: {selected.record}</span>
           </div>
@@ -107,8 +111,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '4px' }}>Oklahoma Species Guide</div>
-        <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.45, marginBottom: '8px' }}>Common catches you should see, plus occasional fish you might run into across Oklahoma lakes, rivers, and ponds.</div>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px' }}>Oklahoma Species Guide</div>
         <input
           aria-label="Search fish species"
           value={search}
@@ -117,15 +120,14 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: '#e2e8f0', marginBottom: '8px', boxSizing: 'border-box' }}
         />
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9px', color: '#64748b', fontWeight: 'bold', marginBottom: '8px' }}>
-            REGION
+            OKLAHOMA STATE COVERAGE
             <select
               aria-label="Filter species by state"
               value={stateFilter}
               onChange={(event) => setStateFilter(event.target.value as SpeciesStateFilter)}
               style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '5px 8px', fontSize: '11px', color: '#cbd5e1', fontWeight: 'normal' }}
             >
-              <option value="All">All states</option>
-              {STATE_FILTERS.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
+              <option value="OK">Oklahoma</option>
             </select>
           </label>
           <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>WATER TYPE</div>
@@ -140,6 +142,19 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
               {speciesFilter}
             </button>
           ))}
+          </div>
+          <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>OKLAHOMA STATUS</div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            {OKLAHOMA_STATUS_FILTERS.map((status) => (
+              <button
+                key={status}
+                aria-pressed={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+                style={{ background: statusFilter === status ? '#0f766e' : '#0f172a', border: `1px solid ${statusFilter === status ? '#0f766e' : '#334155'}`, color: statusFilter === status ? 'white' : '#94a3b8', padding: '4px 10px', borderRadius: '12px', fontSize: '10px', cursor: 'pointer', fontWeight: statusFilter === status ? 'bold' : 'normal' }}
+              >
+                {status}
+              </button>
+            ))}
           </div>
           <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>SPECIES GROUP</div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -176,6 +191,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                 <span style={{ background: '#0c4a6e', color: '#7dd3fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.habitat}</span>
                 <span style={{ background: '#312e81', color: '#c4b5fd', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.group}</span>
+                <span style={{ background: species.oklahomaStatus === 'Game fish' ? '#14532d' : species.oklahomaStatus === 'Special concern' ? '#7f1d1d' : '#164e63', color: species.oklahomaStatus === 'Game fish' ? '#86efac' : species.oklahomaStatus === 'Special concern' ? '#fecaca' : '#a5f3fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.oklahomaStatus}</span>
                 <span style={{ background: species.difficulty === 'Easy' ? '#14532d' : species.difficulty === 'Medium' ? '#713f12' : '#7f1d1d', color: species.difficulty === 'Easy' ? '#4ade80' : species.difficulty === 'Medium' ? '#fbbf24' : '#f87171', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.difficulty}</span>
                 <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>Record: {species.record}</span>
               </div>

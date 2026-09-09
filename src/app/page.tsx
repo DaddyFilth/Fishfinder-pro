@@ -13,9 +13,6 @@ import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFil
 import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
-import SpotDiscovery from '@/components/SpotDiscovery';
-import PublicAccessPanel from '@/components/PublicAccessPanel';
-import { PUBLIC_FISHING_ACCESS_POINTS } from '@/lib/publicAccess';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -27,6 +24,10 @@ const MAP_FILTERS = [
   { id: 'lake', label: 'Lake' },
   { id: 'reservoir', label: 'Reservoir' },
   { id: 'river', label: 'River' },
+  { id: 'pfa', label: 'Public Fishing Area' },
+  { id: 'wma', label: 'Wildlife Area' },
+  { id: 'municipal', label: 'Municipal Water' },
+  { id: 'trout', label: 'Trout Area' },
 ] as const;
 
 async function getSpots(): Promise<Spot[]> {
@@ -118,11 +119,11 @@ export default function MobilePage() {
       <header style={{ background:'#0a0f1e', borderBottom:'1px solid #1e293b', padding:'0 16px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'52px', flexShrink:0, zIndex:40 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <span style={{ fontSize:'20px' }}>🎣</span>
-          <span style={{ fontSize:'16px', fontWeight:'800', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>FishFinder Pro</span>
+          <span style={{ fontSize:'16px', fontWeight:'800', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Oklahoma Fishfinder Pro</span>
           <span style={{ background:'#0c4a6e', color:'#7dd3fc', fontSize:'8px', padding:'2px 5px', borderRadius:'8px', fontWeight:'bold' }}>BETA</span>
         </div>
         <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-          <span style={{ fontSize:'8px', color:'#22c55e' }}>● LIVE</span>
+          <span style={{ fontSize:'10px', color:'#22c55e' }}>● LIVE</span>
           <span style={{ fontSize:'18px', cursor:'pointer' }}>🔔</span>
           <AuthAccountButton />
         </div>
@@ -137,8 +138,8 @@ export default function MobilePage() {
             <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
 
             {/* Floating spot count badge */}
-            <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'3px 8px', fontSize:'9px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
-              📍 {visibleSpots.length} Oklahoma public spots
+            <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
+              📍 {visibleSpots.length} Oklahoma public-access waters
             </div>
 
             {mapLayers.depth && (
@@ -168,7 +169,7 @@ export default function MobilePage() {
               {sheetOpen && (
                 <div style={{ padding:'0 16px 16px', maxHeight:'45dvh', overflowY:'auto' }}>
                   <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between' }}>
-                    <span>🏆 TOP SPOTS TODAY</span>
+                    <span>🏆 OKLAHOMA TOP WATERS TODAY</span>
                     <span style={{ color:'#0ea5e9' }}>Hide ↓</span>
                   </div>
                   {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
@@ -245,8 +246,6 @@ export default function MobilePage() {
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
             <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
 
-            <SpotDiscovery coordinates={coordinates} onAccepted={() => getSpots().then(setSpots)} />
-
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>
               <div style={{ fontSize:'12px', fontWeight:'bold', color:'#64748b', marginBottom:'8px' }}>🗺 Map Filters</div>
@@ -289,14 +288,6 @@ export default function MobilePage() {
               <div style={{ display:'flex', gap:'8px' }}>
                 {(['explore', 'satellite'] as BaseLayer[]).map((layer) => (
                   <button key={layer} onClick={() => setBaseLayer(layer)} style={{ flex:1, background:baseLayer === layer ? '#0369a1' : '#0f172a', border:'1px solid #1e293b', borderRadius:'8px', color:'#e2e8f0', padding:'8px', cursor:'pointer', fontSize:'11px', textTransform:'capitalize' }}>{layer}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontSize:'12px', fontWeight:'bold', color:'#64748b', marginBottom:'8px' }}>🎣 Oklahoma public access</div>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {PUBLIC_FISHING_ACCESS_POINTS.map((access) => (
-                  <PublicAccessPanel key={access.id} access={access} />
                 ))}
               </div>
             </div>
