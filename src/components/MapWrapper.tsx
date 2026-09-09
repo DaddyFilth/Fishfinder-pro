@@ -480,7 +480,7 @@ export default function FishingMap({
 
                         {activeTab === 'water' && (
                           <>
-                            {metricRow({ icon: '🌡', label: 'Water temp', value: c.water_temp_c?.toFixed(1) ?? null, unit: '°C' })}
+                            {metricRow({ icon: '🌡', label: 'Water temp', value: c.water_temp_c != null ? (c.water_temp_c * 9 / 5 + 32).toFixed(1) : null, unit: '°F' })}
                             {metricRow({ icon: '🫧', label: 'Dissolved oxygen', value: c.dissolved_oxygen_mgl?.toFixed(1) ?? null, unit: 'mg/L' })}
                             {metricRow({ icon: '🌫', label: 'Turbidity', value: c.turbidity_ntu?.toFixed(1) ?? null, unit: 'NTU' })}
                             {metricRow({ icon: '⚗️', label: 'pH', value: c.ph?.toFixed(1) ?? null })}
@@ -491,7 +491,7 @@ export default function FishingMap({
 
                         {activeTab === 'atmosphere' && (
                           <>
-                            {metricRow({ icon: '🌤', label: 'Air temp', value: c.air_temp_c?.toFixed(1) ?? null, unit: '°C' })}
+                            {metricRow({ icon: '🌤', label: 'Air temp', value: c.air_temp_c != null ? (c.air_temp_c * 9 / 5 + 32).toFixed(1) : null, unit: '°F' })}
                             {metricRow({ icon: '💨', label: 'Wind speed', value: c.wind_speed_ms?.toFixed(1) ?? null, unit: 'm/s' })}
                             {metricRow({ icon: '🧭', label: 'Wind direction', value: c.wind_dir_deg?.toFixed(0) ?? null, unit: '°' })}
                             {metricRow({ icon: '🌡', label: 'Pressure', value: c.pressure_hpa?.toFixed(0) ?? null, unit: 'hPa' })}
