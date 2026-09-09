@@ -122,7 +122,7 @@ export default function MobilePage() {
           <span style={{ background:'#0c4a6e', color:'#7dd3fc', fontSize:'8px', padding:'2px 5px', borderRadius:'8px', fontWeight:'bold' }}>BETA</span>
         </div>
         <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-          <span style={{ fontSize:'10px', color:'#22c55e' }}>● LIVE</span>
+          <span style={{ fontSize:'8px', color:'#22c55e' }}>● LIVE</span>
           <span style={{ fontSize:'18px', cursor:'pointer' }}>🔔</span>
           <AuthAccountButton />
         </div>
@@ -137,7 +137,7 @@ export default function MobilePage() {
             <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
 
             {/* Floating spot count badge */}
-            <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
+            <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'3px 8px', fontSize:'9px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
               📍 {visibleSpots.length} Oklahoma public spots
             </div>
 
