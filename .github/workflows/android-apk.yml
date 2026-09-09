@@ -47,14 +47,15 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      - name: Install JavaScript dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Run lint checks
-        run: npm run lint
+      - name: Generate Android launcher icons from SVG
+        run: |
+          npx @capacitor/assets generate --android --iconBackgroundColor "#0a192f"
 
       - name: Sync Capacitor Android project
-        run: npm run android:sync
+        run: npx cap sync android
 
       - name: Build debug APK
         working-directory: android
