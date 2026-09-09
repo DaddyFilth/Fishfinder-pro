@@ -8,6 +8,13 @@ import type { Spot } from '@/lib/mapFilters';
  */
 const source = 'ODWC / municipal public access';
 
+export const OKLAHOMA_BOUNDS = {
+  minLat: 33.615,
+  maxLat: 37.002,
+  minLng: -103.003,
+  maxLng: -94.430,
+} as const;
+
 const spot = (
   id: number,
   name: string,
