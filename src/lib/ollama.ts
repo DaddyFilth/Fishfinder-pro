@@ -12,5 +12,5 @@ export const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL?.trim() || 'l
 export function getOllama() {
   const configuredBaseURL = process.env.OLLAMA_BASE_URL?.trim() || 'http://localhost:11434';
   const baseURL = `${configuredBaseURL.replace(/\/+$/, '').replace(/\/v1$/, '')}/v1`;
-  return new OpenAI({ apiKey: 'ollama', baseURL });
+  return new OpenAI({ apiKey: process.env.OLLAMA_API_KEY?.trim() || 'ollama', baseURL });
 }
