@@ -10,6 +10,10 @@ export async function GET() {
   const { data, error } = await supabase
     .from('fishing_spots')
     .select('id, name, lat, lng, water_type, spot_type')
+    .gte('lat', 33.6)
+    .lte('lat', 37.1)
+    .gte('lng', -103.1)
+    .lte('lng', -94.4)
     .order('name');
   if (error) return NextResponse.json([...DEFAULT_SPOTS], { headers: { 'x-fishfinder-data-mode': 'local-fallback' } });
 
