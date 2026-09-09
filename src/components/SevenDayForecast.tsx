@@ -1,6 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 
+interface NWSPeriod {
+  name?: string;
+  isDaytime?: boolean;
+  temperature?: number;
+  temperatureUnit?: string;
+  windSpeed?: string;
+  shortForecast?: string;
+  icon?: string;
+}
+
 interface DayForecast {
   name: string;
   temp: number;
@@ -58,7 +68,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
         const fRes = await fetch(point.properties.forecast,
           { headers: { 'User-Agent': 'FishFinderPro/1.0' } });
         const data = await fRes.json();
-        setForecast((data.properties.periods as any[]).slice(0, 14).filter((p) => p.isDaytime).map((p) => ({ ...p, temp: p.temperature ?? 0, tempUnit: p.temperatureUnit ?? 'F', wind: p.windSpeed ?? '' })));
+        setForecast((data.properties.periods as NWSPeriod[]).slice(0, 14).filter((p) => p.isDaytime).map((p) => ({ ...p, temp: p.temperature ?? 0, tempUnit: p.temperatureUnit ?? 'F', wind: p.windSpeed ?? '' }) as DayForecast));
       } catch {
         setError('Unable to load 7-day forecast');
       } finally { setLoading(false); }
