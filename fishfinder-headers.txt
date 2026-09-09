@@ -1,0 +1,32 @@
+HTTP/2 308 
+cache-control: public, max-age=0, must-revalidate
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com https://basemap.nationalmap.gov https://tiles.openseamap.org https://cdnjs.cloudflare.com; connect-src 'self' https://*.supabase.co https://api.weather.gov https://api.waterdata.usgs.gov https://marine-api.open-meteo.com https://api.tidesandcurrents.noaa.gov; frame-ancestors 'none'
+content-type: text/plain
+date: Wed, 09 Sep 2026 21:43:47 GMT
+location: https://fishfinder-pro.online/api/spots
+permissions-policy: camera=(), microphone=(), geolocation=(self)
+referrer-policy: strict-origin-when-cross-origin
+refresh: 0;url=https://fishfinder-pro.online/api/spots
+server: Vercel
+strict-transport-security: max-age=63072000
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-vercel-id: cle1::6cz6x-1788990227298-737d3e2b44a7
+
+HTTP/2 200 
+age: 0
+cache-control: public, max-age=0, must-revalidate
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com https://basemap.nationalmap.gov https://tiles.openseamap.org https://cdnjs.cloudflare.com; connect-src 'self' https://*.supabase.co https://api.weather.gov https://api.waterdata.usgs.gov https://marine-api.open-meteo.com https://api.tidesandcurrents.noaa.gov; frame-ancestors 'none'
+content-type: application/json
+date: Wed, 09 Sep 2026 21:43:47 GMT
+permissions-policy: camera=(), microphone=(), geolocation=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Vercel
+strict-transport-security: max-age=63072000
+x-content-type-options: nosniff
+x-fishfinder-data-mode: supabase-plus-oklahoma-catalog
+x-frame-options: DENY
+x-matched-path: /api/spots
+x-vercel-cache: MISS
+x-vercel-id: cle1::iad1::6cz6x-1788990227577-580a6a67f3f1
+
