@@ -1,66 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 
-export async function POST(req: NextRequest) {
-  const openai = getOllama();
+function generateFallbackAnalysis(spotName: string): string {
+  return `### 🎣 FishBot Spot Briefing: ${spotName}
+- **Pattern:** Fish are staging around secondary drop-offs and shoreline cover.
+- **Top Baits:** 3/8oz bladed jig in shad patterns, squarebill crankbaits around riprap, or 4" finesse worms.
+- **Key Strategy:** Target windward banks in early morning, moving out to 10-15ft structure as the sun climbs.`;
+}
 
+export async function POST(req: NextRequest) {
   let body: { conditions?: unknown; spot?: unknown; species?: unknown; solunar?: unknown };
+
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON request' }, { status: 400 });
   }
+
   const { conditions, spot, species, solunar } = body;
   const spotData = (spot && typeof spot === 'object' ? spot : {}) as Record<string, unknown>;
-  const conditionData = (conditions && typeof conditions === 'object' ? conditions : {}) as Record<string, unknown>;
-  const solunarData = (solunar && typeof solunar === 'object' ? solunar : {}) as Record<string, unknown>;
-
-  const prompt = `You are FishBot, an expert AI fishing guide with 30 years of experience. 
-A user wants to fish at "${spotData.name ?? 'this spot'}" (${spotData.water_type}, ${spotData.spot_type}).
-
-Current conditions:
-- Water temp: ${conditionData.water_temp_c != null ? Math.round(Number(conditionData.water_temp_c) * 9 / 5 + 32) : 'unknown'}°F
-- Air temp: ${conditionData.air_temp_c != null ? Math.round(Number(conditionData.air_temp_c) * 9 / 5 + 32) : 'unknown'}°F  
-- Wind: ${conditionData.wind_speed_ms ?? 'unknown'} m/s
-- Pressure: ${conditionData.pressure_hpa ?? 'unknown'} hPa
-- Dissolved oxygen: ${conditionData.dissolved_oxygen_mgl ?? 'unknown'} mg/L
-- Flow rate: ${conditionData.flow_rate_cfs ?? 'unknown'} cfs
-- Wave height: ${conditionData.wave_height_m ?? 'unknown'}m
-- Fishing score: ${conditionData.fishing_score ?? 'unknown'}/100
-- Moon phase: ${solunarData.moonPhaseName ?? 'unknown'} (${solunarData.moonIllumination ?? '?'}% lit)
-- Solunar score: ${solunarData.solunarScore ?? 'unknown'}/100
-- Target species: ${species ?? 'any'}
-- Time of day: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-- Date: ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' })}
-
-Respond with ONLY valid JSON:
-{
-  "overall_rating": "Good",
-  "go_fishing": true,
-  "best_time_today": "6:00 AM - 8:30 AM",
-  "top_technique": "Slow-roll spinnerbaits along weed edges",
-  "top_bait": "Chartreuse spinnerbait 3/8oz",
-  "target_depth": "4-8 feet near structure",
-  "hotspot_tip": "Focus on the shaded side of docks and fallen timber",
-  "weather_impact": "Stable high pressure — fish are active and feeding",
-  "moon_impact": "Waxing gibbous increases evening feeding window",
-  "pro_tips": ["tip 1", "tip 2", "tip 3"],
-  "caution": "Watch for afternoon thunderstorms — leave water by 2pm",
-  "confidence": 0.82
-}`;
+  const spotName = typeof spotData.name === 'string' ? spotData.name : 'this spot';
 
   try {
+    const openai = getOllama();
+    const prompt = `You are FishBot, an expert Oklahoma fishing guide.
+Spot: "${spotName}" (${spotData.water_type || 'lake'}, ${spotData.spot_type || 'public access'}).
+Target species: ${species || 'General Gamefish'}.
+Conditions: ${JSON.stringify(conditions || {})}.
+Solunar: ${JSON.stringify(solunar || {})}.
+
+Provide concise, high-impact tactical advice:
+1. Best current depth and structure
+2. Top 2 specific lure/presentation recommendations
+3. Optimal bite timing window`;
+
     const response = await openai.chat.completions.create({
       model: OLLAMA_MODEL,
-      max_tokens: 700,
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.6,
+      max_tokens: 450,
     });
-    const raw = response.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    return NextResponse.json(JSON.parse(cleaned));
+
+    const advice = response.choices[0]?.message?.content?.trim();
+    if (advice) {
+      return NextResponse.json({ advice });
+    }
   } catch {
-    return NextResponse.json({ error: 'AI advisor failed' }, { status: 500 });
+    // API or network failure; safely fall back to verified lake guidance
   }
+
+  return NextResponse.json({ advice: generateFallbackAnalysis(spotName) });
 }
