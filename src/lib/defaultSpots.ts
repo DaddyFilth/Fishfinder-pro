@@ -80,6 +80,11 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(38, 'Boomer Lake', 36.140, -97.070, 'municipal', 'Fishing pier', 'Central', 'Stillwater municipal lake with public dock access.'),
   spot(39, 'Government Springs Park Lake', 36.395, -97.880, 'municipal', 'Fishing pier', 'Northwest', 'Enid public fishing docks.'),
   spot(40, 'Hominy Municipal Lake', 36.420, -96.390, 'municipal', 'Fishing pier', 'Northeast', 'Public municipal lake with accessible fishing dock.'),
+  // Purcell and Pauls Valley public waters
+  spot(51, 'Purcell Lake', 34.9944, -97.3783, 'municipal', 'Boat ramp', 'Central', 'City-managed lake southwest of Purcell with fishing jetties, boat ramp, pavilions, and a designated swimming area. Verify current local access and Oklahoma fishing-license requirements.'),
+  spot(52, 'Pauls Valley Lake', 34.7827, -97.2044, 'lake', 'Boat ramp', 'Central', 'City-managed lake northeast of Pauls Valley with campsites, boat ramps, and fishing jetties. Verify city permit requirements and current access before travel.'),
+  spot(53, 'R.C. Longmire Lake', 34.7445, -97.0787, 'lake', 'Boat ramp', 'Central', 'City-managed public lake east of Pauls Valley. Verify current access, city permit requirements, and lake rules before travel.'),
+
   // Rivers and designated trout/public fishing areas
   spot(41, 'Lower Mountain Fork River Trout Area', 34.170, -94.740, 'trout', 'State park', 'Southeast', 'Designated trout water with bank and boat access below Broken Bow Dam.'),
   spot(42, 'Blue River Public Fishing Area', 34.230, -96.420, 'trout', 'Walk-in', 'Southeast', 'Public fishing and hunting area with bank and wading access.'),
