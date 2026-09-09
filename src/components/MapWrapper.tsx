@@ -27,6 +27,10 @@ interface Spot {
   lng: number;
   water_type: string;
   spot_type: string;
+  access_type?: string;
+  region?: string;
+  source?: string;
+  notes?: string;
 }
 
 interface Cond {
@@ -283,8 +287,8 @@ export default function FishingMap({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div className="pulse" />
             <div>
-              <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>Fishfinder Pro Map</div>
-              <div style={{ color: '#94a3b8', fontSize: 11 }}>Premium exploration, catches, contours, intelligence</div>
+              <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>Oklahoma Fishfinder Pro Map</div>
+              <div style={{ color: '#94a3b8', fontSize: 11 }}>Public waters, catches, contours, and Oklahoma fishing intelligence</div>
             </div>
           </div>
 
@@ -377,7 +381,8 @@ export default function FishingMap({
                   >
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
+                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
                     </div>
 
                     {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading conditions...</div>}

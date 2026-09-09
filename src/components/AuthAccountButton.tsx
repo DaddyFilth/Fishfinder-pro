@@ -56,7 +56,7 @@ export default function AuthAccountButton() {
   const label = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Account'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <span title={user.email ?? undefined} style={{ maxWidth: '92px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#bae6fd', fontSize: '10px' }}>{label}</span>
+      <Link href="/account" title={user.email ?? undefined} style={{ maxWidth: '92px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#bae6fd', fontSize: '10px', textDecoration: 'none' }}>{label}</Link>
       <button type="button" onClick={signOut} disabled={busy} style={{ border: '1px solid #334155', borderRadius: '8px', background: 'transparent', color: '#94a3b8', padding: '5px 7px', fontSize: '10px', cursor: busy ? 'wait' : 'pointer' }}>
         {busy ? '…' : 'Log out'}
       </button>
