@@ -18,7 +18,7 @@ const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates | null }) {
   const [filter, setFilter] = useState<SpeciesFilter>('All');
   const [groupFilter, setGroupFilter] = useState<SpeciesGroupFilter>('All');
-  const [stateFilter, setStateFilter] = useState<SpeciesStateFilter>('All');
+  const [stateFilter, setStateFilter] = useState<SpeciesStateFilter>('OK');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Species | null>(null);
 
@@ -107,7 +107,8 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px' }}>Species Guide</div>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '4px' }}>Oklahoma Species Guide</div>
+        <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.45, marginBottom: '8px' }}>Common catches you should see, plus occasional fish you might run into across Oklahoma lakes, rivers, and ponds.</div>
         <input
           aria-label="Search fish species"
           value={search}
@@ -116,7 +117,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: '#e2e8f0', marginBottom: '8px', boxSizing: 'border-box' }}
         />
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9px', color: '#64748b', fontWeight: 'bold', marginBottom: '8px' }}>
-            STATE COVERAGE
+            REGION
             <select
               aria-label="Filter species by state"
               value={stateFilter}

@@ -11,7 +11,7 @@ export function stateFromCoordinates({ latitude, longitude }: Coordinates): Nort
 }
 
 export function speciesForCoordinates(species: readonly Species[], coordinates?: Coordinates | null) {
-  const state = coordinates ? stateFromCoordinates(coordinates) : null;
+  const state = coordinates ? stateFromCoordinates(coordinates) : 'OK';
   return state ? species.filter((item) => item.states.includes(state)) : [...species];
 }
 
