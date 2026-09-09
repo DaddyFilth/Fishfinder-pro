@@ -58,7 +58,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
         const fRes = await fetch(point.properties.forecast,
           { headers: { 'User-Agent': 'FishFinderPro/1.0' } });
         const data = await fRes.json();
-        setForecast(data.properties.periods.slice(0, 14).filter((p: DayForecast) => p.isDaytime));
+        setForecast((data.properties.periods as any[]).slice(0, 14).filter((p) => p.isDaytime).map((p) => ({ ...p, temp: p.temperature ?? 0, tempUnit: p.temperatureUnit ?? 'F', wind: p.windSpeed ?? '' })));
       } catch {
         setError('Unable to load 7-day forecast');
       } finally { setLoading(false); }
@@ -74,7 +74,7 @@ export default function SevenDayForecast({ lat, lng }: Props) {
       <div style={{ fontSize:'10px', color:'#64748b', fontWeight:'bold', marginBottom:'8px' }}>☀️ 7-DAY FISHING FORECAST</div>
       <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
         {forecast.map((day, i) => {
-          const rating = fishingRatingFromWeather(day.shortForecast, day.wind);
+          const rating = fishingRatingFromWeather(day.shortForecast ?? '', day.wind ?? '');
           const tempC  = Math.round(((day.temp - 32) * 5) / 9);
           return (
             <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px', background:'#0f172a', borderRadius:'6px', padding:'6px 8px' }}>
