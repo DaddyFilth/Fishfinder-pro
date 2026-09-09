@@ -95,3 +95,9 @@ android/captures/
 !.github/workflows/
 !.github/workflows/*.yml
 !.github/workflows/*.yaml
+
+# Keep GitHub Actions workflow source tracked
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+!.github/workflows/*.yaml
