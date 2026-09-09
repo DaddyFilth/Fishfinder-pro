@@ -2,10 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
-import CatchesTab from "@/components/CatchesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
-import SocialTab from "@/components/SocialTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
@@ -42,7 +40,7 @@ async function getSpots(): Promise<Spot[]> {
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'catches'|'bitetime'|'weather'|'social'|'settings'>('map');
+  const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -109,8 +107,6 @@ export default function MobilePage() {
 { id: "settings", icon: "⚙️", label: "Settings" },
 { id: "bitetime", icon: "⏱",  label: "Bite Time"},
 { id: "weather",  icon: "🌤",  label: "Weather"  },
-{ id: "social",   icon: "👥",  label: "Social"   },
-{ id: "catches",  icon: "◈",   label: "Catches"  },
 ] as const;
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:'#030712', color:'white', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>
@@ -231,11 +227,6 @@ export default function MobilePage() {
 
         {/* SPECIES TAB */}
 {/* CATCHES TAB */}
-        {tab === 'catches' && (
-          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
-            <CatchesTab />
-          </div>
-        )}
 
         {/* BITE TIMES TAB */}
         {tab === 'bitetime' && (
@@ -252,11 +243,6 @@ export default function MobilePage() {
         )}
 
         {/* SOCIAL TAB */}
-        {tab === 'social' && (
-          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
-            <SocialTab />
-          </div>
-        )}
         {tab === 'species' && (
           <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
             <SpeciesTab coordinates={coordinates} />
