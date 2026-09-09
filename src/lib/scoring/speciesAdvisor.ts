@@ -50,10 +50,10 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
 
   if (isOptimalTemp) {
     activityScore += 20;
-    reasoning.push(`Water temp ${temp?.toFixed(1)}°C is in optimal range`);
+    reasoning.push(`Water temp ${temp != null ? (temp * 9 / 5 + 32).toFixed(1) : 'unknown'}°F is in optimal range`);
   } else if (temp !== null) {
     activityScore -= 15;
-    reasoning.push(`Water temp ${temp.toFixed(1)}°C outside optimal (${db.optTempMin}–${db.optTempMax}°C)`);
+    reasoning.push(`Water temp ${(temp * 9 / 5 + 32).toFixed(1)}°F outside optimal (${Math.round(db.optTempMin * 9 / 5 + 32)}–${Math.round(db.optTempMax * 9 / 5 + 32)}°F)`);
   }
 
   if (goodPressure) {
