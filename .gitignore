@@ -59,3 +59,18 @@ android/captures/
 
 # Editor swap files
 *.swp
+
+# Local AI agent skills installed by npx skills
+.agents/
+skills-lock.json
+
+# Android machine-local and generated files
+local.properties
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+
+# Editor swap files
+*.swp
