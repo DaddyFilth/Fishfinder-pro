@@ -1,43 +1,11 @@
 import type { Spot } from '@/lib/mapFilters';
 
-/**
- * Curated nationwide map fixtures keep exploration useful during first-run and
- * whenever the optional Supabase database is unavailable.
- */
+/** Public Oklahoma waters used when the database is unavailable. Coordinates are water-body centers, not guaranteed access gates. */
 export const DEFAULT_SPOTS: readonly Spot[] = [
-  { id: '00000000-0000-4000-8000-000000000001', name: 'Lake Thunderbird', lat: 35.215, lng: -97.281, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000002', name: 'Lake Hefner', lat: 35.588, lng: -97.588, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000003', name: 'Lake Eufaula', lat: 35.304, lng: -95.583, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000004', name: 'Lake Texoma', lat: 33.817, lng: -96.610, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000005', name: 'Arkansas River — Tulsa', lat: 36.145, lng: -96.006, water_type: 'freshwater', spot_type: 'river' },
-  { id: '00000000-0000-4000-8000-000000000006', name: 'Broken Bow Lake', lat: 34.180, lng: -94.752, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000007', name: 'Red River — Denison', lat: 33.785, lng: -96.583, water_type: 'freshwater', spot_type: 'river' },
-  { id: '00000000-0000-4000-8000-000000000008', name: 'Lake Michigan — Chicago', lat: 41.895, lng: -87.600, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000009', name: 'Lake Erie — Cleveland', lat: 41.510, lng: -81.700, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000010', name: 'Lake Superior — Duluth', lat: 46.780, lng: -92.090, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000011', name: 'Lake Okeechobee', lat: 26.950, lng: -80.800, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000012', name: 'Everglades National Park', lat: 25.286, lng: -80.898, water_type: 'saltwater', spot_type: 'marsh' },
-  { id: '00000000-0000-4000-8000-000000000013', name: 'Chesapeake Bay — Annapolis', lat: 38.978, lng: -76.495, water_type: 'saltwater', spot_type: 'bay' },
-  { id: '00000000-0000-4000-8000-000000000014', name: 'Cape Cod Bay', lat: 41.780, lng: -70.200, water_type: 'saltwater', spot_type: 'bay' },
-  { id: '00000000-0000-4000-8000-000000000015', name: 'Hudson River — New York', lat: 40.720, lng: -74.010, water_type: 'saltwater', spot_type: 'river' },
-  { id: '00000000-0000-4000-8000-000000000016', name: 'Lake Lanier', lat: 34.250, lng: -83.950, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000017', name: 'Lake Guntersville', lat: 34.390, lng: -86.250, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000018', name: 'Lake Norman', lat: 35.470, lng: -80.950, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000019', name: 'Lake Tahoe', lat: 39.096, lng: -120.032, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000020', name: 'Columbia River — Portland', lat: 45.650, lng: -122.750, water_type: 'freshwater', spot_type: 'river' },
-  { id: '00000000-0000-4000-8000-000000000021', name: 'Puget Sound — Seattle', lat: 47.650, lng: -122.400, water_type: 'saltwater', spot_type: 'sound' },
-  { id: '00000000-0000-4000-8000-000000000022', name: 'San Francisco Bay', lat: 37.800, lng: -122.400, water_type: 'saltwater', spot_type: 'bay' },
-  { id: '00000000-0000-4000-8000-000000000023', name: 'Lake Mead', lat: 36.080, lng: -114.700, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000024', name: 'Lake Powell', lat: 37.070, lng: -111.240, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000025', name: 'Gulf Coast — Galveston', lat: 29.300, lng: -94.790, water_type: 'saltwater', spot_type: 'coast' },
-  { id: '00000000-0000-4000-8000-000000000026', name: 'Lake Travis', lat: 30.440, lng: -97.970, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000027', name: 'Mississippi River — St. Louis', lat: 38.630, lng: -90.180, water_type: 'freshwater', spot_type: 'river' },
-  { id: '00000000-0000-4000-8000-000000000028', name: 'Lake of the Ozarks', lat: 38.180, lng: -92.650, water_type: 'freshwater', spot_type: 'reservoir' },
-  { id: '00000000-0000-4000-8000-000000000029', name: 'Yellowstone Lake', lat: 44.500, lng: -110.300, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000030', name: 'Lake Champlain', lat: 44.530, lng: -73.330, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000031', name: 'Purcell Lake', lat: 34.990139, lng: -97.389444, water_type: 'freshwater', spot_type: 'lake' },
-  { id: '00000000-0000-4000-8000-000000000032', name: 'Pauls Valley City Lake', lat: 34.782694, lng: -97.204444, water_type: 'freshwater', spot_type: 'lake' },
-];
+  ['Lake Thunderbird',35.215,-97.281,'lake'],['Lake Hefner',35.588,-97.588,'lake'],['Lake Eufaula',35.304,-95.583,'reservoir'],['Lake Texoma',33.817,-96.61,'reservoir'],['Arkansas River — Tulsa',36.145,-96.006,'river'],['Broken Bow Lake',34.18,-94.752,'lake'],['Lake Tenkiller',35.625,-95.05,'reservoir'],['Foss Lake',35.555,-99.17,'reservoir'],['Grand Lake o’ the Cherokees',36.52,-95.02,'reservoir'],['Lake Murray',34.08,-97.08,'lake'],['Kaw Lake',36.75,-96.88,'reservoir'],['Keystone Lake',36.18,-96.38,'reservoir'],['Oologah Lake',36.62,-95.75,'reservoir'],['Fort Gibson Lake',35.79,-95.26,'reservoir'],['Lake Skiatook',36.37,-96.13,'reservoir'],['Copan Lake',36.91,-95.92,'reservoir'],['Sooner Lake',36.48,-97.07,'lake'],['Lake Carl Blackwell',36.16,-97.29,'lake'],['Lake McMurtry',36.22,-97.46,'lake'],['Arcadia Lake',35.67,-97.33,'lake'],['Lake Stanley Draper',35.4,-97.39,'lake'],['Lake Altus-Lugert',34.93,-99.3,'reservoir'],['Lake Lawtonka',34.92,-98.47,'reservoir'],['Lake Waurika',34.73,-98.0,'reservoir'],['Lake Ellsworth',34.72,-98.36,'reservoir'],['Lake Hugo',34.01,-95.5,'reservoir'],['McGee Creek Reservoir',34.33,-96.99,'reservoir'],['Atoka Lake',34.43,-96.0,'lake'],['Lake Arbuckle',34.44,-97.02,'lake'],['Lake Chickasha',35.1,-98.25,'lake'],['Lake Elmer Thomas',34.66,-98.49,'lake'],['Lake Overholser',35.53,-97.66,'lake'],['Purcell Lake',34.990139,-97.389444,'lake'],['Pauls Valley City Lake',34.782694,-97.204444,'lake'],['Canadian River — Norman',35.23,-97.44,'river'],['North Canadian River — Oklahoma City',35.47,-97.52,'river'],['Illinois River — Tahlequah',35.91,-94.97,'river'],['Red River — Colbert',33.85,-96.5,'river'],['Neosho River — Miami',36.89,-94.88,'river'],['Kiamichi River — Clayton',34.59,-95.35,'river']].map(([name, lat, lng, spot_type], index) => ({ id: `ok-${String(index + 1).padStart(3, '0')}`, name: String(name), lat: Number(lat), lng: Number(lng), water_type: 'freshwater', spot_type: String(spot_type) }));
+
+export const OKLAHOMA_COVERAGE_SOURCE = 'https://www.wildlifedepartment.com/fishing/wheretofish';
+export const OKLAHOMA_BOUNDS = { minLat: 33.6, maxLat: 37.1, minLng: -103.1, maxLng: -94.4 };
 
 export function getDefaultCondition(spot: Spot) {
   const score = spot.spot_type === 'river' ? 74 : spot.spot_type === 'reservoir' ? 68 : 71;

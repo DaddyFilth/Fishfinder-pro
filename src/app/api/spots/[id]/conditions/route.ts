@@ -6,7 +6,7 @@ import { DEFAULT_SPOTS, getDefaultCondition } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const parsed = z.object({ id: z.string().uuid() }).safeParse(await params);
+  const parsed = z.object({ id: z.string().min(1).max(128) }).safeParse(await params);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid spot ID' }, { status: 400 });
 
   const { id } = parsed.data;
