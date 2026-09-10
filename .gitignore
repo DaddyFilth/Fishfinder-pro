@@ -101,3 +101,11 @@ android/captures/
 !.github/workflows/
 !.github/workflows/*.yml
 !.github/workflows/*.yaml
+
+# Android release signing material — never commit
+android/keystore/
+*.jks
+*.keystore
+
+# Temporary encoded Android signing key — never commit
+fishfinder-upload.jks.base64
