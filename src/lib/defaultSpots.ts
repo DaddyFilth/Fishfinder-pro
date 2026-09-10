@@ -96,6 +96,10 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(60, 'Birch Lake', 36.5301, -96.1660, 'reservoir', 'Boat ramp', 'Northeast', 'USACE public reservoir south of Barnsdall with public fishing and recreation access. Verify current Corps recreation-area access, ramp status, fees, hours, and Oklahoma fishing regulations before travel.'),
   spot(61, 'Webbers Falls Reservoir', 35.5220, -95.1510, 'reservoir', 'Public shore', 'Northeast', 'Public navigation reservoir on the Arkansas River near Webbers Falls, with fishing opportunities in the reservoir, river channel, and below-dam tailwater areas. Verify current access, boating conditions, dam-area restrictions, and Oklahoma fishing regulations before travel.'),
 
+  spot(62, 'Hugo Lake', 34.0677, -95.4163, 'reservoir', 'Boat ramp', 'Southeast', 'Public USACE reservoir east of Hugo in Choctaw County with public recreation areas, shoreline fishing, boat-launch access, and campground facilities. Verify current Corps access, ramp status, fees, seasonal closures, and Oklahoma fishing regulations before travel.'),
+  spot(63, 'Sardis Lake', 34.6550, -95.3740, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir near Clayton in Pushmataha and Latimer Counties with state-park and public recreation access, boat ramps, shoreline fishing, and camping areas. Verify current access, fees, ramp conditions, lake levels, and Oklahoma fishing regulations before travel.'),
+  spot(64, 'McGee Creek Reservoir', 34.3614, -95.8934, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir in Atoka County with state-park, wildlife-area, campground, shoreline, and boat-launch access. Verify current lake access, permit requirements, seasonal restrictions, ramp conditions, and Oklahoma fishing regulations before travel.'),
+
   // Rivers and designated trout/public fishing areas
   spot(41, 'Lower Mountain Fork River Trout Area', 34.170, -94.740, 'trout', 'State park', 'Southeast', 'Designated trout water with bank and boat access below Broken Bow Dam.'),
   spot(42, 'Blue River Public Fishing Area', 34.230, -96.420, 'trout', 'Walk-in', 'Southeast', 'Public fishing and hunting area with bank and wading access.'),
