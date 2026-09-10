@@ -39,6 +39,7 @@ jobs:
         if: ${{ inputs.migration == 'environmental_snapshots' || inputs.migration == 'both' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
         run: |
           psql "$SUPABASE_DB_URL" \
             --set ON_ERROR_STOP=1 \
@@ -48,6 +49,7 @@ jobs:
         if: ${{ inputs.migration == 'reservoir_seed' || inputs.migration == 'both' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
         run: |
           psql "$SUPABASE_DB_URL" \
             --set ON_ERROR_STOP=1 \
