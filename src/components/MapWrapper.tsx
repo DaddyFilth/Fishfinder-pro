@@ -8,6 +8,7 @@ import BiteTimePanel from '@/components/BiteTimePanel';
 import WaypointMarkers from '@/components/WaypointMarkers';
 import DepthOverlay from '@/components/DepthOverlay';
 import FishBot from '@/components/ai/FishBot';
+import { temperatureFahrenheitValue } from '@/lib/temperature';
 import FishIdentifier from '@/components/ai/FishIdentifier';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
@@ -172,7 +173,7 @@ export default function FishingMap({
         lat: spot.lat,
         lng: spot.lng,
         name: spot.name,
-        temperature: conditions[spot.id]?.water_temp_c ?? null,
+        temperature: temperatureFahrenheitValue(conditions[spot.id]?.water_temp_c),
       })),
     [spots, conditions]
   );

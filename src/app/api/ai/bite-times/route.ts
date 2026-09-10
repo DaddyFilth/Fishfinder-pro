@@ -58,7 +58,7 @@ Respond with ONLY valid JSON in this exact format:
   ],
   "avoid_times": "Brief description of times to avoid and why",
   "pro_tip": "One specific actionable tip for ${species} today"
-}`;
+} Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
   try {
     const res = await openai.chat.completions.create({
