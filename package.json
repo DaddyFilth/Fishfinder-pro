@@ -60,8 +60,8 @@
     "vitest": "^4.1.11"
   },
   "allowScripts": {
-    "unrs-resolver@1.12.2": true,
-    "esbuild@0.28.2": true
+    "esbuild": true,
+    "unrs-resolver": true
   },
   "overrides": {}
 }
