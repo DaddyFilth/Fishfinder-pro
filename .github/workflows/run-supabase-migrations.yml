@@ -1,0 +1,54 @@
+name: Run Supabase migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration:
+        description: 'Choose which migration to run'
+        required: true
+        type: choice
+        default: environmental_snapshots
+        options:
+          - environmental_snapshots
+          - reservoir_seed
+          - both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply selected production migration
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Apply environmental snapshots migration
+        if: ${{ inputs.migration == 'environmental_snapshots' || inputs.migration == 'both' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" \
+            --set ON_ERROR_STOP=1 \
+            --file db/migrations/20260910_create_environmental_snapshots.sql
+
+      - name: Apply reservoir seed migration
+        if: ${{ inputs.migration == 'reservoir_seed' || inputs.migration == 'both' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" \
+            --set ON_ERROR_STOP=1 \
+            --file db/migrations/20260910_seed_reservoir_batches_4_5.sql
