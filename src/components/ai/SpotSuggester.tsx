@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- spot cards use local catalog image assets */
 
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Spot {
   id: string;
@@ -32,6 +32,16 @@ interface Props {
   spots: Spot[];
 }
 
+const LOCATION_CACHE_KEY = 'fishfinder:last-location';
+const LOCATION_CACHE_MAX_AGE_MS = 604800000;
+
+interface CachedLocation {
+  lat: number;
+  lng: number;
+  savedAt: number;
+}
+
+
 const ratingColor = (rating: string) =>
   rating === 'Hot'
     ? '#22c55e'
@@ -58,6 +68,30 @@ export default function SpotSuggester({ spots }: Props) {
     lat: number;
     lng: number;
   } | null>(null);
+
+  useEffect(() => {
+    try {
+      const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
+
+      if (!cached) return;
+
+      const saved = JSON.parse(cached) as CachedLocation;
+      const isFresh =
+        typeof saved.lat === 'number' &&
+        typeof saved.lng === 'number' &&
+        typeof saved.savedAt === 'number' &&
+        Date.now() - saved.savedAt < LOCATION_CACHE_MAX_AGE_MS;
+
+      if (isFresh) {
+        setUserLocation({ lat: saved.lat, lng: saved.lng });
+      } else {
+        window.localStorage.removeItem(LOCATION_CACHE_KEY);
+      }
+    } catch {
+      window.localStorage.removeItem(LOCATION_CACHE_KEY);
+    }
+  }, []);
+
 
   const runSuggestion = useCallback(
     async (lat?: number, lng?: number) => {
@@ -99,33 +133,86 @@ export default function SpotSuggester({ spots }: Props) {
     [spots],
   );
 
+  const saveLocation = (lat: number, lng: number) => {
+    const location = { lat, lng };
+    setUserLocation(location);
+
+    try {
+      window.localStorage.setItem(
+        LOCATION_CACHE_KEY,
+        JSON.stringify({
+          lat,
+          lng,
+          savedAt: Date.now(),
+        }),
+      );
+    } catch {
+      // Local caching may be unavailable in private browsing.
+    }
+
+    return location;
+  };
+
+  const useSavedLocation = () => {
+    try {
+      const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
+
+      if (!cached) return false;
+
+      const saved = JSON.parse(cached) as CachedLocation;
+      const isFresh =
+        typeof saved.lat === 'number' &&
+        typeof saved.lng === 'number' &&
+        typeof saved.savedAt === 'number' &&
+        Date.now() - saved.savedAt < LOCATION_CACHE_MAX_AGE_MS;
+
+      if (!isFresh) {
+        window.localStorage.removeItem(LOCATION_CACHE_KEY);
+        return false;
+      }
+
+      setUserLocation({ lat: saved.lat, lng: saved.lng });
+      runSuggestion(saved.lat, saved.lng);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleFind = () => {
     setLocating(true);
 
     if (!navigator.geolocation) {
       setLocating(false);
-      runSuggestion();
+
+      if (!useSavedLocation()) {
+        runSuggestion();
+      }
+
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+        const location = saveLocation(
+          position.coords.latitude,
+          position.coords.longitude,
+        );
 
-        setUserLocation(location);
         setLocating(false);
         runSuggestion(location.lat, location.lng);
       },
       () => {
         setLocating(false);
-        runSuggestion();
+
+        if (!useSavedLocation()) {
+          runSuggestion();
+        }
       },
       {
+        enableHighAccuracy: false,
         timeout: 6000,
-        maximumAge: 60000,
+        maximumAge: 900000,
       },
     );
   };
@@ -203,6 +290,30 @@ export default function SpotSuggester({ spots }: Props) {
             : results.length > 0
               ? '↻ Find Again'
               : '🎯 Find Best Spots Near Me'}
+        </button>
+      )}
+
+      {userLocation && !loading && (
+        <button
+          onClick={() => {
+            window.localStorage.removeItem(LOCATION_CACHE_KEY);
+            setUserLocation(null);
+            setResults([]);
+            setTotalNearby(null);
+          }}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: '#94a3b8',
+            border: '1px solid #334155',
+            padding: '9px',
+            borderRadius: '10px',
+            fontSize: '11px',
+            cursor: 'pointer',
+            marginBottom: '16px',
+          }}
+        >
+          Clear saved location
         </button>
       )}
 
