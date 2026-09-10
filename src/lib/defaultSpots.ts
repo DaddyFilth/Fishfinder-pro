@@ -85,6 +85,8 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(52, 'Pauls Valley Lake', 34.7827, -97.2044, 'lake', 'Boat ramp', 'Central', 'City-managed lake northeast of Pauls Valley with campsites, boat ramps, and fishing jetties. Verify city permit requirements and current access before travel.'),
   spot(53, 'R.C. Longmire Lake', 34.7445, -97.0787, 'lake', 'Boat ramp', 'Central', 'City-managed public lake east of Pauls Valley. Verify current access, city permit requirements, and lake rules before travel.'),
 
+  spot(54, 'Lake Dahlgren - Lexington WMA', 35.0586, -97.2001, 'lake', 'Boat ramp', 'Central', '30-acre ODWC public fishing lake inside Lexington Wildlife Management Area in Cleveland County. Largemouth bass, channel catfish, bluegill, redear sunfish, boat ramp, jetties, and accessible fishing dock. Lake Dahlgren closes during designated Lexington WMA controlled hunts; verify current ODWC access dates and fishing rules before travel.'),
+
   // Rivers and designated trout/public fishing areas
   spot(41, 'Lower Mountain Fork River Trout Area', 34.170, -94.740, 'trout', 'State park', 'Southeast', 'Designated trout water with bank and boat access below Broken Bow Dam.'),
   spot(42, 'Blue River Public Fishing Area', 34.230, -96.420, 'trout', 'Walk-in', 'Southeast', 'Public fishing and hunting area with bank and wading access.'),
