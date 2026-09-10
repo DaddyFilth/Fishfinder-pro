@@ -112,15 +112,13 @@ export default function MobilePage() {
     <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:'#030712', color:'white', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>
 
       {/* HEADER */}
-      <header style={{ background:'#0a0f1e', borderBottom:'1px solid #1e293b', padding:'0 16px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'52px', flexShrink:0, zIndex:40 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-          <span style={{ fontSize:'20px' }}>🎣</span>
-          <span style={{ fontSize:'16px', fontWeight:'800', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Oklahoma Fishfinder Pro</span>
-          <span style={{ background:'#0c4a6e', color:'#7dd3fc', fontSize:'8px', padding:'2px 5px', borderRadius:'8px', fontWeight:'bold' }}>BETA</span>
+      <header style={{ background:'#0a0f1e', borderBottom:'1px solid #1e293b', padding:'0 10px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'42px', flexShrink:0, zIndex:40, gap:'8px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
+          <span style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
+          <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Fishfinder Pro</span>
         </div>
-        <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-          <span style={{ fontSize:'10px', color:'#22c55e' }}>● LIVE</span>
-          <span style={{ fontSize:'18px', cursor:'pointer' }}>🔔</span>
+        <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
+          <span style={{ fontSize:'9px', color:'#22c55e' }}>● LIVE</span>
           <AuthAccountButton />
         </div>
       </header>
