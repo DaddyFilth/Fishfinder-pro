@@ -5,6 +5,7 @@ import SpeciesTab from "@/components/SpeciesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
+import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
@@ -40,7 +41,7 @@ async function getSpots(): Promise<Spot[]> {
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [tab, setTab] = useState<'map'|'log'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
+  const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -101,6 +102,7 @@ export default function MobilePage() {
   const tabs = [
 { id: "map",      icon: "🗺",  label: "Map"      },
 { id: "log",      icon: "📓",  label: "Logbook"  },
+{ id: "gallery", icon: "📸", label: "Gallery" },
 { id: "ai",       icon: "🤖",  label: "AI"       },
 { id: "top",      icon: "🏆",  label: "Top Spots"},
 { id: "species",  icon: "◎",   label: "Species"  },
@@ -193,7 +195,7 @@ export default function MobilePage() {
 
         {/* LOGBOOK TAB */}
         {tab === 'log' && <LogbookTab />}
-
+        {tab === 'gallery' && <PhotoGalleryTab />}
         {/* AI TAB */}
         {tab === 'ai' && (
           <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
