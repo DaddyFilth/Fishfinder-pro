@@ -47,13 +47,13 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Verify Fishfinder launcher icon assets
+      - name: Verify Fishfinder bass-radar icon assets
         run: |
           test -s assets/icon-only.png
           test -s assets/icon-foreground.png
           test -s assets/icon-background.png
 
-      - name: Generate Android bass-radar launcher icon assets
+      - name: Generate Android launcher icons from bass-radar artwork
         run: |
           npx --yes @capacitor/assets@3.0.5 generate \
             --android \
