@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { temperatureFahrenheitValue } from '@/lib/temperature';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -10,6 +11,25 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
 }
 
+function convertConditionTemperaturesToFahrenheit(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (key.endsWith('_temp_c') && typeof item === 'number') {
+      const fahrenheitKey = key.slice(0, -2) + 'f';
+      result[fahrenheitKey] = temperatureFahrenheitValue(item);
+      continue;
+    }
+
+    result[key] = item;
+  }
+
+  return result;
+}
 export async function POST(req: NextRequest) {
   let body: {
     message?: unknown;
@@ -68,9 +88,10 @@ export async function POST(req: NextRequest) {
     'Give practical, specific advice: target species, depth, structure, lure or bait, retrieve, time window, and adjustments for conditions when relevant.',
     'Be honest about uncertainty. Do not fabricate live readings, catches, regulations, or access conditions.',
     'Keep answers useful and conversational, normally 2–5 short paragraphs or bullet points when steps are helpful.',
+'Temperature rule: use Fahrenheit only. Never show Celsius, never use °C, and never describe a Celsius value to the user.',
     `Current selected spot: ${spotName}.`,
     `Water type: ${waterType}. Access/type: ${spotType}.`,
-    `Conditions supplied by the app: ${JSON.stringify(body.conditions || {})}.`,
+    `Conditions supplied by the app in Fahrenheit: ${JSON.stringify(convertConditionTemperaturesToFahrenheit(body.conditions || {}))}.`,
     `Solunar information supplied by the app: ${JSON.stringify(body.solunar || {})}.`,
     `Target species supplied by the app: ${typeof body.species === 'string' ? body.species : 'not specified'}.`,
   ].join(String.fromCharCode(10));

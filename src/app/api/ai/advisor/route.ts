@@ -32,7 +32,7 @@ Solunar: ${JSON.stringify(solunar || {})}.
 Provide concise, high-impact tactical advice:
 1. Best current depth and structure
 2. Top 2 specific lure/presentation recommendations
-3. Optimal bite timing window`;
+3. Optimal bite timing window Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
     const response = await openai.chat.completions.create({
       model: OLLAMA_MODEL,
