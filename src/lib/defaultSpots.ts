@@ -87,6 +87,9 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
 
   spot(54, 'Lake Dahlgren - Lexington WMA', 35.0586, -97.2001, 'lake', 'Boat ramp', 'Central', '30-acre ODWC public fishing lake inside Lexington Wildlife Management Area in Cleveland County. Largemouth bass, channel catfish, bluegill, redear sunfish, boat ramp, jetties, and accessible fishing dock. Lake Dahlgren closes during designated Lexington WMA controlled hunts; verify current ODWC access dates and fishing rules before travel.'),
 
+  spot(55, 'Lake Arcadia', 35.6680, -97.3650, 'reservoir', 'Boat ramp', 'Central', 'City of Edmond public reservoir east of Edmond with public shoreline fishing, campgrounds, boat ramps, fishing piers, and recreation areas. Verify current city fees, hours, access rules, and Oklahoma fishing regulations before travel.'),
+  spot(56, 'Wes Watkins Reservoir', 35.4054, -97.1220, 'reservoir', 'Boat ramp', 'Central', 'Public reservoir near McLoud with designated fishing areas, boat ramps, fishing docks, camping, and recreation access. Fees may apply. Verify current operating hours, launch conditions, lake restrictions, and Oklahoma fishing regulations before travel.'),
+
   // Rivers and designated trout/public fishing areas
   spot(41, 'Lower Mountain Fork River Trout Area', 34.170, -94.740, 'trout', 'State park', 'Southeast', 'Designated trout water with bank and boat access below Broken Bow Dam.'),
   spot(42, 'Blue River Public Fishing Area', 34.230, -96.420, 'trout', 'Walk-in', 'Southeast', 'Public fishing and hunting area with bank and wading access.'),
