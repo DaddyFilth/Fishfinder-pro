@@ -1,13 +1,14 @@
 import OpenAI from 'openai';
 
-export const OLLAMA_MODEL =
-  process.env.GROQ_MODEL?.trim() ||
-  process.env.OLLAMA_MODEL?.trim() ||
-  'llama-3.3-70b-versatile';
+const hasGroqKey = Boolean(process.env.GROQ_API_KEY?.trim());
+
+export const OLLAMA_MODEL = hasGroqKey
+  ? (process.env.GROQ_MODEL?.trim() || 'openai/gpt-oss-20b')
+  : (process.env.OLLAMA_MODEL?.trim() || 'llama3.2');
 
 export const OLLAMA_VISION_MODEL =
   process.env.OLLAMA_VISION_MODEL?.trim() ||
-  'llama-3.2-11b-vision-preview';
+  'llama3.2-vision';
 
 export function getOllama() {
   const groqKey = process.env.GROQ_API_KEY?.trim();
