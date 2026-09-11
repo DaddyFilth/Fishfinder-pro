@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
@@ -9,9 +9,11 @@ import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
-import { requestDeviceLocation, type Coordinates } from '@/lib/region';
+import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
+import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
+import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
@@ -48,18 +50,38 @@ const MAP_FILTERS = [
   { id: 'trout', label: 'Trout Area' },
 ] as const;
 
-async function getSpots(): Promise<Spot[]> {
+type SpotLoadResult = {
+  spots: Spot[];
+  source: 'live' | 'cached' | 'fallback';
+  savedAt: string | null;
+};
+
+async function getSpots(): Promise<SpotLoadResult> {
+  const cached = readCachedSpots();
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
-    if (!res.ok) return [...DEFAULT_SPOTS];
-    const data = await res.json();
-    return Array.isArray(data) && data.length > 0 ? data : [...DEFAULT_SPOTS];
-  } catch { return [...DEFAULT_SPOTS]; }
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const savedAt = new Date().toISOString();
+        cacheSpots(data);
+        return { spots: data, source: 'live', savedAt };
+      }
+    }
+  } catch {
+    // Fall through to browser cache or bundled Oklahoma fixtures.
+  }
+  if (cached?.spots.length) return { spots: cached.spots, source: 'cached', savedAt: cached.savedAt };
+  return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
 }
 
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
+  const [nearbyMode, setNearbyMode] = useState(false);
+  const [cacheSource, setCacheSource] = useState<'loading' | 'live' | 'cached' | 'fallback'>('loading');
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
@@ -74,11 +96,45 @@ export default function MobilePage() {
     waypoints: true,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
+  const locationCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    getSpots().then(setSpots);
-    return requestDeviceLocation(setCoordinates);
+    let active = true;
+    getSpots().then((result) => {
+      if (!active) return;
+      setSpots(result.spots);
+      setCacheSource(result.source);
+      setCachedAt(result.savedAt);
+    });
+    return () => { active = false; };
   }, []);
+
+  useEffect(() => () => {
+    locationCleanupRef.current?.();
+  }, []);
+
+  const startLocationTracking = () => {
+    if (locationStatus === 'active' || locationStatus === 'locating') {
+      locationCleanupRef.current?.();
+      locationCleanupRef.current = null;
+      setLocationStatus('idle');
+      setNearbyMode(false);
+      return;
+    }
+    setLocationStatus('locating');
+    locationCleanupRef.current = watchDeviceLocation(
+      (nextCoordinates) => {
+        setCoordinates(nextCoordinates);
+        setLocationStatus('active');
+        setNearbyMode(true);
+      },
+      (status) => {
+        locationCleanupRef.current?.();
+        locationCleanupRef.current = null;
+        setLocationStatus(status);
+      },
+    );
+  };
 
   useEffect(() => {
     if (!spots.length) return;
@@ -111,8 +167,11 @@ export default function MobilePage() {
     });
   }, [spots, mapFilter, conditionScores]);
 
-  const visibleSpots = filterSpots(spots, mapFilter);
+  const filteredSpots = filterSpots(spots, mapFilter);
+  const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
+  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
   const rankedSpots = rankSpots(visibleSpots, conditionScores);
+  const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
@@ -153,8 +212,18 @@ export default function MobilePage() {
             <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
 
             {/* Floating spot count badge */}
-            <div style={PAGE_STYLES.mapBadge}>
-              📍 {visibleSpots.length} Oklahoma public-access waters
+            <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
+              <div style={PAGE_STYLES.mapBadge}>
+                📍 {visibleSpots.length} {nearbyMode ? 'nearby ' : ''}Oklahoma public-access waters
+              </div>
+              <button type="button" onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
+                {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
+              </button>
+            </div>
+            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'live' ? '#86efac' : '#fbbf24', zIndex:10, backdropFilter:'blur(8px)' }}>
+              {cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+              {locationStatus === 'denied' && ' · Location permission denied'}
+              {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
 
             {mapLayers.depth && (
@@ -183,9 +252,9 @@ export default function MobilePage() {
               )}
               {sheetOpen && (
                 <div style={{ padding:'0 16px 16px', maxHeight:'45dvh', overflowY:'auto' }}>
-                  <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between' }}>
-                    <span>🏆 OKLAHOMA TOP WATERS TODAY</span>
-                    <span style={{ color:'#0ea5e9' }}>Hide ↓</span>
+                  <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between', gap:'8px' }}>
+                    <span>{nearbyMode ? '📍 NEAREST OKLAHOMA WATERS' : '🏆 OKLAHOMA TOP WATERS TODAY'}</span>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); setNearbyMode(false); }} style={{ background:'transparent', border:0, color:'#0ea5e9', fontSize:'10px', cursor:'pointer', padding:0 }}>Show all</button>
                   </div>
                   {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
                     const scoreValue = loadingScores[spot.id] ? '…' : score;
@@ -195,7 +264,7 @@ export default function MobilePage() {
                         <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
                         <div style={{ flex:1 }}>
                           <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
-                          <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}</div>
+                          <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}{Number.isFinite(distanceById.get(spot.id)) ? ` · ${formatDistance(distanceById.get(spot.id) ?? Number.POSITIVE_INFINITY)}` : ''}</div>
                         </div>
                         <div style={{ textAlign:'right' }}>
                           <div style={{ fontSize:'18px', fontWeight:'bold', color:'#22c55e' }}>{scoreValue}</div>
@@ -233,7 +302,7 @@ export default function MobilePage() {
                   <span style={{ fontSize:'20px', fontWeight:'bold', color:'#334155', minWidth:'28px' }}>#{i+1}</span>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
-                    <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}</div>
+                    <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}{Number.isFinite(distanceById.get(spot.id)) ? ` · ${formatDistance(distanceById.get(spot.id) ?? Number.POSITIVE_INFINITY)}` : ''}</div>
                   </div>
                   <div style={{ background:'#14532d', color:'#4ade80', fontSize:'14px', fontWeight:'bold', padding:'4px 10px', borderRadius:'16px' }}>{scoreValue}</div>
                 </div>
