@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 import { temperatureFahrenheitValue } from '@/lib/temperature';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -31,6 +32,10 @@ function convertConditionTemperaturesToFahrenheit(value: unknown): unknown {
   return result;
 }
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-chat', limit: 20, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req)) return tooLarge();
+
   let body: {
     message?: unknown;
     history?: unknown;
