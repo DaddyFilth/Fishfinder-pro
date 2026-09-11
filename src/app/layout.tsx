@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { ReactNode } from "react";
+import ConnectionStatus from '@/components/offline/ConnectionStatus';
+import ServiceWorkerRegistration from '@/components/offline/ServiceWorkerRegistration';
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -42,6 +44,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className="h-full antialiased"
     >
       <body style={{ height: "100%", margin: 0 }} className="min-h-full flex flex-col">
+        <ServiceWorkerRegistration />
+        <ConnectionStatus />
         {children}
         <SpeedInsights />
       </body>
