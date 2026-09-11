@@ -1,7 +1,6 @@
-const CACHE_VERSION = 'fishfinder-pro-v1';
+const CACHE_VERSION = 'fishfinder-pro-v3';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
-const API_CACHE = `${CACHE_VERSION}-api`;
 
 const APP_SHELL = [
   '/',
@@ -48,15 +47,39 @@ self.addEventListener('fetch', (event) => {
 
   if (!isSameOrigin(url)) return;
 
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request).catch(() =>
+        new Response(
+          JSON.stringify({
+            offline: true,
+            error: 'Offline — live fishing data is unavailable.',
+          }),
+          {
+            status: 503,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Fishfinder-Offline': 'true',
+            },
+          },
+        ),
+      ),
+    );
+
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
+          if (response.ok) {
+            const copy = response.clone();
 
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, copy);
-          });
+            void caches.open(RUNTIME_CACHE).then((cache) => {
+              void cache.put(request, copy);
+            });
+          }
 
           return response;
         })
@@ -76,44 +99,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (!response || !response.ok) return response;
-
-          const copy = response.clone();
-
-          caches.open(API_CACHE).then((cache) => {
-            cache.put(request, copy);
-          });
-
-          return response;
-        })
-        .catch(async () => {
-          const cachedResponse = await caches.match(request);
-
-          if (cachedResponse) return cachedResponse;
-
-          return new Response(
-            JSON.stringify({
-              offline: true,
-              error: 'Offline — no cached result is available yet.',
-            }),
-            {
-              status: 503,
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Fishfinder-Offline': 'true',
-              },
-            },
-          );
-        }),
-    );
-
-    return;
-  }
-
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;
@@ -124,8 +109,8 @@ self.addEventListener('fetch', (event) => {
 
           const copy = response.clone();
 
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, copy);
+          void caches.open(RUNTIME_CACHE).then((cache) => {
+            void cache.put(request, copy);
           });
 
           return response;
