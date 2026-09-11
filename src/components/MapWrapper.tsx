@@ -186,11 +186,19 @@ export default function FishingMap({
   spots,
   baseLayer,
   layers,
+  userLocation,
 }: {
   spots: Spot[];
   baseLayer: BaseLayer;
   layers: MapLayers;
+  userLocation?: { latitude: number; longitude: number } | null;
 }) {
+  const openDirections = (spot: Spot) => {
+    const origin = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : 'Current Location';
+    const destination = `${spot.lat},${spot.lng}`;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
   const [conditions, setConditions] = useState<Record<string, Cond>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -354,6 +362,23 @@ export default function FishingMap({
             maxZoom={baseLayers[baseLayer].maxZoom}
           />
 
+          {userLocation && (
+            <>
+              <CircleMarker
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={8}
+                pathOptions={{ color: '#38bdf8', fillColor: '#0284c7', fillOpacity: 1, weight: 3 }}
+              >
+                <Popup><strong>Your location</strong></Popup>
+              </CircleMarker>
+              <CircleMarker
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={22}
+                pathOptions={{ color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 0.12, weight: 1 }}
+              />
+            </>
+          )}
+
           {layers.depth && <DepthOverlay enabled={true} />}
           {layers.waterTemp && <WaterTempOverlay points={temperaturePoints} enabled={true} />}
           {layers.waypoints && <WaypointMarkers />}
@@ -373,8 +398,9 @@ export default function FishingMap({
               <Popup>
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
-                  <div style={{ fontSize: 12, color: '#475569' }}>Hotspot confidence: {score}</div>
-                </div>
+                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Hotspot confidence: {score}</div>
+                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                    </div>
               </Popup>
             </CircleMarker>
           ))}
@@ -394,8 +420,9 @@ export default function FishingMap({
               <Popup>
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
-                  <div style={{ fontSize: 12, color: '#475569' }}>Recent catch activity signal • score {score}</div>
-                </div>
+                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Recent catch activity signal • score {score}</div>
+                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                    </div>
               </Popup>
             </CircleMarker>
           ))}
