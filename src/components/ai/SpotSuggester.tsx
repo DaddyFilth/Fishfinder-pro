@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- spot cards use local catalog image assets */
 
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface Spot {
   id: string;
@@ -32,15 +32,17 @@ interface Props {
   spots: Spot[];
 }
 
-const LOCATION_CACHE_KEY = 'fishfinder:last-location';
-const LOCATION_CACHE_MAX_AGE_MS = 604800000;
-
-interface CachedLocation {
+interface UserLocation {
   lat: number;
   lng: number;
+}
+
+interface CachedLocation extends UserLocation {
   savedAt: number;
 }
 
+const LOCATION_CACHE_KEY = 'fishfinder:last-location';
+const LOCATION_CACHE_MAX_AGE_MS = 604800000;
 
 const ratingColor = (rating: string) =>
   rating === 'Hot'
@@ -58,40 +60,78 @@ const scoreColor = (score: number) =>
         ? '#f97316'
         : '#6b7280';
 
+const isValidLocation = (value: unknown): value is CachedLocation => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<CachedLocation>;
+
+  return (
+    typeof candidate.lat === 'number' &&
+    Number.isFinite(candidate.lat) &&
+    candidate.lat >= -90 &&
+    candidate.lat <= 90 &&
+    typeof candidate.lng === 'number' &&
+    Number.isFinite(candidate.lng) &&
+    candidate.lng >= -180 &&
+    candidate.lng <= 180 &&
+    typeof candidate.savedAt === 'number' &&
+    Number.isFinite(candidate.savedAt)
+  );
+};
+
+const getCachedLocation = (): UserLocation | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
+
+    if (!cached) {
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(cached);
+
+    if (!isValidLocation(parsed)) {
+      window.localStorage.removeItem(LOCATION_CACHE_KEY);
+      return null;
+    }
+
+    const age = Date.now() - parsed.savedAt;
+    const isFresh = age >= 0 && age < LOCATION_CACHE_MAX_AGE_MS;
+
+    if (!isFresh) {
+      window.localStorage.removeItem(LOCATION_CACHE_KEY);
+      return null;
+    }
+
+    return {
+      lat: parsed.lat,
+      lng: parsed.lng,
+    };
+  } catch {
+    try {
+      window.localStorage.removeItem(LOCATION_CACHE_KEY);
+    } catch {
+      // Local storage may be unavailable or restricted.
+    }
+
+    return null;
+  }
+};
+
 export default function SpotSuggester({ spots }: Props) {
   const [results, setResults] = useState<RankedSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalNearby, setTotalNearby] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-  useEffect(() => {
-    try {
-      const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
-
-      if (!cached) return;
-
-      const saved = JSON.parse(cached) as CachedLocation;
-      const isFresh =
-        typeof saved.lat === 'number' &&
-        typeof saved.lng === 'number' &&
-        typeof saved.savedAt === 'number' &&
-        Date.now() - saved.savedAt < LOCATION_CACHE_MAX_AGE_MS;
-
-      if (isFresh) {
-        setUserLocation({ lat: saved.lat, lng: saved.lng });
-      } else {
-        window.localStorage.removeItem(LOCATION_CACHE_KEY);
-      }
-    } catch {
-      window.localStorage.removeItem(LOCATION_CACHE_KEY);
-    }
-  }, []);
-
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(
+    getCachedLocation,
+  );
 
   const runSuggestion = useCallback(
     async (lat?: number, lng?: number) => {
@@ -112,14 +152,31 @@ export default function SpotSuggester({ spots }: Props) {
           }),
         });
 
-        const data = await response.json();
+        const data: unknown = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to find fishing spots');
+          const message =
+            data &&
+            typeof data === 'object' &&
+            'error' in data &&
+            typeof data.error === 'string'
+              ? data.error
+              : 'Failed to find fishing spots';
+
+          throw new Error(message);
         }
 
-        setResults(data.results ?? []);
-        setTotalNearby(data.total_nearby ?? null);
+        const responseData = data as {
+          results?: RankedSpot[];
+          total_nearby?: number;
+        };
+
+        setResults(Array.isArray(responseData.results) ? responseData.results : []);
+        setTotalNearby(
+          typeof responseData.total_nearby === 'number'
+            ? responseData.total_nearby
+            : null,
+        );
       } catch (requestError: unknown) {
         setError(
           requestError instanceof Error
@@ -133,7 +190,7 @@ export default function SpotSuggester({ spots }: Props) {
     [spots],
   );
 
-  const saveLocation = (lat: number, lng: number) => {
+  const saveLocation = (lat: number, lng: number): UserLocation => {
     const location = { lat, lng };
     setUserLocation(location);
 
@@ -141,8 +198,7 @@ export default function SpotSuggester({ spots }: Props) {
       window.localStorage.setItem(
         LOCATION_CACHE_KEY,
         JSON.stringify({
-          lat,
-          lng,
+          ...location,
           savedAt: Date.now(),
         }),
       );
@@ -153,30 +209,17 @@ export default function SpotSuggester({ spots }: Props) {
     return location;
   };
 
-  const useSavedLocation = () => {
-    try {
-      const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
+  const runWithCachedLocation = () => {
+    const cachedLocation = getCachedLocation();
 
-      if (!cached) return false;
-
-      const saved = JSON.parse(cached) as CachedLocation;
-      const isFresh =
-        typeof saved.lat === 'number' &&
-        typeof saved.lng === 'number' &&
-        typeof saved.savedAt === 'number' &&
-        Date.now() - saved.savedAt < LOCATION_CACHE_MAX_AGE_MS;
-
-      if (!isFresh) {
-        window.localStorage.removeItem(LOCATION_CACHE_KEY);
-        return false;
-      }
-
-      setUserLocation({ lat: saved.lat, lng: saved.lng });
-      runSuggestion(saved.lat, saved.lng);
-      return true;
-    } catch {
+    if (!cachedLocation) {
       return false;
     }
+
+    setUserLocation(cachedLocation);
+    void runSuggestion(cachedLocation.lat, cachedLocation.lng);
+
+    return true;
   };
 
   const handleFind = () => {
@@ -185,8 +228,8 @@ export default function SpotSuggester({ spots }: Props) {
     if (!navigator.geolocation) {
       setLocating(false);
 
-      if (!useSavedLocation()) {
-        runSuggestion();
+      if (!runWithCachedLocation()) {
+        void runSuggestion();
       }
 
       return;
@@ -200,13 +243,13 @@ export default function SpotSuggester({ spots }: Props) {
         );
 
         setLocating(false);
-        runSuggestion(location.lat, location.lng);
+        void runSuggestion(location.lat, location.lng);
       },
       () => {
         setLocating(false);
 
-        if (!useSavedLocation()) {
-          runSuggestion();
+        if (!runWithCachedLocation()) {
+          void runSuggestion();
         }
       },
       {
@@ -238,400 +281,245 @@ export default function SpotSuggester({ spots }: Props) {
         </div>
         <p
           style={{
-            fontSize: '11px',
-            color: '#64748b',
             margin: 0,
+            color: '#cbd5e1',
+            fontSize: '14px',
+            lineHeight: 1.5,
           }}
         >
-          Every recommended spot includes a bite window, technique, bait, and
-          target species.
+          Find nearby fishing spots ranked by current conditions and species
+          recommendations.
         </p>
       </div>
 
-      {userLocation && (
-        <div
-          style={{
-            background: '#0c2a1a',
-            border: '1px solid #166534',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            marginBottom: '12px',
-            fontSize: '10px',
-            color: '#4ade80',
-          }}
-        >
-          📍 Using your location · {userLocation.lat.toFixed(3)},{' '}
-          {userLocation.lng.toFixed(3)}
-          {totalNearby !== null &&
-            ` · ${totalNearby} spots considered`}
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={handleFind}
+        disabled={loading || locating}
+        style={{
+          width: '100%',
+          border: 0,
+          borderRadius: '10px',
+          padding: '12px 16px',
+          fontSize: '15px',
+          fontWeight: 700,
+          color: '#06202b',
+          background: loading || locating ? '#94a3b8' : '#22d3ee',
+          cursor: loading || locating ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {locating
+          ? 'Getting your location...'
+          : loading
+            ? 'Finding the best spots...'
+            : 'Find Fishing Spots Near Me'}
+      </button>
 
-      {!loading && (
-        <button
-          onClick={handleFind}
-          disabled={locating}
+      {userLocation ? (
+        <p
           style={{
-            width: '100%',
-            background: 'linear-gradient(135deg,#0369a1,#7c3aed)',
-            color: 'white',
-            border: 'none',
-            padding: '14px',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            cursor: locating ? 'default' : 'pointer',
-            marginBottom: '16px',
-            opacity: locating ? 0.7 : 1,
-          }}
-        >
-          {locating
-            ? '📡 Getting your location...'
-            : results.length > 0
-              ? '↻ Find Again'
-              : '🎯 Find Best Spots Near Me'}
-        </button>
-      )}
-
-      {userLocation && !loading && (
-        <button
-          onClick={() => {
-            window.localStorage.removeItem(LOCATION_CACHE_KEY);
-            setUserLocation(null);
-            setResults([]);
-            setTotalNearby(null);
-          }}
-          style={{
-            width: '100%',
-            background: 'transparent',
+            margin: '10px 0 0',
             color: '#94a3b8',
-            border: '1px solid #334155',
-            padding: '9px',
-            borderRadius: '10px',
-            fontSize: '11px',
-            cursor: 'pointer',
-            marginBottom: '16px',
+            fontSize: '12px',
           }}
         >
-          Clear saved location
-        </button>
-      )}
+          Using location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+        </p>
+      ) : null}
 
-      {loading && (
-        <div
+      {error ? (
+        <p
+          role="alert"
           style={{
-            background: '#0f172a',
-            borderRadius: '12px',
-            padding: '24px',
-            textAlign: 'center',
-            marginBottom: '16px',
-          }}
-        >
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧠</div>
-          <p
-            style={{
-              color: '#38bdf8',
-              fontWeight: 'bold',
-              fontSize: '13px',
-              margin: '0 0 4px',
-            }}
-          >
-            AI analyzing nearby spots...
-          </p>
-          <p
-            style={{
-              color: '#475569',
-              fontSize: '11px',
-              margin: 0,
-            }}
-          >
-            Ranking spots and preparing time-window and technique plans
-          </p>
-        </div>
-      )}
-
-      {error && !loading && (
-        <div
-          style={{
-            background: '#450a0a',
-            border: '1px solid #7f1d1d',
+            margin: '16px 0 0',
             borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '12px',
+            padding: '10px 12px',
+            color: '#fecaca',
+            background: '#7f1d1d',
+            fontSize: '14px',
           }}
         >
-          <p
-            style={{
-              color: '#fca5a5',
-              fontSize: '12px',
-              margin: 0,
-            }}
-          >
-            ⚠ {error}
-          </p>
-        </div>
-      )}
+          {error}
+        </p>
+      ) : null}
 
-      {results.length > 0 &&
-        !loading &&
-        results.map((result, index) => (
-          <div
-            key={result.spot_id ?? `${result.spot_name}-${index}`}
+      {totalNearby !== null ? (
+        <p
+          style={{
+            margin: '16px 0 8px',
+            color: '#cbd5e1',
+            fontSize: '13px',
+          }}
+        >
+          {totalNearby} nearby {totalNearby === 1 ? 'spot' : 'spots'} evaluated
+        </p>
+      ) : null}
+
+      <div
+        style={{
+          display: 'grid',
+          gap: '12px',
+          marginTop: results.length > 0 ? '16px' : 0,
+        }}
+      >
+        {results.map((spot) => (
+          <article
+            key={
+              spot.spot_id ??
+              `${spot.spot_name}-${spot.spot_lat ?? 'unknown'}-${spot.spot_lng ?? 'unknown'}`
+            }
             style={{
-              background: '#0a0f1e',
-              border: `1px solid ${ratingColor(result.rating)}33`,
+              overflow: 'hidden',
+              border: '1px solid #334155',
               borderRadius: '12px',
-              padding: '12px',
-              marginBottom: '10px',
-              borderLeft: `4px solid ${ratingColor(result.rating)}`,
+              background: '#0f172a',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '8px',
-              }}
-            >
+            {spot.primary_species[0] ? (
+              <img
+                src={getSpeciesImage(spot.primary_species[0])}
+                alt={spot.primary_species[0]}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  height: '150px',
+                  objectFit: 'cover',
+                  background: '#1e293b',
+                }}
+              />
+            ) : null}
+
+            <div style={{ padding: '14px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}
+              >
+                <div>
+                  <h3
+                    style={{
+                      margin: 0,
+                      color: 'white',
+                      fontSize: '16px',
+                    }}
+                  >
+                    {spot.spot_name}
+                  </h3>
+                  {spot.miles_away !== null ? (
+                    <p
+                      style={{
+                        margin: '4px 0 0',
+                        color: '#94a3b8',
+                        fontSize: '13px',
+                      }}
+                    >
+                      {spot.miles_away.toFixed(1)} miles away
+                    </p>
+                  ) : null}
+                </div>
+
+                <span
+                  style={{
+                    flexShrink: 0,
+                    borderRadius: '999px',
+                    padding: '4px 8px',
+                    color: '#020617',
+                    background: ratingColor(spot.rating),
+                    fontSize: '12px',
+                    fontWeight: 800,
+                  }}
+                >
+                  {spot.rating}
+                </span>
+              </div>
+
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
+                  marginTop: '12px',
                 }}
               >
                 <div
+                  aria-label={`Fishing score: ${spot.fishing_score}`}
                   style={{
-                    background: ratingColor(result.rating),
-                    color: 'black',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    height: '8px',
+                    flex: 1,
+                    overflow: 'hidden',
+                    borderRadius: '999px',
+                    background: '#334155',
                   }}
                 >
-                  {index + 1}
-                </div>
-
-                <div>
                   <div
                     style={{
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      color: '#e2e8f0',
+                      width: `${Math.max(0, Math.min(100, spot.fishing_score))}%`,
+                      height: '100%',
+                      background: scoreColor(spot.fishing_score),
                     }}
-                  >
-                    {result.spot_name}
-                  </div>
-
-                  {result.miles_away !== null && (
-                    <div
-                      style={{
-                        fontSize: '10px',
-                        color: '#64748b',
-                      }}
-                    >
-                      📍 {result.miles_away} miles away
-                    </div>
-                  )}
+                  />
                 </div>
-              </div>
 
-              <div style={{ textAlign: 'right' }}>
-                <div
+                <span
                   style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: scoreColor(result.fishing_score),
+                    color: scoreColor(spot.fishing_score),
+                    fontSize: '13px',
+                    fontWeight: 800,
                   }}
                 >
-                  {result.fishing_score}
-                </div>
-                <div
+                  {spot.fishing_score}/100
+                </span>
+              </div>
+
+              {spot.primary_species.length > 0 ? (
+                <p
                   style={{
-                    fontSize: '8px',
-                    color: ratingColor(result.rating),
-                    fontWeight: 'bold',
+                    margin: '12px 0 0',
+                    color: '#e2e8f0',
+                    fontSize: '14px',
                   }}
                 >
-                  {result.rating.toUpperCase()}
-                </div>
-              </div>
-            </div>
+                  <strong>Target species:</strong> {spot.primary_species.join(', ')}
+                </p>
+              ) : null}
 
-            <p
-              style={{
-                fontSize: '11px',
-                color: '#94a3b8',
-                margin: '0 0 8px',
-                lineHeight: 1.4,
-              }}
-            >
-              {result.reason}
-            </p>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '6px',
-                marginBottom: '6px',
-              }}
-            >
-              <div
+              <p
                 style={{
-                  background: '#0f172a',
-                  borderRadius: '6px',
-                  padding: '7px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '8px',
-                    color: '#475569',
-                    marginBottom: '2px',
-                  }}
-                >
-                  ⏰ BEST WINDOW
-                </div>
-                <div
-                  style={{
-                    fontSize: '10px',
-                    color: '#fbbf24',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {result.best_time_today}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: '#0f172a',
-                  borderRadius: '6px',
-                  padding: '7px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '8px',
-                    color: '#475569',
-                    marginBottom: '2px',
-                  }}
-                >
-                  🎣 TECHNIQUE
-                </div>
-                <div
-                  style={{
-                    fontSize: '9px',
-                    color: '#cbd5e1',
-                    lineHeight: 1.35,
-                  }}
-                >
-                  {result.best_technique}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: '#0f172a',
-                borderRadius: '6px',
-                padding: '7px',
-                marginBottom:
-                  result.primary_species?.length > 0 ? '8px' : 0,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '8px',
-                  color: '#475569',
-                  marginBottom: '2px',
-                }}
-              >
-                🪱 BAIT / LURE
-              </div>
-              <div
-                style={{
-                  fontSize: '9px',
+                  margin: '8px 0 0',
                   color: '#cbd5e1',
-                  lineHeight: 1.35,
+                  fontSize: '14px',
+                  lineHeight: 1.5,
                 }}
               >
-                {result.recommended_lure}
-              </div>
-            </div>
+                {spot.reason}
+              </p>
 
-            {result.primary_species?.length > 0 && (
               <div
                 style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '4px',
+                  display: 'grid',
+                  gap: '6px',
+                  marginTop: '12px',
+                  color: '#cbd5e1',
+                  fontSize: '13px',
                 }}
               >
-                {result.primary_species.map((species, speciesIndex) => (
-                  <span
-                    key={`${species}-${speciesIndex}`}
-                    style={{
-                      background: '#0f3460',
-                      color: '#93c5fd',
-                      fontSize: '9px',
-                      padding: '2px 7px',
-                      borderRadius: '10px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <img
-                      src={getSpeciesImage(species)}
-                      alt={species}
-                      style={{
-                        width: '14px',
-                        height: '14px',
-                        objectFit: 'cover',
-                        borderRadius: '50%',
-                      }}
-                    />
-                    {species}
-                  </span>
-                ))}
+                <div>
+                  <strong>Best time:</strong> {spot.best_time_today}
+                </div>
+                <div>
+                  <strong>Technique:</strong> {spot.best_technique}
+                </div>
+                <div>
+                  <strong>Recommended lure:</strong> {spot.recommended_lure}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          </article>
         ))}
-
-      {results.length === 0 && !loading && !error && (
-        <div
-          style={{
-            background: '#0a0f1e',
-            border: '1px dashed #1e293b',
-            borderRadius: '12px',
-            padding: '24px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: '36px', marginBottom: '8px' }}>🗺️</div>
-          <p
-            style={{
-              color: '#475569',
-              fontSize: '12px',
-              margin: 0,
-            }}
-          >
-            Tap the button above to rank nearby fishing spots and receive a
-            bite window, technique, lure, and target-species plan for each
-            location.
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
