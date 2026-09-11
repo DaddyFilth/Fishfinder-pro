@@ -56,6 +56,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Cap input lengths to prevent prompt injection via oversized payloads.
+  const message = body.message.trim().slice(0, 2000);
+  const speciesInput =
+    typeof body.species === 'string' ? body.species.slice(0, 100) : undefined;
+
   const spot = asRecord(body.spot);
   const spotName = typeof spot.name === 'string' ? spot.name : 'the selected fishing spot';
   const waterType = typeof spot.water_type === 'string' ? spot.water_type : 'public water';
@@ -93,7 +98,7 @@ export async function POST(req: NextRequest) {
     `Water type: ${waterType}. Access/type: ${spotType}.`,
     `Conditions supplied by the app in Fahrenheit: ${JSON.stringify(convertConditionTemperaturesToFahrenheit(body.conditions || {}))}.`,
     `Solunar information supplied by the app: ${JSON.stringify(body.solunar || {})}.`,
-    `Target species supplied by the app: ${typeof body.species === 'string' ? body.species : 'not specified'}.`,
+    `Target species supplied by the app: ${speciesInput ?? 'not specified'}.`,
   ].join(String.fromCharCode(10));
 
   try {
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
       messages: [
         { role: 'system', content: systemPrompt },
         ...history,
-        { role: 'user', content: body.message.trim() },
+        { role: 'user', content: message },
       ],
       temperature: 0.75,
       max_tokens: 700,
@@ -114,12 +119,12 @@ export async function POST(req: NextRequest) {
 
     if (!reply) {
       return NextResponse.json(
-        { error: 'Groq returned an empty FishBot reply. Please try again.' },
+        { error: 'FishBot received an empty reply from the AI provider. Please try again.' },
         { status: 502 },
       );
     }
 
-    return NextResponse.json({ reply, provider: 'groq' });
+    return NextResponse.json({ reply, provider: 'ollama' });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown AI provider error';
@@ -128,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        error: `FishBot could not reach Groq: ${message}`,
+        error: `FishBot could not reach the AI provider. Please try again later.`,
         provider: 'unavailable',
       },
       { status: 502 },

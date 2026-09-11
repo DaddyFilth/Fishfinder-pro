@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
@@ -16,6 +16,25 @@ import AuthAccountButton from '@/components/AuthAccountButton';
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
 interface SpotCondition { fishing_score?: number | null }
+
+// ─── Shared style constants ───────────────────────────────────────────────────
+const PAGE_STYLES = {
+  root: { display: 'flex', flexDirection: 'column', height: '100dvh', background: '#030712', color: 'white', fontFamily: 'system-ui,sans-serif', overflow: 'hidden' } as React.CSSProperties,
+  header: { background: '#0a0f1e', borderBottom: '1px solid #1e293b', padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '42px', flexShrink: 0, zIndex: 40, gap: '8px' } as React.CSSProperties,
+  main: { flex: 1, position: 'relative', overflow: 'hidden' } as React.CSSProperties,
+  card: { background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' } as React.CSSProperties,
+  scrollPane: { position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '70px' } as React.CSSProperties,
+  padPane: { padding: '16px', overflowY: 'auto', height: '100%' } as React.CSSProperties,
+  sectionTitle: { fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '12px' } as React.CSSProperties,
+  navBar: { background: '#0a0f1e', borderTop: '1px solid #1e293b', display: 'flex', height: '60px', flexShrink: 0, zIndex: 40, paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' } as React.CSSProperties,
+  navBtn: (active: boolean): React.CSSProperties => ({
+    flex: '0 0 68px', minWidth: '68px', position: 'relative', background: 'none', border: 'none',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: '2px', cursor: 'pointer', color: active ? '#22d3ee' : '#64748b', transition: 'color 0.15s',
+  }),
+  mapBadge: { position: 'absolute', top: '12px', left: '12px', background: 'rgba(10,15,30,0.9)', border: '1px solid #1e293b', borderRadius: '20px', padding: '6px 12px', fontSize: '11px', color: '#94a3b8', zIndex: 10, backdropFilter: 'blur(8px)' } as React.CSSProperties,
+  settingsCard: { background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px' } as React.CSSProperties,
+} as const;
 
 const MAP_FILTERS = [
   { id: 'all', label: 'All' },
@@ -111,10 +130,10 @@ export default function MobilePage() {
 { id: "weather",  icon: "🌤",  label: "Weather"  },
 ] as const;
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:'#030712', color:'white', fontFamily:'system-ui,sans-serif', overflow:'hidden' }}>
+    <div style={PAGE_STYLES.root}>
 
       {/* HEADER */}
-      <header style={{ background:'#0a0f1e', borderBottom:'1px solid #1e293b', padding:'0 10px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'42px', flexShrink:0, zIndex:40, gap:'8px' }}>
+      <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
           <span style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
           <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Fishfinder Pro</span>
@@ -126,7 +145,7 @@ export default function MobilePage() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main style={{ flex:1, position:'relative', overflow:'hidden' }}>
+      <main style={PAGE_STYLES.main}>
 
         {/* MAP TAB */}
         {tab === 'map' && (
@@ -134,7 +153,7 @@ export default function MobilePage() {
             <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
 
             {/* Floating spot count badge */}
-            <div style={{ position:'absolute', top:'12px', left:'12px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'20px', padding:'6px 12px', fontSize:'11px', color:'#94a3b8', zIndex:10, backdropFilter:'blur(8px)' }}>
+            <div style={PAGE_STYLES.mapBadge}>
               📍 {visibleSpots.length} Oklahoma public-access waters
             </div>
 
@@ -198,19 +217,19 @@ export default function MobilePage() {
         {tab === 'gallery' && <PhotoGalleryTab />}
         {/* AI TAB */}
         {tab === 'ai' && (
-          <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
+          <div style={PAGE_STYLES.padPane}>
             <SpotSuggester spots={visibleSpots} />
           </div>
         )}
 
         {/* TOP SPOTS TAB */}
         {tab === 'top' && (
-          <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
-            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>🏆 Top Spots</div>
+          <div style={PAGE_STYLES.padPane}>
+            <div style={PAGE_STYLES.sectionTitle}>🏆 Top Spots</div>
             {rankedSpots.length > 0 ? rankedSpots.map(({ spot, score }, i) => {
               const scoreValue = loadingScores[spot.id] ? '…' : score;
               return (
-                <div key={spot.id} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'12px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px' }}>
+                <div key={spot.id} style={PAGE_STYLES.card}>
                   <span style={{ fontSize:'20px', fontWeight:'bold', color:'#334155', minWidth:'28px' }}>#{i+1}</span>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
@@ -230,28 +249,28 @@ export default function MobilePage() {
 
         {/* BITE TIMES TAB */}
         {tab === 'bitetime' && (
-          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+          <div style={PAGE_STYLES.scrollPane}>
             <BiteTimesTab />
           </div>
         )}
 
         {/* WEATHER TAB */}
         {tab === 'weather' && (
-          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+          <div style={PAGE_STYLES.scrollPane}>
             <WeatherTab />
           </div>
         )}
 
         {/* SOCIAL TAB */}
         {tab === 'species' && (
-          <div style={{ position:'absolute', inset:0, overflowY:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'70px' }}>
+          <div style={PAGE_STYLES.scrollPane}>
             <SpeciesTab coordinates={coordinates} />
           </div>
         )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
-          <div style={{ padding:'16px', overflowY:'auto', height:'100%' }}>
-            <div style={{ fontSize:'14px', fontWeight:'bold', color:'#22d3ee', marginBottom:'12px' }}>⚙️ Settings</div>
+          <div style={PAGE_STYLES.padPane}>
+            <div style={PAGE_STYLES.sectionTitle}>⚙️ Settings</div>
 
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>
@@ -278,7 +297,7 @@ export default function MobilePage() {
               </div>
             </div>
 
-            <div style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'8px' }}>
+            <div style={PAGE_STYLES.settingsCard}>
               <div style={{ fontSize:'13px', color:'#e2e8f0', marginBottom:'10px' }}>🗺 Map layers</div>
               {([
                 ['hotspots', '🔥 Hotspots'],
@@ -298,18 +317,22 @@ export default function MobilePage() {
                 ))}
               </div>
             </div>
-            {[['🔎','Notifications','Push alerts for hot bites'],['📍','Location','Use GPS for nearby spots'],['🌡','Units','Imperial (lbs, ft, °F)'],['🗺','Map Style','Dark (default)'],['🔁','Auto-refresh','Every 30 minutes']].map(([icon,title,sub]) => (
-              <div key={title as string} style={{ background:'#0a0f1e', border:'1px solid #1e293b', borderRadius:'10px', padding:'14px', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-                  <span style={{ fontSize:'20px' }}>{icon}</span>
+            {[
+              ['🔎', 'Notifications', 'Push alerts for hot bites'],
+              ['📍', 'Location', 'Use GPS for nearby spots'],
+              ['🌡', 'Units', 'Imperial (lbs, ft, °F)'],
+              ['🗺', 'Map Style', 'Dark (default)'],
+              ['🔁', 'Auto-refresh', 'Every 30 minutes'],
+            ].map(([icon, title, sub]) => (
+              <div key={title as string} style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '20px' }}>{icon}</span>
                   <div>
-                    <div style={{ fontSize:'13px', color:'#e2e8f0' }}>{title as string}</div>
-                    <div style={{ fontSize:'10px', color:'#475569' }}>{sub as string}</div>
+                    <div style={{ fontSize: '13px', color: '#e2e8f0' }}>{title as string}</div>
+                    <div style={{ fontSize: '10px', color: '#475569' }}>{sub as string}</div>
                   </div>
                 </div>
-                <div style={{ width:'40px', height:'22px', background:'#0369a1', borderRadius:'11px', position:'relative', cursor:'pointer' }}>
-                  <div style={{ position:'absolute', right:'2px', top:'2px', width:'18px', height:'18px', background:'white', borderRadius:'50%' }} />
-                </div>
+                <span style={{ fontSize: '10px', color: '#475569', fontStyle: 'italic' }}>Coming soon</span>
               </div>
             ))}
           </div>
@@ -317,10 +340,10 @@ export default function MobilePage() {
       </main>
 
       {/* BOTTOM NAV */}
-      <nav style={{ background:'#0a0f1e', borderTop:'1px solid #1e293b', display:'flex', height:'60px', flexShrink:0, zIndex:40, paddingBottom:'env(safe-area-inset-bottom)', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none' }}>
+      <nav style={PAGE_STYLES.navBar}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); setSheetOpen(false); }}
-            style={{ flex:'0 0 68px', minWidth:'68px', position:'relative', background:'none', border:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2px', cursor:'pointer', color: tab === t.id ? '#22d3ee' : '#64748b', transition:'color 0.15s' }}>
+            style={PAGE_STYLES.navBtn(tab === t.id)}>
             <span style={{ fontSize:'20px' }}>{t.icon}</span>
             <span style={{ fontSize:'10px', fontWeight: tab === t.id ? 'bold' : 'normal', whiteSpace:'nowrap' }}>{t.label}</span>
             {tab === t.id && <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'32px', height:'2px', background:'#22d3ee', borderRadius:'1px' }} />}

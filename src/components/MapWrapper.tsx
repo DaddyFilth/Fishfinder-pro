@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -12,6 +12,7 @@ import FishIdentifier from '@/components/ai/FishIdentifier';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
+import { type Spot } from '@/lib/mapFilters';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -20,18 +21,61 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-interface Spot {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  water_type: string;
-  spot_type: string;
-  access_type?: string;
-  region?: string;
-  source?: string;
-  notes?: string;
-}
+// ─── Shared style constants ───────────────────────────────────────────────────
+const S = {
+  popupWrap: {
+    minWidth: '300px',
+    maxHeight: '430px',
+    overflowY: 'auto',
+    fontFamily: 'system-ui, sans-serif',
+    background: 'rgba(3,7,18,0.96)',
+    margin: '-12px',
+    padding: '12px',
+    borderRadius: '14px',
+    color: '#f8fafc',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+    backdropFilter: 'blur(18px)',
+  } as React.CSSProperties,
+
+  tabBtn: (active: boolean): React.CSSProperties => ({
+    background: active ? '#0f766e' : '#111827',
+    color: active ? 'white' : '#9ca3af',
+    border: `1px solid ${active ? '#14b8a6' : '#374151'}`,
+    borderRadius: 999,
+    padding: '4px 8px',
+    fontSize: 11,
+    cursor: 'pointer',
+  }),
+
+  metricRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 0',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+  } as React.CSSProperties,
+
+  metricLabel: { fontSize: '11px', color: '#94a3b8' } as React.CSSProperties,
+  metricValue: { fontSize: '12px', fontWeight: 700, color: '#f8fafc' } as React.CSSProperties,
+
+  retryBox: {
+    background: '#7f1d1d',
+    border: '1px solid #dc2626',
+    borderRadius: 8,
+    padding: 10,
+  } as React.CSSProperties,
+
+  retryBtn: {
+    background: '#dc2626',
+    color: 'white',
+    border: 'none',
+    borderRadius: 6,
+    padding: '6px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+} as const;
 
 interface Cond {
   fishing_score: number;
@@ -338,7 +382,7 @@ export default function FishingMap({
           {layers.catchPins && recentPins.map(({ spot, score }) => (
             <CircleMarker
               key={`pin-${spot.id}`}
-              center={[spot.lat + 0.015, spot.lng + 0.015]}
+              center={[spot.lat, spot.lng]}
               radius={4}
               pathOptions={{
                 color: '#22c55e',
@@ -363,22 +407,7 @@ export default function FishingMap({
             return (
               <Marker key={spot.id} position={[spot.lat, spot.lng]} eventHandlers={{ click: () => load(spot.id) }}>
                 <Popup maxWidth={360} minWidth={310}>
-                  <div
-                    style={{
-                      minWidth: '300px',
-                      maxHeight: '430px',
-                      overflowY: 'auto',
-                      fontFamily: 'system-ui, sans-serif',
-                      background: 'rgba(3,7,18,0.96)',
-                      margin: '-12px',
-                      padding: '12px',
-                      borderRadius: '14px',
-                      color: '#f8fafc',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
-                      backdropFilter: 'blur(18px)',
-                    }}
-                  >
+                  <div style={S.popupWrap}>
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
@@ -388,19 +417,11 @@ export default function FishingMap({
                     {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading conditions...</div>}
 
                     {errors[spot.id] && (
-                      <div style={{ background: '#7f1d1d', border: '1px solid #dc2626', borderRadius: 8, padding: 10 }}>
+                      <div style={S.retryBox}>
                         <div style={{ fontSize: 12, marginBottom: 8 }}>Failed to load: {errors[spot.id]}</div>
                         <button
                           onClick={() => retry(spot.id)}
-                          style={{
-                            background: '#dc2626',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 6,
-                            padding: '6px 10px',
-                            fontSize: 12,
-                            cursor: 'pointer',
-                          }}
+                          style={S.retryBtn}
                         >
                           Retry
                         </button>
@@ -424,15 +445,7 @@ export default function FishingMap({
                             <button
                               key={tab}
                               onClick={() => setTabs((p) => ({ ...p, [spot.id]: tab }))}
-                              style={{
-                                background: activeTab === tab ? '#0f766e' : '#111827',
-                                color: activeTab === tab ? 'white' : '#9ca3af',
-                                border: `1px solid ${activeTab === tab ? '#14b8a6' : '#374151'}`,
-                                borderRadius: 999,
-                                padding: '4px 8px',
-                                fontSize: 11,
-                                cursor: 'pointer',
-                              }}
+                              style={S.tabBtn(activeTab === tab)}
                             >
                               {icon}
                             </button>

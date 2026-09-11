@@ -425,7 +425,7 @@ Do not return Markdown, code fences, commentary, or spots not included in the su
     });
 
     const content = response.choices[0]?.message?.content?.trim() ?? '';
-    const jsonMatch = content.match(/[[sS]*]/);
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
 
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

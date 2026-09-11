@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
   if (typeof image_base64 !== 'string' || !SUPPORTED_IMAGE_DATA_URL.test(image_base64)) {
     return NextResponse.json({ error: 'Use a JPEG, PNG, or WebP image' }, { status: 400 });
   }
+  // ~2 MB limit: base64 expands ~33%, so 2_750_000 chars ≈ 2 MB of binary.
+  if (image_base64.length > 2_750_000) {
+    return NextResponse.json({ error: 'Image too large. Maximum size is 2 MB.' }, { status: 413 });
+  }
 
   try {
     const response = await openai.chat.completions.create({
