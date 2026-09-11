@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/server'
+import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge } from '@/lib/security'
 import { APP_ROLES } from '@/lib/auth/roles'
 
 const RoleUpdateSchema = z.object({
@@ -21,7 +22,12 @@ export async function GET() {
   return NextResponse.json({ users: data ?? [] })
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const limited = enforceRateLimit(request, { name: 'admin-role-write', limit: 20, windowMs: 60_000 })
+  if (limited) return limited
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
+  if (requestBodyTooLarge(request)) return tooLarge()
+
   const context = await requireRole('admin')
   if (!context) return NextResponse.json({ error: 'Administrator access required.' }, { status: 403 })
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_VISION_MODEL } from '@/lib/ollama';
 import { SPECIES } from '@/lib/speciesCatalog';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) =>
   `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
@@ -10,6 +11,10 @@ const SUPPORTED_IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0
 const openai = getOllama();
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-identify', limit: 8, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req, 3_000_000)) return tooLarge();
+
   let image_base64: unknown;
   try {
     ({ image_base64 } = await req.json());
