@@ -86,6 +86,10 @@ export default function MapView({spots,onSpotSelect,aiPicks=[]}:{spots:Spot[];on
 
   function toggleLayer(id:string){setActiveLayers(prev=>{const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n;});}
   function selectSpot(s:Spot){setSelected(s);onSpotSelect(s);}
+  function openDirections(spot:Spot){
+    const url=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${spot.lat},${spot.lng}`)}&travelmode=driving`;
+    window.open(url,'_blank','noopener,noreferrer');
+  }
   const rankOf=(id:string)=>aiPicks.indexOf(id);
 
   return(
@@ -149,7 +153,7 @@ export default function MapView({spots,onSpotSelect,aiPicks=[]}:{spots:Spot[];on
             <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',color:'#475569',fontSize:'18px',cursor:'pointer',lineHeight:1}}>x</button>
           </div>
           <div style={{display:'flex',gap:'8px',marginTop:'10px'}}>
-            <button style={{flex:1,background:'linear-gradient(135deg,#0369a1,#0ea5e9)',color:'white',border:'none',padding:'8px',borderRadius:'8px',fontSize:'11px',fontWeight:'bold',cursor:'pointer'}}>Navigate</button>
+            <button onClick={()=>openDirections(selected)} aria-label={`Get directions to ${selected.name}`} style={{flex:1,background:'linear-gradient(135deg,#0369a1,#0ea5e9)',color:'white',border:'none',padding:'8px',borderRadius:'8px',fontSize:'11px',fontWeight:'bold',cursor:'pointer'}}>Navigate</button>
             <button style={{flex:1,background:'#0f172a',border:'1px solid #334155',color:'#94a3b8',padding:'8px',borderRadius:'8px',fontSize:'11px',cursor:'pointer'}}>Details</button>
           </div>
         </div>
