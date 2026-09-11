@@ -13,7 +13,13 @@ function isOklahomaSpot(spot: { lat: number; lng: number }) {
 
 export async function GET() {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return NextResponse.json([...DEFAULT_SPOTS], { headers: { 'x-fishfinder-data-mode': 'local-fallback' } });
+
+  if (!supabase) {
+    return NextResponse.json([...DEFAULT_SPOTS].filter(isOklahomaSpot), {
+      headers: { 'x-fishfinder-data-mode': 'local-fallback' },
+    });
+  }
+
   const { data, error } = await supabase
     .from('fishing_spots')
     .select('id, name, lat, lng, water_type, spot_type')
@@ -22,19 +28,29 @@ export async function GET() {
     .gte('lng', OKLAHOMA_BOUNDS.minLng)
     .lte('lng', OKLAHOMA_BOUNDS.maxLng)
     .order('name');
-  if (error) return NextResponse.json([...DEFAULT_SPOTS], { headers: { 'x-fishfinder-data-mode': 'local-fallback' } });
 
-  const byId = new Map(DEFAULT_SPOTS.map((spot) => [spot.id, spot]));
-  for (const spot of data ?? []) {
-    if (isOklahomaSpot(spot)) byId.set(spot.id, spot);
+  if (error) {
+    return NextResponse.json([...DEFAULT_SPOTS].filter(isOklahomaSpot), {
+      headers: { 'x-fishfinder-data-mode': 'local-fallback' },
+    });
   }
 
-  const uniqueSpots = [...byId.values()].filter(isOklahomaSpot).filter((spot, index, list) => {
-    const key = `${spot.name.trim().toLowerCase()}|${spot.lat.toFixed(3)}|${spot.lng.toFixed(3)}`;
-    return list.findIndex((candidate) => `${candidate.name.trim().toLowerCase()}|${candidate.lat.toFixed(3)}|${candidate.lng.toFixed(3)}` === key) === index;
-  });
+  const byId = new Map(DEFAULT_SPOTS.map((spot) => [spot.id, spot]));
 
-  return NextResponse.json(uniqueSpots, {
-    headers: { 'x-fishfinder-data-mode': data && data.length > 0 ? 'supabase-plus-oklahoma-catalog' : 'oklahoma-catalog-fallback' },
+  for (const spot of data ?? []) {
+    if (isOklahomaSpot(spot)) {
+      byId.set(spot.id, spot);
+    }
+  }
+
+  const spots = [...byId.values()].filter(isOklahomaSpot);
+
+  return NextResponse.json(spots, {
+    headers: {
+      'x-fishfinder-data-mode':
+        data && data.length > 0
+          ? 'supabase-plus-oklahoma-catalog'
+          : 'oklahoma-catalog-fallback',
+    },
   });
 }
