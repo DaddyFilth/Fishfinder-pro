@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getAuthContext } from '@/lib/auth/server'
+import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge } from '@/lib/security'
 
 const ProfileUpdateSchema = z.object({
   username: z.string().trim().min(2).max(32).regex(/^[a-zA-Z0-9_]+$/, 'Use only letters, numbers, and underscores.').nullable().optional(),
@@ -34,7 +35,12 @@ export async function GET() {
   })
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const limited = enforceRateLimit(request, { name: 'profile-write', limit: 10, windowMs: 60_000 })
+  if (limited) return limited
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
+  if (requestBodyTooLarge(request)) return tooLarge()
+
   const context = await getAuthContext()
   if (!context) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
 
