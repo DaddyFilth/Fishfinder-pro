@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "codeant-resolve-pr-comments": {
+      "source": "CodeAnt-AI/skills",
+      "sourceType": "github",
+      "skillPath": "skills/codeant-resolve-pr-comments/SKILL.md",
+      "computedHash": "03a7f618c6eb4d56353944b4a8a49103f78540cb2a275cf2f8e631b4476f2ce8"
+    }
+  }
+}
