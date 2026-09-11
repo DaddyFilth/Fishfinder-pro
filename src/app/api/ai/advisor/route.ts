@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 function generateFallbackAnalysis(spotName: string): string {
   return `### 🎣 FishBot Spot Briefing: ${spotName}
@@ -9,6 +10,10 @@ function generateFallbackAnalysis(spotName: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-advisor', limit: 10, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req)) return tooLarge();
+
   let body: { conditions?: unknown; spot?: unknown; species?: unknown; solunar?: unknown };
 
   try {

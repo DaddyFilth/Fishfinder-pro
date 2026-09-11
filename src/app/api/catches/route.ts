@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthContext } from '@/lib/auth/server';
+import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge, unauthorized } from '@/lib/security';
 
 // `id` and `user_id` are intentionally excluded — they are set server-side.
 const CatchSchema = z.object({
@@ -11,13 +12,18 @@ const CatchSchema = z.object({
   notes: z.string().max(500),
   spot_id: z.string().uuid(),
   spot_name: z.string().max(200),
-  lat: z.number(),
-  lng: z.number(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
   caught_at: z.string().datetime(),
   photo_url: z.string().url().max(2000).optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'catches-write', limit: 20, windowMs: 60_000 });
+  if (limited) return limited;
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
+  if (requestBodyTooLarge(req)) return tooLarge();
+
   const context = await getAuthContext();
   if (!context) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
