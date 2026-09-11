@@ -68,3 +68,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Offline maps and nearby waters
+
+The map caches the latest successful `/api/spots` response in browser storage and registers `public/sw.js` to cache the app shell and same-origin assets. If the network is unavailable, the app uses the browser cache first and the bundled Oklahoma public-access dataset as a final fallback. The cache is device-local; it is not a substitute for live closures, conditions, or regulation updates.
+
+Select **Find nearby** on the map to request browser location permission. While permission is granted, GPS updates are watched and the map sheet switches to the 20 nearest filtered Oklahoma waters, showing approximate distance in miles. Location is used in the browser and is not sent to the server by this feature. GPS requires a secure context such as HTTPS or localhost; users can stop tracking at any time or continue using the map without location permission.
