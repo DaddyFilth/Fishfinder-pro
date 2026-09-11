@@ -209,7 +209,7 @@ export default function MobilePage() {
         {/* MAP TAB */}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
-            <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} />
+            <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} userLocation={coordinates} />
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
