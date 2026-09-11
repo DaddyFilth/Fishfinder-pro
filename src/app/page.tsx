@@ -84,6 +84,8 @@ export default function MobilePage() {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [mapPopupOpen, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
@@ -173,6 +175,7 @@ export default function MobilePage() {
   const rankedSpots = rankSpots(visibleSpots, conditionScores);
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
+  const hideMapBadges = sheetOpen || mapPopupOpen || selectedSpot !== null;
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };
@@ -209,7 +212,26 @@ export default function MobilePage() {
         {/* MAP TAB */}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
-            <MapWrapper spots={visibleSpots} baseLayer={baseLayer} layers={mapLayers} userLocation={coordinates} />
+            <MapWrapper
+              spots={visibleSpots}
+              baseLayer={baseLayer}
+              layers={mapLayers}
+              userLocation={coordinates}
+              selectedSpot={selectedSpot}
+              sheetOpen={sheetOpen}
+              onSpotSelect={(spot) => {
+                setSelectedSpot(spot);
+                setMapPopupOpen(true);
+              }}
+              onPopupOpen={(spot) => {
+                setSelectedSpot(spot);
+                setMapPopupOpen(true);
+              }}
+              onPopupClose={() => {
+                setMapPopupOpen(false);
+                setSelectedSpot(null);
+              }}
+            />
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
