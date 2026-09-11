@@ -187,12 +187,23 @@ export default function FishingMap({
   baseLayer,
   layers,
   userLocation,
+  selectedSpot,
+  sheetOpen = false,
+  onSpotSelect,
+  onPopupOpen,
+  onPopupClose,
 }: {
   spots: Spot[];
   baseLayer: BaseLayer;
   layers: MapLayers;
   userLocation?: { latitude: number; longitude: number } | null;
+  selectedSpot?: Spot | null;
+  sheetOpen?: boolean;
+  onSpotSelect?: (spot: Spot) => void;
+  onPopupOpen?: (spot: Spot) => void;
+  onPopupClose?: () => void;
 }) {
+  const showMapHud = !sheetOpen && !selectedSpot;
   const openDirections = (spot: Spot) => {
     const origin = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : 'Current Location';
     const destination = `${spot.lat},${spot.lng}`;
@@ -335,7 +346,7 @@ export default function FishingMap({
         <div className="map-glow" />
         <div className="map-vignette" />
 
-        <div className="hud" style={{ position: 'absolute', top: 18, left: 18, zIndex: 1600, borderRadius: 18, padding: '14px 16px', minWidth: 265 }}>
+        <div className="hud" aria-hidden={!showMapHud} style={{ position: 'absolute', top: 18, left: 18, zIndex: 1600, borderRadius: 18, padding: '14px 16px', minWidth: 265, pointerEvents: 'none', opacity: showMapHud ? 1 : 0, transform: showMapHud ? 'translateY(0)' : 'translateY(-10px)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div className="pulse" />
             <div>
@@ -432,8 +443,8 @@ export default function FishingMap({
             const activeTab = tabs[spot.id] || 'score';
 
             return (
-              <Marker key={spot.id} position={[spot.lat, spot.lng]} eventHandlers={{ click: () => load(spot.id) }}>
-                <Popup maxWidth={360} minWidth={310}>
+              <Marker key={spot.id} position={[spot.lat, spot.lng]} eventHandlers={{ click: () => { load(spot.id); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}>
+                <Popup maxWidth={360} minWidth={310} eventHandlers={{ add: () => onPopupOpen?.(spot), remove: () => onPopupClose?.() }}>
                   <div style={S.popupWrap}>
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
