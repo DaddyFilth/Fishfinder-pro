@@ -106,7 +106,15 @@ export default function FishBot({ spot, conditions }: Props) {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, spot, conditions }),
+        body: JSON.stringify({
+          message: userMsg,
+          spot,
+          conditions,
+          history: messages.map((message) => ({
+            role: message.role === 'bot' ? 'assistant' : 'user',
+            content: message.text,
+          })),
+        }),
       });
 
       const data: unknown = await res.json().catch(() => ({}));
