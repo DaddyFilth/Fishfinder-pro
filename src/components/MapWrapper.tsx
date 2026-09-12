@@ -252,6 +252,21 @@ export default function FishingMap({
   );
 
   const hotSpots = rankedSpots.slice(0, 6);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const updateConnectionStatus = () => setIsOnline(navigator.onLine);
+
+    updateConnectionStatus();
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+
+    return () => {
+      window.removeEventListener('online', updateConnectionStatus);
+      window.removeEventListener('offline', updateConnectionStatus);
+    };
+  }, []);
+
   const recentPins = rankedSpots.slice(0, 18);
   const liveFeeds = rankedSpots.length;
 
@@ -362,8 +377,16 @@ export default function FishingMap({
             <span style={{ color: 'white', fontWeight: 700 }}>{spots.length}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>
-            <span>Live feeds</span>
-            <span style={{ color: '#22c55e', fontWeight: 700 }}>{liveFeeds}</span>
+            <span>{isOnline ? 'Live feeds' : 'Connection'}</span>
+            <span
+              aria-live="polite"
+              style={{
+                color: isOnline ? '#22c55e' : '#f59e0b',
+                fontWeight: 700,
+              }}
+            >
+              {isOnline ? liveFeeds : 'Offline'}
+            </span>
           </div>
         </div>
 
