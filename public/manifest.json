@@ -1,9 +1,11 @@
 {
-  "name": "Fishfinder Pro",
+  "name": "Oklahoma Fishfinder Pro",
   "short_name": "Fishfinder",
-  "description": "Find fishing spots, track trips, log catches, and plan your best bite window.",
+  "description": "Find Oklahoma public fishing spots, track trips, log catches, and plan your best bite window.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
   "background_color": "#030712",
   "theme_color": "#0a0f1e",
   "orientation": "portrait-primary",
