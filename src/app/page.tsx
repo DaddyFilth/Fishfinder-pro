@@ -84,6 +84,8 @@ export default function MobilePage() {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [backHint, setBackHint] = useState(false);
+  const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [mapPopupOpen, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
@@ -114,6 +116,46 @@ export default function MobilePage() {
   useEffect(() => () => {
     locationCleanupRef.current?.();
   }, []);
+
+  useEffect(() => {
+    const marker = { fishfinderMapBack: true };
+
+    if (!window.history.state?.fishfinderMapBack) {
+      window.history.replaceState(marker, '', window.location.href);
+      window.history.pushState(marker, '', window.location.href);
+    }
+
+    const onPopState = () => {
+      const mapIsFocused = tab === 'map' && !sheetOpen;
+
+      if (!mapIsFocused) {
+        setTab('map');
+        setSheetOpen(false);
+        setSelectedSpot(null);
+        setMapPopupOpen(false);
+        setBackHint(false);
+        window.history.pushState(marker, '', window.location.href);
+        return;
+      }
+
+      const now = Date.now();
+
+      if (now - lastBackAtRef.current < 2000) {
+        return;
+      }
+
+      lastBackAtRef.current = now;
+      setBackHint(true);
+      window.setTimeout(() => setBackHint(false), 2000);
+      window.history.pushState(marker, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [tab, sheetOpen]);
 
   const startLocationTracking = () => {
     if (locationStatus === 'active' || locationStatus === 'locating') {
@@ -205,6 +247,30 @@ export default function MobilePage() {
           <AuthAccountButton />
         </div>
       </header>
+
+      {backHint && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: '82px',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            background: 'rgba(15,23,42,0.96)',
+            border: '1px solid #334155',
+            borderRadius: '999px',
+            color: '#e2e8f0',
+            padding: '10px 16px',
+            fontSize: '12px',
+            fontWeight: 700,
+            boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Press Back again to exit Fishfinder Pro
+        </div>
+      )}
 
       {/* MAIN CONTENT AREA */}
       <main style={PAGE_STYLES.main}>
