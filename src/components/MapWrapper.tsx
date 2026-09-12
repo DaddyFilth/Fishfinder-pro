@@ -9,6 +9,7 @@ import WaypointMarkers from '@/components/WaypointMarkers';
 import DepthOverlay from '@/components/DepthOverlay';
 import FishBot from '@/components/ai/FishBot';
 import FishIdentifier from '@/components/ai/FishIdentifier';
+import CommunityPinsPanel from '@/components/CommunityPinsPanel';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
@@ -114,7 +115,8 @@ type Tab =
   | 'forecast'
   | 'log'
   | 'ai'
-  | 'identify';
+  | 'identify'
+  | 'community';
 
 export type BaseLayer = 'satellite' | 'explore';
 
@@ -480,6 +482,7 @@ export default function FishingMap({
                             ['log', '📝'],
                             ['ai', '🤖'],
                             ['identify', '📷'],
+                            ['community', '📍'],
                           ] as [Tab, string][]).map(([tab, icon]) => (
                             <button
                               key={tab}
@@ -571,7 +574,14 @@ export default function FishingMap({
                         {activeTab === 'log' && <CatchLogger spotId={spot.id} spotName={spot.name} lat={spot.lat} lng={spot.lng} />}
                         {activeTab === 'ai' && <FishBot spot={spot} conditions={c} />}
                         {activeTab === 'identify' && <FishIdentifier />}
-
+                        {activeTab === 'community' && (
+<CommunityPinsPanel
+    knownSpotId={spot.id}
+    spotName={spot.name}
+    latitude={spot.lat}
+    longitude={spot.lng}
+  />
+)} 
                         <div style={{ marginTop: 10, fontSize: 10, color: '#6b7280' }}>
                           {c.cached ? 'Cached' : 'Live'} • {new Date(c.captured_at).toLocaleString()}
                         </div>
