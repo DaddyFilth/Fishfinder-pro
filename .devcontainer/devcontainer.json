@@ -10,14 +10,5 @@
     "VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX": "true",
     "XDG_RUNTIME_DIR": "/tmp/runtime-vscode"
   },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "-ms-dotnettools.vscode-dotnet-runtime",
-        "-ms-dotnettools.csharp",
-        "-ms-dotnettools.csdevkit"
-      ]
-    }
-  },
   "postCreateCommand": "npm ci || npm install"
 }
