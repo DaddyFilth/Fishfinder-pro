@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
     'If the user says cancel, say the draft was discarded and do not continue the save flow.',
     'Be honest about uncertainty. Do not fabricate live readings, catches, regulations, access conditions, app state, or draft values.',
     'Keep answers useful and conversational, normally 2–5 short paragraphs or short bullets when steps are helpful.',
+    'For community spot submissions: never invent a location name, coordinates, public-access status, agency, source URL, or access details. Ask the user for a map-selected location or exact coordinates and their factual access information. Explain that only approved submissions become public. Do not claim a location is public, legal, open, verified, or approved unless the app supplies that status.',
     'Temperature rule: use Fahrenheit only. Never show Celsius, never use °C, and never describe a Celsius value to the user.',
     `Current selected spot: ${spotName}.`,
     `Water type: ${waterType}. Access/type: ${spotType}.`,
