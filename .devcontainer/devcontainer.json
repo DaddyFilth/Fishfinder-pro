@@ -1,26 +1,23 @@
 {
   "name": "Fishfinder Pro",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
-  "remoteEnv": {
-    "NEXT_TELEMETRY_DISABLED": "1"
-  },
-  "postCreateCommand": "bash .devcontainer/postCreate.sh",
-  "postStartCommand": "bash .devcontainer/start.sh",
-  "forwardPorts": [3000],
-  "portsAttributes": {
-    "3000": {
-      "label": "Fishfinder Pro",
-      "onAutoForward": "openPreview"
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21"
     }
+  },
+  "containerEnv": {
+    "VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX": "true",
+    "XDG_RUNTIME_DIR": "/tmp/runtime-vscode"
   },
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint"
+        "-ms-dotnettools.vscode-dotnet-runtime",
+        "-ms-dotnettools.csharp",
+        "-ms-dotnettools.csdevkit"
       ]
     }
-  }
+  },
+  "postCreateCommand": "npm ci || npm install"
 }
