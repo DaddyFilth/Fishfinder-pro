@@ -8,6 +8,7 @@ const WWW_HOST = `www.${CANONICAL_HOST}`;
 const PUBLIC_PATHS = [
   '/auth/login',
   '/auth/callback',
+  '/api/auth',
   '/offline',
   '/manifest.json',
   '/sw.js',

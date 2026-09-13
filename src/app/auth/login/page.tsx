@@ -3,7 +3,6 @@
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { getSafeNextPath } from '@/lib/supabase/redirect'
 
 type AuthMode = 'login' | 'signup'
@@ -34,12 +33,6 @@ export default function LoginPage() {
     setErrorMessage('')
     setSuccessMessage('')
 
-    const supabase = createClient()
-    if (!supabase) {
-      setErrorMessage('Account services are not configured yet. Please contact the site administrator.')
-      return
-    }
-
     if (!email.trim() || !password) {
       setErrorMessage('Enter an email address and password to continue.')
       return
@@ -53,34 +46,28 @@ export default function LoginPage() {
     setBusy(true)
 
     try {
-      if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode,
           email: email.trim(),
           password,
-          options: {
-            data: { full_name: fullName.trim() || null },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-          },
-        })
+          fullName: fullName.trim(),
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        }),
+      })
+      const result = await response.json() as { error?: string; confirmed?: boolean }
 
-        if (error) throw error
+      if (!response.ok) throw new Error(result.error || 'Authentication failed.')
 
-        if (!data.session) {
-          setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
-        } else {
-          router.replace(nextPath)
-        }
+      if (mode === 'signup' && !result.confirmed) {
+        setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-
-        if (error) throw error
         router.replace(nextPath)
       }
-    } catch {
-      setErrorMessage('Authentication failed. Please try again.')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.')
     } finally {
       setBusy(false)
     }
