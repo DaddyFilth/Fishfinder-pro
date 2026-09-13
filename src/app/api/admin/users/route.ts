@@ -18,7 +18,7 @@ export async function GET() {
     .select('id, username, full_name, avatar_url, role, created_at')
     .order('created_at', { ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Unable to load users.' }, { status: 500 })
   return NextResponse.json({ users: data ?? [] })
 }
 
@@ -46,7 +46,7 @@ export async function PATCH(request: NextRequest) {
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .eq('role', 'admin')
-    if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
+    if (countError) return NextResponse.json({ error: 'Unable to verify administrator count.' }, { status: 500 })
     if ((count ?? 0) <= 1) return NextResponse.json({ error: 'The final administrator cannot be demoted.' }, { status: 400 })
   }
 
@@ -57,6 +57,6 @@ export async function PATCH(request: NextRequest) {
     .select('id, username, full_name, avatar_url, role, created_at')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: error.code === 'PGRST116' ? 404 : 500 })
+  if (error) return NextResponse.json({ error: error.code === 'PGRST116' ? 'User not found.' : 'Unable to update user.' }, { status: error.code === 'PGRST116' ? 404 : 500 })
   return NextResponse.json({ user: data })
 }

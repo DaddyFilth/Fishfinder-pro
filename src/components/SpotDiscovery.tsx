@@ -19,7 +19,7 @@ export default function SpotDiscovery({ coordinates, onAccepted }: { coordinates
       if (!response.ok) throw new Error(data.error);
       setCandidates(data.candidates ?? []);
       setMessage(data.candidates?.length ? 'Review each source before adding it.' : 'No public spots found nearby.');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Search unavailable.'); }
+    } catch { setMessage('Search unavailable.'); }
     finally { setLoading(false); }
   };
   const accept = (candidate: Candidate) => {
