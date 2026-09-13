@@ -56,6 +56,107 @@ type SpotLoadResult = {
   savedAt: string | null;
 };
 
+  // __SETTINGS_TRANSFORM_APPLIED__
+
+  type UnitPreference = 'imperial' | 'metric'
+  type AutoRefreshPreference = 'off' | '15' | '30' | '60'
+  type NotificationState = 'loading' | 'unsupported' | NotificationPermission
+
+  const BASE_STYLE_OPTIONS = [
+    { id: 'explore', label: 'Dark / Explore' },
+    { id: 'satellite', label: 'Satellite' },
+  ] as const
+
+  const AUTO_REFRESH_OPTIONS = [
+    { id: 'off', label: 'Off', minutes: null },
+    { id: '15', label: 'Every 15 minutes', minutes: 15 },
+    { id: '30', label: 'Every 30 minutes', minutes: 30 },
+    { id: '60', label: 'Every 60 minutes', minutes: 60 },
+  ] as const
+
+  const SETTINGS_STORAGE_KEYS = {
+    units: 'fishfinder.units',
+    mapStyle: 'fishfinder.map-style',
+    autoRefresh: 'fishfinder.auto-refresh',
+    notifications: 'fishfinder.notifications.enabled',
+  } as const
+
+  function readStoredValue(key: string, fallback: string) {
+    if (typeof window === 'undefined') return fallback
+
+    try {
+      return window.localStorage.getItem(key) ?? fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  function saveStoredValue(key: string, value: string) {
+    if (typeof window === 'undefined') return
+
+    try {
+      window.localStorage.setItem(key, value)
+    } catch {
+      // Storage denial or private browsing should not break settings UI.
+    }
+  }
+
+  type SettingCardProps = {
+    icon: string
+    title: string
+    description: string
+    status?: string
+    children?: React.ReactNode
+  }
+
+  function SettingCard({ icon, title, description, status, children }: SettingCardProps) {
+    return (
+      <section style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <span aria-hidden="true" style={{ fontSize: '20px' }}>{icon}</span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '13px', color: '#e2e8f0' }}>{title}</h3>
+              <p style={{ margin: '3px 0 0', fontSize: '10px', color: '#94a3b8' }}>{description}</p>
+            </div>
+          </div>
+          {status && <span style={{ fontSize: '9px', color: '#22d3ee', fontWeight: 800 }}>{status}</span>}
+        </div>
+        {children && <div style={{ marginTop: '12px' }}>{children}</div>}
+      </section>
+    )
+  }
+
+  type PreferenceButtonProps = {
+    label: string
+    selected: boolean
+    onSelect: () => void
+  }
+
+  function PreferenceButton({ label, selected, onSelect }: PreferenceButtonProps) {
+    return (
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onSelect}
+        style={{
+          flex: 1,
+          minWidth: '92px',
+          background: selected ? '#0369a1' : '#0f172a',
+          border: selected ? '1px solid #7dd3fc' : '1px solid #1e293b',
+          borderRadius: '8px',
+          color: selected ? '#e0f2fe' : '#cbd5e1',
+          padding: '8px',
+          cursor: 'pointer',
+          fontSize: '11px',
+          fontWeight: selected ? 800 : 500,
+        }}
+      >
+        {label}
+      </button>
+    )
+  }
+
 async function getSpots(): Promise<SpotLoadResult> {
   const cached = readCachedSpots();
   try {
@@ -92,6 +193,10 @@ export default function MobilePage() {
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
   const [baseLayer, setBaseLayer] = useState<BaseLayer>('explore');
+  const [unitsPreference, setUnitsPreference] = useState<UnitPreference>('imperial');
+  const [autoRefreshPreference, setAutoRefreshPreference] = useState<AutoRefreshPreference>('off');
+  const [notificationState, setNotificationState] = useState<NotificationState>('loading');
+  const [notificationsPreferred, setNotificationsPreferred] = useState(false);
   const [mapLayers, setMapLayers] = useState<MapLayers>({
     hotspots: true,
     depth: false,
@@ -100,18 +205,70 @@ export default function MobilePage() {
     waypoints: true,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
+  const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    let active = true;
-    getSpots().then((result) => {
-      if (!active) return;
-      setSpots(result.spots);
-      setCacheSource(result.source);
-      setCachedAt(result.savedAt);
-    });
-    return () => { active = false; };
+    const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
+    setBaseLayer(storedMapStyle === 'satellite' ? 'satellite' : 'explore');
+
+    const storedUnits = readStoredValue(SETTINGS_STORAGE_KEYS.units, 'imperial');
+    setUnitsPreference(storedUnits === 'metric' ? 'metric' : 'imperial');
+
+    const storedAutoRefresh = readStoredValue(SETTINGS_STORAGE_KEYS.autoRefresh, 'off');
+    setAutoRefreshPreference(
+      storedAutoRefresh === '15' || storedAutoRefresh === '30' || storedAutoRefresh === '60'
+        ? storedAutoRefresh
+        : 'off',
+    );
+
+    setNotificationsPreferred(
+      readStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false') === 'true',
+    );
+
+    if (!('Notification' in window)) {
+      setNotificationState('unsupported');
+      return;
+    }
+
+    setNotificationState(Notification.permission);
   }, []);
+
+  useEffect(() => {
+    void loadSpotData(false);
+  }, []);
+
+  useEffect(() => {
+    const selectedAutoRefresh = AUTO_REFRESH_OPTIONS.find(
+      (option) => option.id === autoRefreshPreference,
+    );
+
+    if (!selectedAutoRefresh?.minutes) return;
+
+    const refreshIfSafe = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        navigator.onLine &&
+        !refreshInFlightRef.current
+      ) {
+        void loadSpotData(true);
+      }
+    };
+
+    const intervalId = window.setInterval(
+      refreshIfSafe,
+      selectedAutoRefresh.minutes * 60 * 1000,
+    );
+
+    window.addEventListener('online', refreshIfSafe);
+    document.addEventListener('visibilitychange', refreshIfSafe);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('online', refreshIfSafe);
+      document.removeEventListener('visibilitychange', refreshIfSafe);
+    };
+  }, [autoRefreshPreference]);
 
   useEffect(() => () => {
     locationCleanupRef.current?.();
@@ -156,6 +313,55 @@ export default function MobilePage() {
       window.removeEventListener('popstate', onPopState);
     };
   }, [tab, sheetOpen]);
+
+  const loadSpotData = async (isAutoRefresh = false) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+
+    try {
+      const result = await getSpots();
+      setSpots(result.spots);
+      setCacheSource(result.source);
+      setCachedAt(result.savedAt);
+
+      if (result.source === 'live' && isAutoRefresh) {
+        setConditionScores({});
+        setLoadingScores({});
+        scoreFetchInFlight.current = {};
+      }
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      setNotificationState('unsupported');
+      setNotificationsPreferred(false);
+      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setNotificationState(permission);
+
+    const enabled = permission === 'granted';
+    setNotificationsPreferred(enabled);
+    saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, String(enabled));
+  };
+
+  const locationSettingStatus = (
+    locationStatus === 'locating' ? 'LOCATING' :
+    locationStatus === 'active' ? 'ON' :
+    locationStatus === 'denied' ? 'DENIED' :
+    locationStatus === 'unavailable' ? 'UNAVAILABLE' : 'OFF'
+  );
+
+  const unitPreferenceLabel = unitsPreference === 'imperial' ? 'IMPERIAL' : 'METRIC';
+  const mapStyleLabel = baseLayer === 'satellite' ? 'SATELLITE' : 'DARK/EXPLORE';
+  const autoRefreshLabel = autoRefreshPreference === 'off'
+    ? 'OFF'
+    : `EVERY ${autoRefreshPreference} MIN`;
 
   const startLocationTracking = () => {
     if (locationStatus === 'active' || locationStatus === 'locating') {
@@ -474,24 +680,123 @@ export default function MobilePage() {
                 ))}
               </div>
             </div>
-            {[
-              ['🔎', 'Notifications', 'Push alerts for hot bites'],
-              ['📍', 'Location', 'Use GPS for nearby spots'],
-              ['🌡', 'Units', 'Imperial (lbs, ft, °F)'],
-              ['🗺', 'Map Style', 'Dark (default)'],
-              ['🔁', 'Auto-refresh', 'Every 30 minutes'],
-            ].map(([icon, title, sub]) => (
-              <div key={title as string} style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '20px' }}>{icon}</span>
-                  <div>
-                    <div style={{ fontSize: '13px', color: '#e2e8f0' }}>{title as string}</div>
-                    <div style={{ fontSize: '10px', color: '#475569' }}>{sub as string}</div>
-                  </div>
-                </div>
-                <span style={{ fontSize: '10px', color: '#475569', fontStyle: 'italic' }}>Coming soon</span>
+            <SettingCard
+              icon="🔔"
+              title="Notifications"
+              description="Browser permission only. Server-sent hot-bite alerts require VAPID keys, subscription storage, and review."
+              status={notificationState === 'unsupported' ? 'UNAVAILABLE' : notificationState.toUpperCase()}
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <PreferenceButton
+                  label={notificationsPreferred ? 'Notifications enabled' : 'Enable notifications'}
+                  selected={notificationsPreferred && notificationState === 'granted'}
+                  onSelect={() => void requestNotificationPermission()}
+                />
               </div>
-            ))}
+              {notificationState === 'denied' && (
+                <p style={{ margin: '8px 0 0', color: '#fca5a5', fontSize: '10px' }}>
+                  Browser permission is blocked. Enable it in Android browser/site settings.
+                </p>
+              )}
+              {notificationState === 'unsupported' && (
+                <p style={{ margin: '8px 0 0', color: '#fca5a5', fontSize: '10px' }}>
+                  This browser or app shell does not expose the Notifications API.
+                </p>
+              )}
+            </SettingCard>
+
+            <SettingCard
+              icon="📍"
+              title="Location"
+              description="Uses browser GPS only for local nearby-water sorting. Coordinates stay on this device by default."
+              status={locationSettingStatus}
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <PreferenceButton
+                  label={locationStatus === 'locating' ? 'Finding location…' : locationStatus === 'active' ? 'Stop GPS' : 'Enable GPS'}
+                  selected={locationStatus === 'active'}
+                  onSelect={startLocationTracking}
+                />
+                <PreferenceButton
+                  label="Show all waters"
+                  selected={!nearbyMode}
+                  onSelect={() => setNearbyMode(false)}
+                />
+              </div>
+            </SettingCard>
+
+            <SettingCard
+              icon="🌡"
+              title="Units"
+              description="Saved locally. Temperature and location formatting stays in Fahrenheit/miles for now."
+              status={unitPreferenceLabel}
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <PreferenceButton
+                  label="Imperial (lbs, ft, °F)"
+                  selected={unitsPreference === 'imperial'}
+                  onSelect={() => {
+                    setUnitsPreference('imperial');
+                    saveStoredValue(SETTINGS_STORAGE_KEYS.units, 'imperial');
+                  }}
+                />
+                <PreferenceButton
+                  label="Metric (kg, m, °C)"
+                  selected={unitsPreference === 'metric'}
+                  onSelect={() => {
+                    setUnitsPreference('metric');
+                    saveStoredValue(SETTINGS_STORAGE_KEYS.units, 'metric');
+                  }}
+                />
+              </div>
+              {unitsPreference === 'metric' && (
+                <p style={{ margin: '8px 0 0', color: '#fbbf24', fontSize: '10px' }}>
+                  Metric preference is saved; display conversion is staged for the next UI consistency pass.
+                </p>
+              )}
+            </SettingCard>
+
+            <SettingCard
+              icon="🗺"
+              title="Map Style"
+              description="Selects the active base map immediately. Dark and Explore use the same current tile source."
+              status={mapStyleLabel}
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {BASE_STYLE_OPTIONS.map((option) => (
+                  <PreferenceButton
+                    key={option.id}
+                    label={option.label}
+                    selected={baseLayer === option.id}
+                    onSelect={() => {
+                      setBaseLayer(option.id);
+                      saveStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, option.id);
+                    }}
+                  />
+                ))}
+              </div>
+            </SettingCard>
+
+            <SettingCard
+              icon="🔁"
+              title="Auto-refresh"
+              description="Refreshes only while the app is visible and online. AI and image routes never refresh automatically."
+              status={autoRefreshLabel}
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {AUTO_REFRESH_OPTIONS.map((option) => (
+                  <PreferenceButton
+                    key={option.id}
+                    label={option.label}
+                    selected={autoRefreshPreference === option.id}
+                    onSelect={() => {
+                      setAutoRefreshPreference(option.id);
+                      saveStoredValue(SETTINGS_STORAGE_KEYS.autoRefresh, option.id);
+                    }}
+                  />
+                ))}
+              </div>
+            </SettingCard>
           </div>
         )}
       </main>
