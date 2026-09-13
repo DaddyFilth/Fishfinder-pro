@@ -59,7 +59,7 @@ export default function LoginPage() {
           password,
           options: {
             data: { full_name: fullName.trim() || null },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? `${window.location.origin}/auth/callback`}?next=${encodeURIComponent(nextPath)}`,
           },
         })
 
