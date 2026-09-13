@@ -42,7 +42,7 @@ export default function AccountPage() {
         setFullName(result.profile.full_name ?? '')
         setAvatarUrl(result.profile.avatar_url ?? '')
       })
-      .catch((error) => setMessage({ text: error instanceof Error ? error.message : 'Unable to load profile.', kind: 'error' }))
+      .catch(() => setMessage({ text: 'Unable to load profile.', kind: 'error' }))
       .finally(() => setLoading(false))
   }, [])
 
@@ -65,8 +65,8 @@ export default function AccountPage() {
       if (!response.ok) throw new Error(body.error || 'Unable to save profile.')
       setData((current) => current ? { ...current, profile: body.profile, role: body.role } : current)
       setMessage({ text: 'Profile saved.', kind: 'success' })
-    } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : 'Unable to save profile.', kind: 'error' })
+    } catch {
+      setMessage({ text: 'Unable to save profile.', kind: 'error' })
     } finally {
       setSaving(false)
     }

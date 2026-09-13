@@ -79,8 +79,8 @@ export default function LoginPage() {
         if (error) throw error
         router.replace(nextPath)
       }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.')
+    } catch {
+      setErrorMessage('Authentication failed. Please try again.')
     } finally {
       setBusy(false)
     }
