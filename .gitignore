@@ -80,3 +80,6 @@ android/keystore/
 
 # Temporary encoded Android signing key — never commit
 fishfinder-upload.jks.base64
+
+# Generated Android artifacts — never commit
+/apk-output/
