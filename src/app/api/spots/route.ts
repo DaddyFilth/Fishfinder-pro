@@ -3,54 +3,55 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300;
 
 function isOklahomaSpot(spot: { lat: number; lng: number }) {
-  return Number.isFinite(spot.lat) && Number.isFinite(spot.lng) &&
-    spot.lat >= OKLAHOMA_BOUNDS.minLat && spot.lat <= OKLAHOMA_BOUNDS.maxLat &&
-    spot.lng >= OKLAHOMA_BOUNDS.minLng && spot.lng <= OKLAHOMA_BOUNDS.maxLng;
+  return (
+    spot.lat >= OKLAHOMA_BOUNDS.minLat &&
+    spot.lat <= OKLAHOMA_BOUNDS.maxLat &&
+    spot.lng >= OKLAHOMA_BOUNDS.minLng &&
+    spot.lng <= OKLAHOMA_BOUNDS.maxLng
+  );
 }
 
 export async function GET() {
-  const supabase = getSupabaseAdmin();
-
-  if (!supabase) {
-    return NextResponse.json([...DEFAULT_SPOTS].filter(isOklahomaSpot), {
-      headers: { 'x-fishfinder-data-mode': 'local-fallback' },
-    });
-  }
-
-  const { data, error } = await supabase
-    .from('fishing_spots')
-    .select('id, name, lat, lng, water_type, spot_type')
-    .gte('lat', OKLAHOMA_BOUNDS.minLat)
-    .lte('lat', OKLAHOMA_BOUNDS.maxLat)
-    .gte('lng', OKLAHOMA_BOUNDS.minLng)
-    .lte('lng', OKLAHOMA_BOUNDS.maxLng)
-    .order('name');
-
-  if (error) {
-    return NextResponse.json([...DEFAULT_SPOTS].filter(isOklahomaSpot), {
-      headers: { 'x-fishfinder-data-mode': 'local-fallback' },
-    });
-  }
-
-  const byId = new Map(DEFAULT_SPOTS.map((spot) => [spot.id, spot]));
-
-  for (const spot of data ?? []) {
-    if (isOklahomaSpot(spot)) {
-      byId.set(spot.id, spot);
+  try {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
+      return NextResponse.json(filteredDefaults, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+        },
+      });
     }
+
+    const { data: spots, error } = await supabase
+      .from('spots')
+      .select('*')
+      .order('name');
+
+    if (error || !spots || spots.length === 0) {
+      const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
+      return NextResponse.json(filteredDefaults, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+        },
+      });
+    }
+
+    const oklahomaSpots = spots.filter(isOklahomaSpot);
+    return NextResponse.json(oklahomaSpots, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+      },
+    });
+  } catch {
+    const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
+    return NextResponse.json(filteredDefaults, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+      },
+    });
   }
-
-  const spots = [...byId.values()].filter(isOklahomaSpot);
-
-  return NextResponse.json(spots, {
-    headers: {
-      'x-fishfinder-data-mode':
-        data && data.length > 0
-          ? 'supabase-plus-oklahoma-catalog'
-          : 'oklahoma-catalog-fallback',
-    },
-  });
 }
