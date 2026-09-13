@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ confirmed: Boolean(result.data.session) })
-  } catch {
+  } catch (error) {
+    console.error('[v0] Auth route failure:', error instanceof Error ? error.message : 'unknown error')
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
   }
 }
