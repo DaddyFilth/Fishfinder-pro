@@ -312,8 +312,13 @@ export default function CommunityPinsPanel({
               <input
                 type="datetime-local"
                 value={expiresAt}
-                min={toLocalDateTimeValue(new Date())}
-                max={toLocalDateTimeValue(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000))}
+                onFocus={(event) => {
+                  const now = new Date();
+                  event.currentTarget.min = toLocalDateTimeValue(now);
+                  event.currentTarget.max = toLocalDateTimeValue(
+                    new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
+                  );
+                }}
                 onChange={(event) => setExpiresAt(event.target.value)}
                 style={inputStyle}
               />
