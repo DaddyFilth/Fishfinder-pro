@@ -19,7 +19,7 @@ export async function GET() {
     .eq('id', context.user.id)
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Unable to load profile.' }, { status: 500 })
 
   return NextResponse.json({
     profile: data ?? {
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     const status = error.code === '23505' ? 409 : 500
-    return NextResponse.json({ error: status === 409 ? 'That username is already in use.' : error.message }, { status })
+    return NextResponse.json({ error: status === 409 ? 'That username is already in use.' : 'Unable to save profile.' }, { status })
   }
 
   if (parsed.data.full_name !== undefined) {
