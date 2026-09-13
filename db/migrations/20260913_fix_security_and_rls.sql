@@ -1,12 +1,7 @@
 -- Migration: 20260913_fix_security_and_rls.sql
 -- Description: Resolve Supabase Security Advisor and Database Linter findings
--- 1. Add primary key to private.fishing_spots_seed (if table exists)
--- 2. Consolidate and deduplicate RLS policies across public tables
--- 3. Ensure Row-Level Security is strictly enabled on all tables
 
--- ============================================================================
 -- 1. Primary Key for private.fishing_spots_seed
--- ============================================================================
 DO $$
 BEGIN
   IF EXISTS (
@@ -25,15 +20,12 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================================================
 -- 2. Profiles Table: Clean RLS Policies
--- ============================================================================
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
     ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-    -- Drop legacy / duplicate policies
     DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
     DROP POLICY IF EXISTS "Users can view all profiles" ON public.profiles;
     DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
@@ -42,7 +34,6 @@ BEGIN
     DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
     DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 
-    -- Create single consolidated policies
     CREATE POLICY "profiles_select_public"
       ON public.profiles FOR SELECT
       USING (true);
@@ -58,15 +49,12 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================================================
 -- 3. Catches Table: Clean RLS Policies
--- ============================================================================
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'catches') THEN
     ALTER TABLE public.catches ENABLE ROW LEVEL SECURITY;
 
-    -- Drop legacy / duplicate policies
     DROP POLICY IF EXISTS "Catches are viewable by everyone" ON public.catches;
     DROP POLICY IF EXISTS "Users can view all catches" ON public.catches;
     DROP POLICY IF EXISTS "Users can view own catches" ON public.catches;
@@ -78,7 +66,6 @@ BEGIN
     DROP POLICY IF EXISTS "catches_update_own" ON public.catches;
     DROP POLICY IF EXISTS "catches_delete_own" ON public.catches;
 
-    -- Create consolidated policies
     CREATE POLICY "catches_select_policy"
       ON public.catches FOR SELECT
       USING (
@@ -101,9 +88,7 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================================================
 -- 4. Community Pins Table: Clean RLS Policies
--- ============================================================================
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'community_pins') THEN
@@ -138,9 +123,7 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================================================
 -- 5. Environmental Snapshots: Clean RLS Policies
--- ============================================================================
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'environmental_snapshots') THEN
