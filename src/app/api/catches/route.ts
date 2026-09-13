@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthContext } from '@/lib/auth/server';
-import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge, unauthorized } from '@/lib/security';
+import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge, } from '@/lib/security';
 
 // `id` and `user_id` are intentionally excluded — they are set server-side.
 const CatchSchema = z.object({

@@ -1,5 +1,6 @@
-'use client'
+'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '@/lib/auth/roles'
@@ -81,7 +82,7 @@ export default function AdminUsersPage() {
           <div style={{ display: 'grid', gap: '8px' }}>
             {users.map((user) => (
               <article key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#020617', border: '1px solid #1e293b', borderRadius: '12px' }}>
-                {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '50%' }} /> : <div style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#164e63', color: '#a5f3fc', fontSize: '15px', fontWeight: 800 }}>{(user.full_name || user.username || 'A').slice(0, 1).toUpperCase()}</div>}
+                {user.avatar_url ? <Image width={38} height={38} unoptimized src={user.avatar_url} alt="" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '50%' }} /> : <div style={{ width: '38px', height: '38px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#164e63', color: '#a5f3fc', fontSize: '15px', fontWeight: 800 }}>{(user.full_name || user.username || 'A').slice(0, 1).toUpperCase()}</div>}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ color: '#f8fafc', fontWeight: 700, fontSize: '13px' }}>{user.full_name || user.username || 'Unnamed angler'}</div>
                   <div style={{ color: '#64748b', fontSize: '10px', marginTop: '3px' }}>{user.username ? `@${user.username}` : 'No username'} · joined {new Date(user.created_at).toLocaleDateString()}</div>

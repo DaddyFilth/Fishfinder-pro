@@ -1,5 +1,6 @@
-'use client'
+'use client';
 
+import Image from 'next/image';
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ROLE_LABELS, type AppRole } from '@/lib/auth/roles'
@@ -92,7 +93,7 @@ export default function AccountPage() {
         {data && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: '#020617', border: '1px solid #1e293b', borderRadius: '12px', marginBottom: '20px' }}>
-              {data.profile.avatar_url ? <img src={data.profile.avatar_url} alt="Profile avatar" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #0e7490' }} /> : <div style={{ width: '52px', height: '52px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#164e63', color: '#a5f3fc', fontSize: '20px', fontWeight: 800 }}>{(data.profile.full_name || data.email || 'A').slice(0, 1).toUpperCase()}</div>}
+              {data.profile.avatar_url ? <Image width={52} height={52} unoptimized src={data.profile.avatar_url} alt="Profile avatar" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #0e7490' }} /> : <div style={{ width: '52px', height: '52px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#164e63', color: '#a5f3fc', fontSize: '20px', fontWeight: 800 }}>{(data.profile.full_name || data.email || 'A').slice(0, 1).toUpperCase()}</div>}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: '#f8fafc', fontWeight: 800 }}>{data.profile.full_name || data.profile.username || 'FishFinder angler'}</div>
                 <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{data.email}</div>
