@@ -268,7 +268,6 @@ export default function FishingMap({
   }, []);
 
   const recentPins = rankedSpots.slice(0, 18);
-  const liveFeeds = rankedSpots.length;
 
   const load = useCallback(async (id: string) => {
     if (conditions[id] || loading[id]) return;
@@ -377,7 +376,7 @@ export default function FishingMap({
             <span style={{ color: 'white', fontWeight: 700 }}>{spots.length}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>
-            <span>{isOnline ? 'Live feeds' : 'Connection'}</span>
+            <span>Data status</span>
             <span
               aria-live="polite"
               style={{
@@ -385,7 +384,7 @@ export default function FishingMap({
                 fontWeight: 700,
               }}
             >
-              {isOnline ? liveFeeds : 'Offline'}
+              {isOnline ? 'Live' : 'Offline'}
             </span>
           </div>
         </div>
