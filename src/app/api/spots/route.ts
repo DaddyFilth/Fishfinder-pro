@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 300;
+export const revalidate = 60;
 
 function isOklahomaSpot(spot: { lat: number; lng: number }) {
   return (
@@ -15,14 +15,13 @@ function isOklahomaSpot(spot: { lat: number; lng: number }) {
 }
 
 export async function GET() {
+  const fallbackSpots = DEFAULT_SPOTS.filter(isOklahomaSpot);
+
   try {
     const supabase = getSupabaseAdmin();
     if (!supabase) {
-      const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
-      return NextResponse.json(filteredDefaults, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
-        },
+      return NextResponse.json(fallbackSpots, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' },
       });
     }
 
@@ -31,27 +30,20 @@ export async function GET() {
       .select('*')
       .order('name');
 
+    // If database table is empty or errored, return the catalog
     if (error || !spots || spots.length === 0) {
-      const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
-      return NextResponse.json(filteredDefaults, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
-        },
+      return NextResponse.json(fallbackSpots, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' },
       });
     }
 
     const oklahomaSpots = spots.filter(isOklahomaSpot);
-    return NextResponse.json(oklahomaSpots, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
-      },
+    return NextResponse.json(oklahomaSpots.length > 0 ? oklahomaSpots : fallbackSpots, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' },
     });
   } catch {
-    const filteredDefaults = DEFAULT_SPOTS.filter(isOklahomaSpot);
-    return NextResponse.json(filteredDefaults, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
-      },
+    return NextResponse.json(fallbackSpots, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' },
     });
   }
 }
