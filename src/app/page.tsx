@@ -188,7 +188,7 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [mapPopupOpen, setMapPopupOpen] = useState(false);
+  const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
@@ -209,6 +209,7 @@ export default function MobilePage() {
   const locationCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
     setBaseLayer(storedMapStyle === 'satellite' ? 'satellite' : 'explore');
 
@@ -232,7 +233,29 @@ export default function MobilePage() {
     }
 
     setNotificationState(Notification.permission);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
+
+  const loadSpotData = async (isAutoRefresh = false) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+
+    try {
+      const result = await getSpots();
+      setSpots(result.spots);
+      setCacheSource(result.source);
+      setCachedAt(result.savedAt);
+
+      if (result.source === 'live' && isAutoRefresh) {
+        setConditionScores({});
+        setLoadingScores({});
+        scoreFetchInFlight.current = {};
+      }
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  };
 
   useEffect(() => {
     void loadSpotData(false);
@@ -313,26 +336,6 @@ export default function MobilePage() {
       window.removeEventListener('popstate', onPopState);
     };
   }, [tab, sheetOpen]);
-
-  const loadSpotData = async (isAutoRefresh = false) => {
-    if (refreshInFlightRef.current) return;
-    refreshInFlightRef.current = true;
-
-    try {
-      const result = await getSpots();
-      setSpots(result.spots);
-      setCacheSource(result.source);
-      setCachedAt(result.savedAt);
-
-      if (result.source === 'live' && isAutoRefresh) {
-        setConditionScores({});
-        setLoadingScores({});
-        scoreFetchInFlight.current = {};
-      }
-    } finally {
-      refreshInFlightRef.current = false;
-    }
-  };
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -423,7 +426,6 @@ export default function MobilePage() {
   const rankedSpots = rankSpots(visibleSpots, conditionScores);
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
-  const hideMapBadges = sheetOpen || mapPopupOpen || selectedSpot !== null;
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };
