@@ -172,7 +172,7 @@ function metricRow({ icon, label, value, unit }: { icon: string; label: string; 
 function scoreBar({ label, value }: { label: string; value: number }) {
   const color = scoreColor(value);
   return (
-    <div style={{ marginBottom: '6px' }}>
+    <div key={label} style={{ marginBottom: '6px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginBottom: '3px' }}>
         <span>{label}</span>
         <span style={{ color }}>{value}</span>
