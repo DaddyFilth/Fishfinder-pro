@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { createServerClient } from '@supabase/ssr';
 
-const CANONICAL_HOST = 'fishfinder-pro.online';
-const WWW_HOST = `www.${CANONICAL_HOST}`;
+const CANONICAL_HOST = 'www.fishfinder-pro.online';
+const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
   '/auth/login',
@@ -30,10 +30,10 @@ if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 
-  if (host === CANONICAL_HOST || host === WWW_HOST) {
+  if (host === CANONICAL_HOST || host === APEX_HOST) {
     const forwardedProtocol = request.headers.get('x-forwarded-proto')?.split(',')[0].trim();
 
-    if (host === WWW_HOST || forwardedProtocol === 'http') {
+    if (host === APEX_HOST || forwardedProtocol === 'http') {
       const url = request.nextUrl.clone();
       url.protocol = 'https:';
       url.hostname = CANONICAL_HOST;
