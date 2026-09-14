@@ -3,10 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )?.trim()
+
   if (!url || !key) return NextResponse.next({ request })
 
   let supabaseResponse = NextResponse.next({ request })
+
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() {
@@ -22,8 +27,7 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  // Refresh the Supabase session cookie when needed. The app remains public;
-  // authenticated accounts enhance the experience without blocking map access.
-  await supabase.auth.getClaims()
+  await supabase.auth.getUser()
+
   return supabaseResponse
 }

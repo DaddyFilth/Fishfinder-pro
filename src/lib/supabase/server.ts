@@ -3,10 +3,15 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )?.trim()
+
   if (!url || !key) return null
 
   const cookieStore = await cookies()
+
   return createServerClient(url, key, {
     cookies: {
       getAll() {
@@ -18,7 +23,7 @@ export async function createClient() {
             cookieStore.set(name, value, options),
           )
         } catch {
-          // Server components cannot always mutate cookies; middleware refreshes them.
+          // Handled in middleware
         }
       },
     },
