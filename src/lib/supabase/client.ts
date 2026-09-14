@@ -1,22 +1,27 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+const supabaseUrl = (
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL ||
+  process.env.SUPABASE_URL
+)?.trim()
+
+const supabaseKey = (
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_ANON_KEY
+)?.trim()
+
 export function hasSupabasePublicConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim()
-  return Boolean(url && key)
+  return Boolean(supabaseUrl && supabaseKey)
 }
 
 export function createClient() {
   if (!hasSupabasePublicConfig()) return null
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )!.trim()
-
-  return createBrowserClient(url, key)
+  return createBrowserClient(supabaseUrl!, supabaseKey!)
 }

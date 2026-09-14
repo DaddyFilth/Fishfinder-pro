@@ -139,15 +139,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ reply, provider: 'ollama' });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown AI provider error';
-
-    console.error('[FishBot /api/ai/chat]', message);
+  } catch {
+    console.error('[FishBot /api/ai/chat] Provider request failed');
 
     return NextResponse.json(
       {
-        error: `FishBot could not reach the AI provider. Please try again later.`,
+        error: 'FishBot could not reach the AI provider. Please try again later.',
         provider: 'unavailable',
       },
       { status: 502 },

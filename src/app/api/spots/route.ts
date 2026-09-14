@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     const { data: spots, error } = await supabase
-      .from('spots')
+      .from('fishing_spots')
       .select('*')
       .order('name');
 
