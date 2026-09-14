@@ -1,19 +1,22 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function hasSupabasePublicConfig() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim(),
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )?.trim()
+  return Boolean(url && key)
 }
 
 export function createClient() {
   if (!hasSupabasePublicConfig()) return null
 
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  )
-}
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )!.trim()
 
-export type BrowserSupabaseClient = NonNullable<ReturnType<typeof createClient>>
+  return createBrowserClient(url, key)
+}
