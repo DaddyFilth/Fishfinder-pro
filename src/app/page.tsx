@@ -21,21 +21,21 @@ interface SpotCondition { fishing_score?: number | null }
 
 // ─── Shared style constants ───────────────────────────────────────────────────
 const PAGE_STYLES = {
-  root: { display: 'flex', flexDirection: 'column', height: '100dvh', background: '#030712', color: 'white', fontFamily: 'system-ui,sans-serif', overflow: 'hidden' } as React.CSSProperties,
-  header: { background: '#0a0f1e', borderBottom: '1px solid #1e293b', padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '42px', flexShrink: 0, zIndex: 40, gap: '8px' } as React.CSSProperties,
+  root: { display: 'flex', flexDirection: 'column', height: '100dvh', background: '#07111b', color: '#f8fafc', fontFamily: 'system-ui,sans-serif', overflow: 'hidden' } as React.CSSProperties,
+  header: { background: 'rgba(7,17,27,0.94)', borderBottom: '1px solid #1d3442', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '58px', flexShrink: 0, zIndex: 40, gap: '12px', backdropFilter: 'blur(16px)' } as React.CSSProperties,
   main: { flex: 1, position: 'relative', overflow: 'hidden' } as React.CSSProperties,
-  card: { background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' } as React.CSSProperties,
-  scrollPane: { position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '70px' } as React.CSSProperties,
-  padPane: { padding: '16px', overflowY: 'auto', height: '100%' } as React.CSSProperties,
-  sectionTitle: { fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '12px' } as React.CSSProperties,
-  navBar: { background: '#0a0f1e', borderTop: '1px solid #1e293b', display: 'flex', height: '60px', flexShrink: 0, zIndex: 40, paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' } as React.CSSProperties,
+  card: { background: '#0d1c29', border: '1px solid #1d3442', borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.14)' } as React.CSSProperties,
+  scrollPane: { position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '18px 16px calc(84px + env(safe-area-inset-bottom))' } as React.CSSProperties,
+  padPane: { padding: '20px 16px calc(84px + env(safe-area-inset-bottom))', overflowY: 'auto', height: '100%' } as React.CSSProperties,
+  sectionTitle: { fontSize: '18px', fontWeight: '800', letterSpacing: '-0.02em', color: '#e2f7ff', marginBottom: '16px' } as React.CSSProperties,
+  navBar: { background: 'rgba(7,17,27,0.96)', borderTop: '1px solid #1d3442', display: 'flex', height: '68px', flexShrink: 0, zIndex: 40, paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', boxShadow: '0 -10px 24px rgba(0,0,0,0.16)' } as React.CSSProperties,
   navBtn: (active: boolean): React.CSSProperties => ({
-    flex: '0 0 68px', minWidth: '68px', position: 'relative', background: 'none', border: 'none',
+    flex: '0 0 76px', minWidth: '76px', position: 'relative', background: active ? 'rgba(14,116,144,0.16)' : 'none', border: 'none',
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: '2px', cursor: 'pointer', color: active ? '#22d3ee' : '#64748b', transition: 'color 0.15s',
+    gap: '5px', cursor: 'pointer', color: active ? '#67e8f9' : '#78909c', transition: 'color 0.15s, background 0.15s',
   }),
-  mapBadge: { position: 'absolute', top: '12px', left: '12px', background: 'rgba(10,15,30,0.9)', border: '1px solid #1e293b', borderRadius: '20px', padding: '6px 12px', fontSize: '11px', color: '#94a3b8', zIndex: 10, backdropFilter: 'blur(8px)' } as React.CSSProperties,
-  settingsCard: { background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px' } as React.CSSProperties,
+  mapBadge: { position: 'absolute', top: '14px', left: '14px', background: 'rgba(7,17,27,0.88)', border: '1px solid #294452', borderRadius: '999px', padding: '8px 12px', fontSize: '11px', color: '#c4d7df', zIndex: 10, backdropFilter: 'blur(12px)' } as React.CSSProperties,
+  settingsCard: { background: '#0d1c29', border: '1px solid #1d3442', borderRadius: '14px', padding: '16px', marginBottom: '12px' } as React.CSSProperties,
 } as const;
 
 const MAP_FILTERS = [
@@ -431,16 +431,15 @@ export default function MobilePage() {
   };
 
   const tabs = [
-{ id: "map",      icon: "🗺",  label: "Map"      },
-{ id: "log",      icon: "📓",  label: "Logbook"  },
-{ id: "gallery", icon: "📸", label: "Gallery" },
-{ id: "ai",       icon: "🤖",  label: "AI"       },
-{ id: "top",      icon: "🏆",  label: "Top Spots"},
-{ id: "species",  icon: "◎",   label: "Species"  },
-{ id: "settings", icon: "⚙️", label: "Settings" },
-{ id: "bitetime", icon: "⏱",  label: "Bite Time"},
-{ id: "weather",  icon: "🌤",  label: "Weather"  },
-] as const;
+    { id: 'map', icon: '⌖', label: 'Explore' },
+    { id: 'log', icon: '▤', label: 'Logbook' },
+    { id: 'top', icon: '✦', label: 'Top spots' },
+    { id: 'weather', icon: '☼', label: 'Weather' },
+    { id: 'species', icon: '◉', label: 'Species' },
+    { id: 'gallery', icon: '▧', label: 'Gallery' },
+    { id: 'ai', icon: '✧', label: 'Trip help' },
+    { id: 'settings', icon: '⚙', label: 'Settings' },
+  ] as const;
   return (
     <div style={PAGE_STYLES.root}>
 
@@ -510,7 +509,7 @@ export default function MobilePage() {
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
               <div style={PAGE_STYLES.mapBadge}>
-                📍 {visibleSpots.length} {nearbyMode ? 'nearby ' : ''}Oklahoma public-access waters
+                {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}public waters
               </div>
               <button type="button" onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
