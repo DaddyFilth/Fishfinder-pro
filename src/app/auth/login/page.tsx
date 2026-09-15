@@ -57,9 +57,9 @@ export default function LoginPage() {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         }),
       })
-      const result = await response.json() as { error?: string; confirmed?: boolean }
+      const result = await response.json().catch(() => ({})) as { error?: string; confirmed?: boolean }
 
-      if (!response.ok) throw new Error(result.error || 'Authentication failed.')
+      if (!response.ok) throw new Error(result.error || `Authentication failed (${response.status}).`)
 
       if (mode === 'signup' && !result.confirmed) {
         setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
