@@ -12,6 +12,7 @@ import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFil
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
+import { createClient, hasSupabasePublicConfig } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
@@ -178,6 +179,8 @@ async function getSpots(): Promise<SpotLoadResult> {
 
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
+  const [authReady, setAuthReady] = useState(() => !hasSupabasePublicConfig());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
   const [nearbyMode, setNearbyMode] = useState(false);
@@ -258,10 +261,43 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    void loadSpotData(false);
+    const supabase = createClient();
+    if (!supabase) return;
+
+    let mounted = true;
+    const syncSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      const signedIn = Boolean(data.session?.user);
+      setIsAuthenticated(signedIn);
+      setAuthReady(true);
+      if (signedIn) void loadSpotData(false);
+      else setSpots([]);
+    };
+
+    void syncSession();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      const signedIn = Boolean(session?.user);
+      setIsAuthenticated(signedIn);
+      setAuthReady(true);
+      if (signedIn) void loadSpotData(false);
+      else {
+        setSpots([]);
+        setSelectedSpot(null);
+        setConditionScores({});
+      }
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
+    if (!authReady || !isAuthenticated) return;
+
     const selectedAutoRefresh = AUTO_REFRESH_OPTIONS.find(
       (option) => option.id === autoRefreshPreference,
     );
@@ -291,7 +327,7 @@ export default function MobilePage() {
       window.removeEventListener('online', refreshIfSafe);
       document.removeEventListener('visibilitychange', refreshIfSafe);
     };
-  }, [autoRefreshPreference]);
+  }, [autoRefreshPreference, authReady, isAuthenticated]);
 
   useEffect(() => () => {
     locationCleanupRef.current?.();
@@ -390,7 +426,7 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    if (!spots.length) return;
+    if (!authReady || !isAuthenticated || !spots.length) return;
 
     const visibleSpots = filterSpots(spots, mapFilter);
     visibleSpots.forEach((spot) => {
@@ -418,7 +454,7 @@ export default function MobilePage() {
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
     });
-  }, [spots, mapFilter, conditionScores]);
+  }, [authReady, isAuthenticated, spots, mapFilter, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
@@ -506,6 +542,21 @@ export default function MobilePage() {
                 setSelectedSpot(null);
               }}
             />
+
+            {!authReady && (
+              <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.48)', backdropFilter:'blur(3px)' }}>
+                <div style={{ background:'rgba(7,17,27,0.96)', border:'1px solid #1d3442', borderRadius:'14px', padding:'18px 20px', color:'#cbd5e1', fontSize:'13px', fontWeight:700 }}>Checking account…</div>
+              </div>
+            )}
+            {authReady && !isAuthenticated && (
+              <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.42)', backdropFilter:'blur(3px)' }}>
+                <div style={{ maxWidth:'300px', margin:'16px', textAlign:'center', background:'rgba(7,17,27,0.97)', border:'1px solid #1d3442', borderRadius:'16px', padding:'22px', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
+                  <div style={{ fontSize:'15px', fontWeight:800, color:'#e2f7ff' }}>Sign in to explore spots</div>
+                  <p style={{ margin:'8px 0 16px', color:'#94a3b8', fontSize:'12px', lineHeight:1.5 }}>Fishing locations are private to account holders. Sign in to view exact map points and conditions.</p>
+                  <a href="/auth/login?next=/" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', minHeight:'38px', padding:'0 16px', borderRadius:'9px', background:'#0369a1', color:'white', fontSize:'12px', fontWeight:800, textDecoration:'none' }}>Log in or create account</a>
+                </div>
+              </div>
+            )}
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
