@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { getSafeNextPath } from '@/lib/supabase/redirect'
 
 type AuthMode = 'login' | 'signup'
@@ -46,22 +47,33 @@ export default function LoginPage() {
     setBusy(true)
 
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          email: email.trim(),
-          password,
-          fullName: fullName.trim(),
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-        }),
-      })
-      const result = await response.json().catch(() => ({})) as { error?: string; confirmed?: boolean }
+      const supabase = createClient()
+      if (!supabase) throw new Error('Authentication is not configured. Please try again later.')
 
-      if (!response.ok) throw new Error(result.error || `Authentication failed (${response.status}).`)
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+      const result = mode === 'signup'
+        ? await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              data: { full_name: fullName.trim() || null },
+              emailRedirectTo: redirectTo,
+            },
+          })
+        : await supabase.auth.signInWithPassword({ email: email.trim(), password })
 
-      if (mode === 'signup' && !result.confirmed) {
+      if (result.error) {
+        const message = result.error.message.toLowerCase()
+        if (message.includes('already registered') || message.includes('already exists')) {
+          throw new Error('An account with this email already exists. Try logging in instead.')
+        }
+        if (message.includes('confirm')) {
+          throw new Error('Please confirm your email before logging in.')
+        }
+        throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Unable to create the account. Check your details and try again.')
+      }
+
+      if (mode === 'signup' && !result.data.session) {
         setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
       } else {
         router.replace(nextPath)

@@ -30,9 +30,29 @@ export async function POST(request: Request) {
   if (requestBodyTooLarge(request, 8_192)) return tooLarge()
   const requestUrl = new URL(request.url)
   const origin = request.headers.get('origin')
-  // Accept same-origin requests in local, preview, and production environments.
-  // Cross-site requests are rejected without relying on a mutable allowlist.
-  if (origin && origin !== requestUrl.origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
+  // Proxies can expose a loopback request URL while the browser uses localhost.
+  // Keep production requests exact, but treat loopback hostnames as the same local origin.
+  if (origin) {
+    try {
+      const requestOrigin = new URL(origin)
+      const requestHost = requestUrl.hostname
+      const isLoopback = (hostname: string) =>
+        hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+      const isPreviewHost = (hostname: string) =>
+        isLoopback(hostname) ||
+        hostname.endsWith('.vercel.app') ||
+        hostname.endsWith('.vercel.run')
+      const sameOrigin = origin === requestUrl.origin || (
+        requestOrigin.protocol === requestUrl.protocol &&
+        isPreviewHost(requestHost) &&
+        isPreviewHost(requestOrigin.hostname)
+      )
+      const sameSiteRequest = request.headers.get('sec-fetch-site') === 'same-origin'
+      if (!sameOrigin && !sameSiteRequest) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
+    } catch {
+      return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
+    }
+  }
   const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
   if (rateLimited) return rateLimited
 
@@ -86,7 +106,7 @@ export async function POST(request: Request) {
 
     return mode === 'forgot-password'
       ? NextResponse.json({ sent: true })
-      : NextResponse.json({ confirmed: 'session' in result.data && Boolean(result.data.session) })
+      : NextResponse.json({ confirmed: Boolean(result.data?.session) })
   } catch {
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
   }
