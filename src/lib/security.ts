@@ -9,7 +9,7 @@ function clientKey(request: Request) {
 }
 
 export function enforceRateLimit(
-  request: NextRequest,
+  request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
   const now = Date.now()
