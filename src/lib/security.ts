@@ -3,13 +3,13 @@ import type { NextRequest } from 'next/server'
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
-function clientKey(request: NextRequest) {
+function clientKey(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
   return forwarded || request.headers.get('x-real-ip') || 'unknown'
 }
 
 export function enforceRateLimit(
-  request: NextRequest,
+  request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
   const now = Date.now()
