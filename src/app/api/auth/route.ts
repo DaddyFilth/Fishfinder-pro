@@ -11,13 +11,15 @@ const authSchema = z.object({
   redirectTo: z.string().url().optional(),
 }).strict()
 
-const CANONICAL_ORIGIN = 'https://www.fishfinder-pro.online'
 
 export async function POST(request: Request) {
   if (request.method !== 'POST') return methodNotAllowed('POST')
   if (requestBodyTooLarge(request, 8_192)) return tooLarge()
+  const requestUrl = new URL(request.url)
   const origin = request.headers.get('origin')
-  if (origin && origin !== CANONICAL_ORIGIN) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
+  // Accept same-origin requests in local, preview, and production environments.
+  // Cross-site requests are rejected without relying on a mutable allowlist.
+  if (origin && origin !== requestUrl.origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
   if (rateLimited) return rateLimited
 
@@ -25,7 +27,12 @@ export async function POST(request: Request) {
     const parsed = authSchema.safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
     const { email, password, mode, fullName } = parsed.data
-    const redirectTo = parsed.data.redirectTo === `${CANONICAL_ORIGIN}/auth/callback` || parsed.data.redirectTo?.startsWith(`${CANONICAL_ORIGIN}/auth/callback?`) ? parsed.data.redirectTo : undefined
+    const redirectOrigin = parsed.data.redirectTo ? new URL(parsed.data.redirectTo).origin : null
+    const redirectTo = parsed.data.redirectTo &&
+      redirectOrigin === requestUrl.origin &&
+      new URL(parsed.data.redirectTo).pathname === '/auth/callback'
+      ? parsed.data.redirectTo
+      : undefined
 
     if (mode === 'signup' && password.length < 8) {
       return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
