@@ -115,6 +115,12 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {mode === 'login' && (
+          <Link href={`/auth/reset?email=${encodeURIComponent(email.trim())}`} style={{ display: 'block', marginTop: '16px', color: '#7dd3fc', fontSize: '12px', textAlign: 'center', textDecoration: 'none' }}>
+            Forgot your password?
+          </Link>
+        )}
+
         <p style={{ margin: '18px 0 0', color: '#64748b', fontSize: '11px', lineHeight: 1.5 }}>Accounts are securely stored by Supabase Auth. If email confirmation is enabled, you must confirm your email before logging in.</p>
       </section>
     </main>
