@@ -1,16 +1,33 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
+
+const authSchema = z.object({
+  mode: z.enum(['login', 'signup']),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(1).max(256),
+  fullName: z.string().trim().max(100).optional().default(''),
+  redirectTo: z.string().url().optional(),
+}).strict()
+
+const CANONICAL_ORIGIN = 'https://www.fishfinder-pro.online'
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const email = typeof body.email === 'string' ? body.email.trim() : ''
-    const password = typeof body.password === 'string' ? body.password : ''
-    const mode = body.mode === 'signup' ? 'signup' : 'login'
-    const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : ''
-    const redirectTo = typeof body.redirectTo === 'string' ? body.redirectTo : undefined
+  if (request.method !== 'POST') return methodNotAllowed('POST')
+  if (requestBodyTooLarge(request, 8_192)) return tooLarge()
+  const origin = request.headers.get('origin')
+  if (origin && origin !== CANONICAL_ORIGIN) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
+  const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
+  if (rateLimited) return rateLimited
 
-    if (!email || !password || (mode === 'signup' && password.length < 8)) {
+  try {
+    const parsed = authSchema.safeParse(await request.json())
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
+    const { email, password, mode, fullName } = parsed.data
+    const redirectTo = parsed.data.redirectTo === `${CANONICAL_ORIGIN}/auth/callback` || parsed.data.redirectTo?.startsWith(`${CANONICAL_ORIGIN}/auth/callback?`) ? parsed.data.redirectTo : undefined
+
+    if (mode === 'signup' && password.length < 8) {
       return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
     }
 
