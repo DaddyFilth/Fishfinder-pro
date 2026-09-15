@@ -1,4 +1,7 @@
 'use client';
+
+import NextBestAction from '@/components/NextBestAction';
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
@@ -184,6 +187,7 @@ export default function MobilePage() {
   const [cacheSource, setCacheSource] = useState<'loading' | 'live' | 'cached' | 'fallback'>('loading');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
@@ -208,6 +212,8 @@ export default function MobilePage() {
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
 
+
+  useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
@@ -484,6 +490,7 @@ export default function MobilePage() {
       <main style={PAGE_STYLES.main}>
 
         {/* MAP TAB */}
+{tab === "map" && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={false} onOpenAi={() => setTab("ai")} onOpenLogbook={() => setTab("log")} onRefresh={() => { void loadSpotData(false) }} />}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
             <MapWrapper
@@ -817,3 +824,4 @@ export default function MobilePage() {
     </div>
   );
 }
+
