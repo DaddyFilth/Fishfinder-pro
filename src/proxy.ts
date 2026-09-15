@@ -6,6 +6,7 @@ const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
+  '/',
   '/auth/login',
   '/auth/callback',
   '/api/auth',
