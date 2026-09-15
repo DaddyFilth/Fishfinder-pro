@@ -70,7 +70,6 @@ if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
     process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_SECRET_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )?.trim();
 
