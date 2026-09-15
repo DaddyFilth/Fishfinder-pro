@@ -467,15 +467,15 @@ export default function MobilePage() {
   };
 
   const tabs = [
-    { id: 'map', icon: '⌖', label: 'Explore' },
-    { id: 'log', icon: '▤', label: 'Logbook' },
-    { id: 'top', icon: '✦', label: 'Top spots' },
-  { id: 'weather', icon: '☼', label: 'Weather' },
-  { id: 'bitetime', icon: '◒', label: 'Bite times' },
-  { id: 'species', icon: '◉', label: 'Species' },
-    { id: 'gallery', icon: '▧', label: 'Gallery' },
-    { id: 'ai', icon: '✧', label: 'Trip help' },
-    { id: 'settings', icon: '⚙', label: 'Settings' },
+    { id: 'map', icon: '🗺️', label: 'Explore' },
+    { id: 'log', icon: '📓', label: 'Logbook' },
+    { id: 'top', icon: '⭐', label: 'Top spots' },
+    { id: 'weather', icon: '🌤️', label: 'Weather' },
+    { id: 'bitetime', icon: '🌙', label: 'Bite times' },
+    { id: 'species', icon: '🐟', label: 'Species' },
+    { id: 'gallery', icon: '📸', label: 'Gallery' },
+    { id: 'ai', icon: '🧭', label: 'Trip help' },
+    { id: 'settings', icon: '⚙️', label: 'Settings' },
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>
