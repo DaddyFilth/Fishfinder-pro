@@ -187,7 +187,7 @@ export default function MobilePage() {
   const [cacheSource, setCacheSource] = useState<'loading' | 'live' | 'cached' | 'fallback'>('loading');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
@@ -213,7 +213,7 @@ export default function MobilePage() {
   const locationCleanupRef = useRef<(() => void) | null>(null);
 
 
-  useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
+  useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
