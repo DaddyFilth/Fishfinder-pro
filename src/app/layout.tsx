@@ -7,12 +7,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.fishfinder-pro.online"),
+  verification: { google: 'a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38' },
   title: "Oklahoma SeamCast",
   description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
   manifest: "/manifest.json",
-  verification: {
-    google: "a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38",
-  },
   icons: {
     icon: [
       {

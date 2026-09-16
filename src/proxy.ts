@@ -7,6 +7,8 @@ const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
   '/',
+  '/robots.txt',
+  '/sitemap.xml',
   '/auth/login',
   '/auth/callback',
   '/api/auth',
