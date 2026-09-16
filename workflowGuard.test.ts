@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -60,13 +60,15 @@ describe('workflow guard', () => {
     expect(workflow.topLevelKeys).toEqual(['name', 'on']);
   });
 
-  it('enforces the guard when invoked through a relative script path', () => {
+  it('enforces the guard when invoked through a symlinked relative script path', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'workflow-guard-'));
     const workflowPath = join(tempDir, 'codeql.yml');
+    const scriptLinkPath = join(tempDir, 'checkCodeqlWorkflowPlaceholder.mjs');
 
     writeFileSync(workflowPath, 'name: CodeQL\non: { workflow_dispatch: {}, push: {} }\n');
+    symlinkSync(join(process.cwd(), 'scripts/checkCodeqlWorkflowPlaceholder.mjs'), scriptLinkPath);
 
-    const result = spawnSync('node', ['scripts/checkCodeqlWorkflowPlaceholder.mjs', workflowPath], {
+    const result = spawnSync('node', [scriptLinkPath, workflowPath], {
       cwd: process.cwd(),
       encoding: 'utf8',
     });

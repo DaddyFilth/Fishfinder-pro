@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -232,7 +232,7 @@ export function inspectWorkflowFile(workflowPath) {
 
 const isDirectExecution =
   typeof process.argv[1] === 'string' &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 
 if (isDirectExecution) {
   const workflowPath = process.argv[2] ?? '.github/workflows/codeql.yml';
