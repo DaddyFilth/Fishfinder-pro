@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const proxySource = readFileSync(new URL('./proxy.ts', import.meta.url), 'utf8');
-const matcher = proxySource.match(/matcher:\s*'([^']+)'/)?.[1];
+const matcher = proxySource.match(/matcher:\s*'([^']+)'/)?.[1].replaceAll('\\\\', '\\');
 
 if (!matcher) {
   throw new Error('Unable to find the proxy matcher.');
