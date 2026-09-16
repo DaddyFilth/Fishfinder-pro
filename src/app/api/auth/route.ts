@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
+    if (body === null) return NextResponse.json({ error: 'Malformed request body.' }, { status: 400 })
     const email = typeof body.email === 'string' ? body.email.trim() : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const mode = body.mode === 'signup' ? 'signup' : 'login'
