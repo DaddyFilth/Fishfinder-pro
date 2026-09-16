@@ -51,6 +51,13 @@ describe('workflow guard', () => {
     expect(workflow.topLevelKeys).toEqual(['name', 'on']);
   });
 
+  it('accepts manual-only inline on mappings', () => {
+    const workflow = inspectWorkflow('name: CodeQL\non: { workflow_dispatch: {} }\n');
+
+    expect(workflow.triggerNames).toEqual(['workflow_dispatch']);
+    expect(workflow.topLevelKeys).toEqual(['name', 'on']);
+  });
+
   it('allows no CodeQL workflow or only a manual placeholder', () => {
     const workflowPath = join(process.cwd(), '.github/workflows/codeql.yml');
 

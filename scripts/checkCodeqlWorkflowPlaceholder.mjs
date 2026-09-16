@@ -41,6 +41,71 @@ function normalizeScalar(value) {
   return quotedMatch ? quotedMatch[2] : trimmed;
 }
 
+function parseInlineMappingKeys(value) {
+  const trimmed = stripInlineComment(value);
+
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+    return null;
+  }
+
+  const entries = [];
+  const body = trimmed.slice(1, -1);
+  let quote = null;
+  let braceDepth = 0;
+  let bracketDepth = 0;
+  let entryStart = 0;
+
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+
+    if (quote) {
+      if (character === quote && body[index - 1] !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+
+    if (character === '{') {
+      braceDepth += 1;
+      continue;
+    }
+
+    if (character === '}') {
+      braceDepth -= 1;
+      continue;
+    }
+
+    if (character === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+
+    if (character === ']') {
+      bracketDepth -= 1;
+      continue;
+    }
+
+    if (character === ',' && braceDepth === 0 && bracketDepth === 0) {
+      entries.push(body.slice(entryStart, index));
+      entryStart = index + 1;
+    }
+  }
+
+  entries.push(body.slice(entryStart));
+
+  return entries
+    .map((entry) => {
+      const match = entry.trim().match(/^(["']?)([A-Za-z0-9_-]+)\1\s*:/);
+      return match ? match[2] : null;
+    })
+    .filter(Boolean);
+}
+
 export function inspectWorkflow(source) {
   const topLevelKeys = new Set();
   const triggerNames = new Set();
@@ -90,7 +155,15 @@ export function inspectWorkflow(source) {
       }
 
       if (value) {
-        triggerNames.add(normalizeScalar(value));
+        const inlineTriggerNames = parseInlineMappingKeys(value);
+
+        if (inlineTriggerNames) {
+          for (const triggerName of inlineTriggerNames) {
+            triggerNames.add(triggerName);
+          }
+        } else {
+          triggerNames.add(normalizeScalar(value));
+        }
         continue;
       }
 
