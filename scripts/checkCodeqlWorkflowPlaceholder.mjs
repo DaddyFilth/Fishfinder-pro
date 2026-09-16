@@ -232,7 +232,7 @@ export function inspectWorkflowFile(workflowPath) {
 
 const isDirectExecution =
   typeof process.argv[1] === 'string' &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
 
 if (isDirectExecution) {
   const workflowPath = process.argv[2] ?? '.github/workflows/codeql.yml';
