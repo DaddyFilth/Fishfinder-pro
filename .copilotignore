@@ -14,6 +14,7 @@ fishfinder-headers.txt
 .claude/
 .cursor/
 .devin/
+.devcontainer/
 android/
 assets/
 docs/
@@ -21,3 +22,18 @@ public/fish/
 public/species/
 VERCEL_ENV.csv
 VERCEL_ENV.json
+
+# Exclude repository-root operational docs and helper scripts by default.
+ANDROID_SDK_CONFIG.md
+DEPLOYMENT.md
+DEVELOPMENT_CHECKLIST.md
+PROJECT_SETUP.md
+SECURITY.md
+VERCEL_DEPLOYMENT_CHECKLIST.md
+VERCEL_ENV_SETUP.md
+audit_map.py
+fix-env.py
+fix_emojis.py
+fix_species.py
+fix_use_client.py
+fixer.py
