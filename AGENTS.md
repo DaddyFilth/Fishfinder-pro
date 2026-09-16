@@ -9,5 +9,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 Repository-specific guidance:
-- Avoid reading repository-root scratch artifacts unless the task is explicitly about them. `build_out.txt`, `eslint_out.txt`, `tsc_out.txt`, `page.b64`, `purge.txt`, and `fishfinder-headers.txt` are debug/export artifacts, not source of truth.
+- Avoid reading repository-root scratch artifacts unless the task is explicitly about them. `build_out.txt`, `eslint_out.txt`, `tsc_out.txt`, `page.b64`, `purge.txt`, `fishfinder-headers.txt`, `VERCEL_ENV.csv`, and `VERCEL_ENV.json` are debug/export artifacts or environment-reference exports, not source of truth.
 - Prefer source files under `src/`, runtime configs, and tracked workflows before inspecting exported environment reference files or ad hoc dumps at the repository root.
