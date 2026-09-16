@@ -37,9 +37,12 @@ jobs:
 
       - name: Guard against advanced CodeQL workflow
         run: |
-          if [ -f .github/workflows/codeql.yml ]; then
-            echo "Do not add .github/workflows/codeql.yml."
-            echo "This repository uses GitHub's default CodeQL setup instead of a checked-in advanced workflow."
+          if [ -f .github/workflows/codeql.yml ] && {
+            grep -Eq '^[[:space:]]*(push|pull_request|pull_request_target|schedule|workflow_run|workflow_call|repository_dispatch|merge_group):' .github/workflows/codeql.yml ||
+            grep -Eq '^[[:space:]]*jobs:' .github/workflows/codeql.yml;
+          }; then
+            echo "Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
+            echo "Only a manual workflow_dispatch placeholder without jobs is allowed."
             exit 1
           fi
 

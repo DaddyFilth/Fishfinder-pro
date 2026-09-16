@@ -30,9 +30,12 @@ jobs:
 
       - name: Ensure advanced CodeQL workflow path is not used
         run: |
-          if [ -f .github/workflows/codeql.yml ]; then
-            echo "::error::.github/workflows/codeql.yml conflicts with GitHub default CodeQL setup."
-            echo "::error::Use a different workflow filename for non-default CodeQL notices."
+          if [ -f .github/workflows/codeql.yml ] && {
+            grep -Eq '^[[:space:]]*(push|pull_request|pull_request_target|schedule|workflow_run|workflow_call|repository_dispatch|merge_group):' .github/workflows/codeql.yml ||
+            grep -Eq '^[[:space:]]*jobs:' .github/workflows/codeql.yml;
+          }; then
+            echo "::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
+            echo "::error::Only a manual workflow_dispatch placeholder without jobs is allowed."
             exit 1
           fi
 
