@@ -28,6 +28,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Ensure advanced CodeQL workflow path is not used
+        run: |
+          if [ -f .github/workflows/codeql.yml ]; then
+            echo "::error::.github/workflows/codeql.yml conflicts with GitHub default CodeQL setup."
+            echo "::error::Use a different workflow filename for non-default CodeQL notices."
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
