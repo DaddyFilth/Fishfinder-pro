@@ -46,8 +46,13 @@ jobs:
           if not os.path.exists(path):
               raise SystemExit(0)
 
-          with open(path, encoding="utf-8") as file:
-              docs = list(yaml.safe_load_all(file))
+          try:
+              with open(path, encoding="utf-8") as file:
+                  docs = list(yaml.safe_load_all(file))
+          except yaml.YAMLError:
+              print("::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml.")
+              print("::error::Only a manual workflow_dispatch placeholder without jobs is allowed.")
+              raise SystemExit(1)
 
           if len(docs) != 1:
               print("::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml.")
