@@ -7,5 +7,14 @@ tsc_out.txt
 page.b64
 purge.txt
 fishfinder-headers.txt
+
+# Exclude duplicated assistant metadata and large media assets that are not
+# useful context for most code, CI, or review tasks.
+.agents/
+.claude/
+.cursor/
+.devin/
+public/fish/
+public/species/
 VERCEL_ENV.csv
 VERCEL_ENV.json
