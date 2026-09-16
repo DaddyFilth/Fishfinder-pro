@@ -68,8 +68,8 @@ describe('workflow guard', () => {
     writeFileSync(workflowPath, 'name: CodeQL\non: { workflow_dispatch: {}, push: {} }\n');
     symlinkSync(join(process.cwd(), 'scripts/checkCodeqlWorkflowPlaceholder.mjs'), scriptLinkPath);
 
-    const result = spawnSync('node', [scriptLinkPath, workflowPath], {
-      cwd: process.cwd(),
+    const result = spawnSync('node', ['./checkCodeqlWorkflowPlaceholder.mjs', './codeql.yml'], {
+      cwd: tempDir,
       encoding: 'utf8',
     });
 
