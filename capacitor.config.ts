@@ -2,10 +2,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'online.fishfinderpro.app',
-  appName: 'Fishfinder Pro',
+  appName: 'SeamCast',
   webDir: 'public',
   server: {
-    url: 'https://www.fishfinder-pro.online',
+    url: 'https://www.seamcast.online',
     cleartext: false,
   },
   android: {

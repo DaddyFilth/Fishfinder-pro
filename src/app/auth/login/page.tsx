@@ -76,9 +76,9 @@ export default function LoginPage() {
   return (
     <main style={{ minHeight: '100dvh', background: '#030712', color: '#e2e8f0', display: 'grid', placeItems: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
       <section style={{ width: '100%', maxWidth: '430px', background: 'linear-gradient(145deg, rgba(15,23,42,0.98), rgba(7,15,30,0.98))', border: '1px solid #1e293b', borderRadius: '20px', padding: '28px', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
-        <Link href="/" style={{ color: '#7dd3fc', fontSize: '12px', textDecoration: 'none' }}>← Back to FishFinder Pro</Link>
+        <Link href="/" style={{ color: '#7dd3fc', fontSize: '12px', textDecoration: 'none' }}>← Back to SeamCast</Link>
         <div style={{ marginTop: '28px', marginBottom: '24px' }}>
-          <div style={{ color: '#22d3ee', fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>FishFinder Pro</div>
+          <div style={{ color: '#22d3ee', fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>SeamCast</div>
           <h1 style={{ margin: '8px 0 8px', fontSize: '30px', lineHeight: 1.1, color: '#f8fafc' }}>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
           <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px', lineHeight: 1.5 }}>{mode === 'login' ? 'Sign in to keep your fishing profile and logbook connected across devices.' : 'Save catches, preferences, and fishing plans to a persistent account.'}</p>
         </div>

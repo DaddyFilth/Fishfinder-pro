@@ -366,7 +366,7 @@ export default function FishingMap({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div className="pulse" />
             <div>
-              <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>Oklahoma Fishfinder Pro Map</div>
+              <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>Oklahoma SeamCast Map</div>
               <div style={{ color: '#94a3b8', fontSize: 11 }}>Public waters, catches, contours, and Oklahoma fishing intelligence</div>
             </div>
           </div>

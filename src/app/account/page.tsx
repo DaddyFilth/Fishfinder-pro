@@ -75,7 +75,7 @@ export default function AccountPage() {
   return (
     <main style={pageStyle}>
       <section style={cardStyle}>
-        <Link href="/" style={backLinkStyle}>← Back to FishFinder Pro</Link>
+        <Link href="/" style={backLinkStyle}>← Back to SeamCast</Link>
         <div style={{ marginTop: '26px', marginBottom: '22px' }}>
           <div style={eyebrowStyle}>Your account</div>
           <h1 style={headingStyle}>Profile settings</h1>
