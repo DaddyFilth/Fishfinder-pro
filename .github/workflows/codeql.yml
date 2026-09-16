@@ -1,38 +1,71 @@
 name: "CodeQL Advanced"
 
 on:
+  workflow_dispatch:
   push:
-    branches: ["main"]
-  pull_request:
     branches: ["main"]
   schedule:
     - cron: "0 6 * * 1"
 
 permissions:
+  actions: read
   contents: read
+  security-events: write
 
 jobs:
   check-default-setup:
     name: Check CodeQL setup mode
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
+      security-events: read
     outputs:
       run_advanced: ${{ steps.check.outputs.run_advanced }}
+      skip_reason: ${{ steps.check.outputs.skip_reason }}
     steps:
       - name: Detect whether CodeQL default setup is enabled
         id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          state="$(gh api repos/${{ github.repository }}/code-scanning/default-setup --jq '.state' 2>/dev/null || echo not-configured)"
-          if [ "$state" = "configured" ]; then
-            echo "run_advanced=false" >> "$GITHUB_OUTPUT"
-            echo "CodeQL default setup is enabled; skipping advanced workflow to avoid SARIF processing conflicts."
-          else
-            echo "run_advanced=true" >> "$GITHUB_OUTPUT"
-            echo "CodeQL default setup is not enabled; running advanced CodeQL workflow."
-          fi
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            try {
+              const response = await github.request(
+                "GET /repos/{owner}/{repo}/code-scanning/default-setup",
+                { owner: context.repo.owner, repo: context.repo.repo },
+              );
+              const state = response.data?.state;
+
+              if (state === "configured") {
+                core.setOutput("run_advanced", "false");
+                core.setOutput(
+                  "skip_reason",
+                  "CodeQL default setup is enabled; skipping advanced workflow to avoid SARIF processing conflicts.",
+                );
+              } else if (state === "not-configured") {
+                core.setOutput("run_advanced", "true");
+                core.setOutput("skip_reason", "");
+              } else {
+                core.setOutput("run_advanced", "false");
+                core.setOutput(
+                  "skip_reason",
+                  `Received unexpected default setup state '${state}'; skipping advanced workflow.`,
+                );
+              }
+            } catch (error) {
+              if (error.status === 404) {
+                core.setOutput("run_advanced", "true");
+                core.setOutput("skip_reason", "");
+              } else {
+                core.setOutput("run_advanced", "false");
+                core.setOutput(
+                  "skip_reason",
+                  `Unable to determine CodeQL default setup state (status: ${error.status ?? "unknown"}); skipping advanced workflow to avoid potential SARIF conflicts.`,
+                );
+                core.warning(error.message);
+              }
+            }
 
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -68,4 +101,4 @@ jobs:
     if: needs.check-default-setup.outputs.run_advanced != 'true'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Skipped because GitHub CodeQL default setup is enabled for this repository."
+      - run: echo "${{ needs.check-default-setup.outputs.skip_reason }}"
