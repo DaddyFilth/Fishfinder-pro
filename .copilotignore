@@ -14,6 +14,7 @@ fishfinder-headers.txt
 .claude/
 .cursor/
 .devin/
+.devcontainer/
 android/
 assets/
 docs/
@@ -21,3 +22,14 @@ public/fish/
 public/species/
 VERCEL_ENV.csv
 VERCEL_ENV.json
+
+# Repository-root operational docs and setup checklists are useful references,
+# but they add noise for most implementation tasks and CI fixes.
+ANDROID_SDK_CONFIG.md
+DEPLOYMENT.md
+DEVELOPMENT_CHECKLIST.md
+PROJECT_SETUP.md
+SECURITY.md
+VERCEL_DEPLOYMENT_CHECKLIST.md
+VERCEL_ENV_SETUP.md
+VULNERABILITY_ANALYSIS.md
