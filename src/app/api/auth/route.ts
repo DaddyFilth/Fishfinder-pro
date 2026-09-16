@@ -24,14 +24,11 @@ function safeRedirectTo(value: string | undefined, requestUrl: URL) {
   return redirect.origin === requestUrl.origin && redirect.pathname === '/auth/callback' ? value : undefined
 }
 
-
 export async function POST(request: Request) {
   if (request.method !== 'POST') return methodNotAllowed('POST')
   if (requestBodyTooLarge(request, 8_192)) return tooLarge()
   const requestUrl = new URL(request.url)
   const origin = request.headers.get('origin')
-  // Proxies can expose a loopback request URL while the browser uses localhost.
-  // Keep production requests exact, but treat loopback hostnames as the same local origin.
   if (origin) {
     try {
       const requestOrigin = new URL(origin)
@@ -57,7 +54,9 @@ export async function POST(request: Request) {
   if (rateLimited) return rateLimited
 
   try {
-    const parsed = authSchema.safeParse(await request.json())
+    const raw = await request.json().catch(() => null)
+    if (raw === null) return NextResponse.json({ error: 'Malformed request body.' }, { status: 400 })
+    const parsed = authSchema.safeParse(raw)
     if (!parsed.success) return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
     const { email, mode } = parsed.data
     const redirectTo = safeRedirectTo(parsed.data.redirectTo, requestUrl)
@@ -106,8 +105,9 @@ export async function POST(request: Request) {
 
     return mode === 'forgot-password'
       ? NextResponse.json({ sent: true })
-      : NextResponse.json({ confirmed: Boolean(result.data?.session) })
-  } catch {
+      : NextResponse.json({ confirmed: Boolean((result.data as any)?.session) })
+  } catch (error) {
+    console.error('[auth] Auth route failure:', error instanceof Error ? error.message : 'unknown error')
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
   }
 }
