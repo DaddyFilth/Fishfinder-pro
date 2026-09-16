@@ -124,5 +124,5 @@ if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
 }
 
 export const config = {
-  matcher: '/((?!_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|\\.well-known/.*).*)',
+  matcher: '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|robots\\.txt|sitemap\\.xml|\\.well-known/.*).*)',
 };
