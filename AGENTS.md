@@ -12,5 +12,7 @@ Repository-specific guidance:
 - Avoid reading repository-root scratch artifacts unless the task is explicitly about them. `build_out.txt`, `eslint_out.txt`, `tsc_out.txt`, `page.b64`, `purge.txt`, `fishfinder-headers.txt`, `VERCEL_ENV.csv`, and `VERCEL_ENV.json` are debug/export artifacts or environment-reference exports, not source of truth.
 - Prefer source files under `src/`, runtime configs, and tracked workflows before inspecting exported environment reference files or ad hoc dumps at the repository root.
 - Ignore duplicated assistant-metadata directories (`.agents/`, `.claude/`, `.cursor/`, `.devin/`) unless the task is explicitly about agent skills or editor integration.
+- Ignore the generated `android/` project, design/export assets under `assets/`, and supplemental `docs/` unless the task explicitly targets Android packaging, artwork, or documentation.
 - Ignore large media catalogs under `public/fish/` and `public/species/` for code, CI, and review tasks unless the task is specifically about those assets.
+- For Google Search Console or other static site verification tasks, prefer the existing verification surface in `public/google*.html` and metadata in `src/app/layout.tsx` before touching unrelated app code.
 - For GitHub Actions failures, after the required initial workflow-runs check, use any run ID or job ID already provided in the task directly instead of repeating exploratory Actions queries.
