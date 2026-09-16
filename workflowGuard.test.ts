@@ -26,6 +26,15 @@ describe('workflow guard', () => {
     expect(extraKeys).toEqual(['jobs']);
   });
 
+  it('rejects invalid committed workflow shapes', () => {
+    const reasons = getWorkflowGuardViolations(
+      'name: CodeQL\n"on": [workflow_dispatch, push] # placeholder\njobs:\n  analyze:\n    runs-on: ubuntu-latest\n',
+    );
+
+    expect(reasons).toContain('automatic triggers: push');
+    expect(reasons).toContain('advanced configuration keys: jobs');
+  });
+
   it('treats true as an alias for the on key', () => {
     const workflow = inspectWorkflow('name: CodeQL\ntrue:\n  workflow_dispatch:\n');
 
