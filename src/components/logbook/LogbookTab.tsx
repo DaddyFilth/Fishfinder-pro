@@ -61,6 +61,13 @@ function today(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
+function formatTripDate(value: string): string {
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function newId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -274,7 +281,12 @@ export default function LogbookTab() {
   const saveTrip = () => {
     const title = form.title.trim();
     if (!title) {
-      setFormError('Give the trip a short title, e.g. "Morning at Lake Texoma".');
+      setFormError('Add a short trip title so it is easy to find later.');
+      return;
+    }
+    const catchesCount = Number(form.catchesCount || 0);
+    if (!Number.isInteger(catchesCount) || catchesCount < 0 || catchesCount > 10000) {
+      setFormError('Catches must be a whole number from 0 to 10,000.');
       return;
     }
     const existing = editingId ? trips.find((t) => t.id === editingId) : undefined;
@@ -349,8 +361,11 @@ export default function LogbookTab() {
 
       {showForm && (
         <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '10px' }}>
-            {editingId ? '✏️ Edit Trip' : '➕ Log a Trip'}
+          <div style={{ fontSize: '15px', fontWeight: '800', color: '#e2e8f0', marginBottom: '4px' }}>
+            {editingId ? 'Edit trip' : 'Log a trip'}
+          </div>
+          <div style={{ fontSize: '11px', color: '#78909c', marginBottom: '12px' }}>
+            Add the details you will want when planning the next outing.
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -458,7 +473,7 @@ export default function LogbookTab() {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#e2e8f0' }}>{trip.title}</div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-                {trip.date}{trip.waterBody ? ` · ${trip.waterBody}` : ''}
+                {formatTripDate(trip.date)}{trip.waterBody ? ` · ${trip.waterBody}` : ''}
               </div>
             </div>
             {trip.catchesCount > 0 && (

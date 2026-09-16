@@ -31,6 +31,9 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
+    const weight = form.weight_lbs ? Number(form.weight_lbs) : null;
+    const length = form.length_in ? Number(form.length_in) : null;
+    if (!form.species || (weight !== null && (!Number.isFinite(weight) || weight <= 0)) || (length !== null && (!Number.isFinite(length) || length <= 0))) return;
     setSaving(true);
     const entry: CatchEntry = {
       id: crypto.randomUUID(),
@@ -46,12 +49,13 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
       photo_url: form.photo_url || undefined,
     };
     try {
-      await fetch('/api/catches', {
+      const response = await fetch('/api/catches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry),
       });
-      setCatches(p => [entry, ...p]);
+      if (!response.ok) throw new Error('Could not save catch');
+      setCatches((previous) => [entry, ...previous]);
       setShowForm(false);
       setForm({ species:'Largemouth Bass', weight_lbs:'', length_in:'', bait:'', notes:'', photo_url:'' });
     } catch(e) { console.error(e); }
