@@ -51,5 +51,8 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Reject automatic or advanced CodeQL workflow configuration
+        run: node scripts/checkCodeqlWorkflowPlaceholder.mjs
+
       - name: Build Next.js application
         run: npm run build
