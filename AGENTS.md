@@ -13,3 +13,4 @@ Repository-specific guidance:
 - Prefer source files under `src/`, runtime configs, and tracked workflows before inspecting exported environment reference files or ad hoc dumps at the repository root.
 - Ignore duplicated assistant-metadata directories (`.agents/`, `.claude/`, `.cursor/`, `.devin/`) unless the task is explicitly about agent skills or editor integration.
 - Ignore large media catalogs under `public/fish/` and `public/species/` for code, CI, and review tasks unless the task is specifically about those assets.
+- For GitHub Actions failures, after the required initial workflow-runs check, use any run ID or job ID already provided in the task directly instead of repeating exploratory Actions queries.
