@@ -10,7 +10,29 @@ function normalizeTopLevelKey(key) {
 }
 
 function stripInlineComment(value) {
-  return value.replace(/\s+#.*$/, '').trim();
+  let quote = null;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (quote) {
+      if (character === quote && value[index - 1] !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+
+    if (character === '#' && (index === 0 || /\s/.test(value[index - 1]))) {
+      return value.slice(0, index).trim();
+    }
+  }
+
+  return value.trim();
 }
 
 function normalizeScalar(value) {
@@ -91,7 +113,7 @@ export function inspectWorkflow(source) {
 
     const triggerMatch = line.match(/^(\s*)(["']?)([A-Za-z0-9_-]+)\2:(?:\s*(.+))?$/);
     if (triggerMatch) {
-      triggerNames.add(normalizeScalar(triggerMatch[3]));
+      triggerNames.add(triggerMatch[3]);
     }
   }
 
