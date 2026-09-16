@@ -33,6 +33,15 @@ describe('workflow guard', () => {
     expect(workflow.topLevelKeys).toEqual(['name', 'on']);
   });
 
+  it('accepts quoted on keys and inline comments', () => {
+    const workflow = inspectWorkflow(
+      'name: CodeQL\n"on": [workflow_dispatch] # placeholder\n',
+    );
+
+    expect(workflow.triggerNames).toEqual(['workflow_dispatch']);
+    expect(workflow.topLevelKeys).toEqual(['name', 'on']);
+  });
+
   it('allows no CodeQL workflow or only a manual placeholder', () => {
     const workflowPath = join(process.cwd(), '.github/workflows/codeql.yml');
 
