@@ -41,8 +41,8 @@ jobs:
             grep -Eq '^[[:space:]]*(push|pull_request|pull_request_target|schedule|workflow_run|workflow_call|repository_dispatch|merge_group):' .github/workflows/codeql.yml ||
             grep -Eq '^[[:space:]]*jobs:' .github/workflows/codeql.yml;
           }; then
-            echo "Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
-            echo "Only a manual workflow_dispatch placeholder without jobs is allowed."
+            echo "::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
+            echo "::error::Only a manual workflow_dispatch placeholder without jobs is allowed."
             exit 1
           fi
 
