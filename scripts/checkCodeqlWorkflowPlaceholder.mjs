@@ -3,9 +3,20 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const allowedTopLevelKeys = new Set(['name', 'on']);
+const yamlKeyPattern = /^(["']?)([A-Za-z0-9_-]+)\1:(?:\s*(.*))?$/;
 
 function normalizeTopLevelKey(key) {
   return key === 'true' ? 'on' : key;
+}
+
+function stripInlineComment(value) {
+  return value.replace(/\s+#.*$/, '').trim();
+}
+
+function normalizeScalar(value) {
+  const trimmed = stripInlineComment(value);
+  const quotedMatch = trimmed.match(/^(["'])(.*)\1$/);
+  return quotedMatch ? quotedMatch[2] : trimmed;
 }
 
 export function inspectWorkflow(source) {
@@ -32,14 +43,14 @@ export function inspectWorkflow(source) {
     }
 
     if (!inOnBlock && indent === 0) {
-      const topLevelMatch = line.match(/^([A-Za-z0-9_-]+):(?:\s*(.+))?$/);
+      const topLevelMatch = line.match(yamlKeyPattern);
 
       if (!topLevelMatch) {
         continue;
       }
 
-      const normalizedKey = normalizeTopLevelKey(topLevelMatch[1]);
-      const value = topLevelMatch[2] ?? '';
+      const normalizedKey = normalizeTopLevelKey(topLevelMatch[2]);
+      const value = stripInlineComment(topLevelMatch[3] ?? '');
       topLevelKeys.add(normalizedKey);
 
       if (normalizedKey !== 'on') {
@@ -48,7 +59,7 @@ export function inspectWorkflow(source) {
 
       if (value.startsWith('[') && value.endsWith(']')) {
         for (const event of value.slice(1, -1).split(',')) {
-          const normalized = event.trim();
+          const normalized = normalizeScalar(event);
           if (normalized) {
             triggerNames.add(normalized);
           }
@@ -57,7 +68,7 @@ export function inspectWorkflow(source) {
       }
 
       if (value) {
-        triggerNames.add(value.trim());
+        triggerNames.add(normalizeScalar(value));
         continue;
       }
 
@@ -78,9 +89,9 @@ export function inspectWorkflow(source) {
       continue;
     }
 
-    const triggerMatch = line.match(/^(\s*)([A-Za-z0-9_-]+):(?:\s*(.+))?$/);
+    const triggerMatch = line.match(/^(\s*)(["']?)([A-Za-z0-9_-]+)\2:(?:\s*(.+))?$/);
     if (triggerMatch) {
-      triggerNames.add(triggerMatch[2]);
+      triggerNames.add(normalizeScalar(triggerMatch[3]));
     }
   }
 
