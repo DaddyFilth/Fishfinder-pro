@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const allowedTopLevelKeys = new Set(['name', 'on']);
-const yamlKeyPattern = /^(["']?)([A-Za-z0-9_-]+)\1:(?:\s*(.*))?$/;
+const yamlKeyPattern = /^(["']?)([A-Za-z0-9_-]+)\1\s*:(?:\s*(.*))?$/;
 
 function normalizeTopLevelKey(key) {
   return key === 'true' ? 'on' : key;
