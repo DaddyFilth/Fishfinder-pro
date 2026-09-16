@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
   manifest: "/manifest.json",
   verification: {
-    google: "google9b802e8e87b013ca.html",
+    google: "a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38",
   },
   icons: {
     icon: [
