@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { getSafeNextPath } from '@/lib/supabase/redirect'
 
 type AuthMode = 'login' | 'signup'
@@ -46,22 +47,33 @@ export default function LoginPage() {
     setBusy(true)
 
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          email: email.trim(),
-          password,
-          fullName: fullName.trim(),
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-        }),
-      })
-      const result = await response.json() as { error?: string; confirmed?: boolean }
+      const supabase = createClient()
+      if (!supabase) throw new Error('Authentication is not configured. Please try again later.')
 
-      if (!response.ok) throw new Error(result.error || 'Authentication failed.')
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+      const result = mode === 'signup'
+        ? await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              data: { full_name: fullName.trim() || null },
+              emailRedirectTo: redirectTo,
+            },
+          })
+        : await supabase.auth.signInWithPassword({ email: email.trim(), password })
 
-      if (mode === 'signup' && !result.confirmed) {
+      if (result.error) {
+        const message = result.error.message.toLowerCase()
+        if (message.includes('already registered') || message.includes('already exists')) {
+          throw new Error('An account with this email already exists. Try logging in instead.')
+        }
+        if (message.includes('confirm')) {
+          throw new Error('Please confirm your email before logging in.')
+        }
+        throw new Error(mode === 'login' ? 'Invalid email or password.' : 'Unable to create the account. Check your details and try again.')
+      }
+
+      if (mode === 'signup' && !result.data.session) {
         setSuccessMessage('Account created. Check your email to confirm the account, then return here to log in.')
       } else {
         router.replace(nextPath)
@@ -76,9 +88,9 @@ export default function LoginPage() {
   return (
     <main style={{ minHeight: '100dvh', background: '#030712', color: '#e2e8f0', display: 'grid', placeItems: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
       <section style={{ width: '100%', maxWidth: '430px', background: 'linear-gradient(145deg, rgba(15,23,42,0.98), rgba(7,15,30,0.98))', border: '1px solid #1e293b', borderRadius: '20px', padding: '28px', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
-        <Link href="/" style={{ color: '#7dd3fc', fontSize: '12px', textDecoration: 'none' }}>← Back to FishFinder Pro</Link>
+        <Link href="/" style={{ color: '#7dd3fc', fontSize: '12px', textDecoration: 'none' }}>← Back to SeamCast</Link>
         <div style={{ marginTop: '28px', marginBottom: '24px' }}>
-          <div style={{ color: '#22d3ee', fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>FishFinder Pro</div>
+          <div style={{ color: '#22d3ee', fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>SeamCast</div>
           <h1 style={{ margin: '8px 0 8px', fontSize: '30px', lineHeight: 1.1, color: '#f8fafc' }}>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
           <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px', lineHeight: 1.5 }}>{mode === 'login' ? 'Sign in to keep your fishing profile and logbook connected across devices.' : 'Save catches, preferences, and fishing plans to a persistent account.'}</p>
         </div>
@@ -114,6 +126,12 @@ export default function LoginPage() {
             {busy ? 'Working…' : mode === 'login' ? 'Log in' : 'Create account'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <Link href={`/auth/reset?email=${encodeURIComponent(email.trim())}`} style={{ display: 'block', marginTop: '16px', color: '#7dd3fc', fontSize: '12px', textAlign: 'center', textDecoration: 'none' }}>
+            Forgot your password?
+          </Link>
+        )}
 
         <p style={{ margin: '18px 0 0', color: '#64748b', fontSize: '11px', lineHeight: 1.5 }}>Accounts are securely stored by Supabase Auth. If email confirmation is enabled, you must confirm your email before logging in.</p>
       </section>

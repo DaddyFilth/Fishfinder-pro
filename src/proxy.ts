@@ -16,8 +16,13 @@ const PUBLIC_PATHS = [
 ];
 
 function isPublicPath(pathname: string) {
+  const isPublicSpotRead =
+    pathname === '/api/spots' ||
+    /^\/api\/spots\/[^/]+\/conditions$/.test(pathname);
+
   return (
     PUBLIC_PATHS.includes(pathname) ||
+    isPublicSpotRead ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'

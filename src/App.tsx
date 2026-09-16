@@ -4,7 +4,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top-bar">
-        <strong>FishFinder Pro</strong>
+        <strong>SeamCast</strong>
       </header>
 
       <FishingMap />
