@@ -1,0 +1,17 @@
+# Local scratch / diagnostic artifacts
+build_out.txt
+eslint_out.txt
+tsc_out.txt
+page.b64
+purge.txt
+fishfinder-headers.txt
+
+# Assistant metadata duplicates
+.agents/
+.claude/
+.cursor/
+.devin/
+
+# Large media catalogs (include only when explicitly needed)
+public/fish/
+public/species/
