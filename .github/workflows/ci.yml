@@ -28,6 +28,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Ensure advanced CodeQL workflow is not committed
+        run: |
+          if [ -e .github/workflows/codeql.yml ]; then
+            echo "Remove .github/workflows/codeql.yml while GitHub default CodeQL setup is enabled."
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
