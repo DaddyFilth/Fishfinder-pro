@@ -1,5 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import {
   getWorkflowGuardViolations,
@@ -56,6 +58,23 @@ describe('workflow guard', () => {
 
     expect(workflow.triggerNames).toEqual(['workflow_dispatch']);
     expect(workflow.topLevelKeys).toEqual(['name', 'on']);
+  });
+
+  it('enforces the guard when invoked through a relative script path', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'workflow-guard-'));
+    const workflowPath = join(tempDir, 'codeql.yml');
+
+    writeFileSync(workflowPath, 'name: CodeQL\non: { workflow_dispatch: {}, push: {} }\n');
+
+    const result = spawnSync('node', ['scripts/checkCodeqlWorkflowPlaceholder.mjs', workflowPath], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    });
+
+    rmSync(tempDir, { recursive: true, force: true });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Forbidden CodeQL workflow configuration');
   });
 
   it('allows no CodeQL workflow or only a manual placeholder', () => {

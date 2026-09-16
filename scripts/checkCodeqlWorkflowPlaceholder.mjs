@@ -230,7 +230,9 @@ export function inspectWorkflowFile(workflowPath) {
   };
 }
 
-const isDirectExecution = process.argv[1] === fileURLToPath(import.meta.url);
+const isDirectExecution =
+  typeof process.argv[1] === 'string' &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectExecution) {
   const workflowPath = process.argv[2] ?? '.github/workflows/codeql.yml';
