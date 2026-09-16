@@ -1,0 +1,71 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  check-default-setup:
+    name: Check CodeQL setup mode
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run_advanced: ${{ steps.check.outputs.run_advanced }}
+    steps:
+      - name: Detect whether CodeQL default setup is enabled
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh api repos/${{ github.repository }}/code-scanning/default-setup --jq '.state' 2>/dev/null || echo not-configured)"
+          if [ "$state" = "configured" ]; then
+            echo "run_advanced=false" >> "$GITHUB_OUTPUT"
+            echo "CodeQL default setup is enabled; skipping advanced workflow to avoid SARIF processing conflicts."
+          else
+            echo "run_advanced=true" >> "$GITHUB_OUTPUT"
+            echo "CodeQL default setup is not enabled; running advanced CodeQL workflow."
+          fi
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    needs: check-default-setup
+    if: needs.check-default-setup.outputs.run_advanced == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript", "python", "actions"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  advanced-disabled:
+    name: Advanced CodeQL disabled by default setup
+    needs: check-default-setup
+    if: needs.check-default-setup.outputs.run_advanced != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Skipped because GitHub CodeQL default setup is enabled for this repository."
