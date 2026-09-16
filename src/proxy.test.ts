@@ -24,5 +24,6 @@ describe('proxy matcher', () => {
     expect(proxyMatcher.test('/robotsXtxt')).toBe(true);
     expect(proxyMatcher.test('/sitemapAxml')).toBe(true);
     expect(proxyMatcher.test('/manifestXjson')).toBe(true);
+    expect(proxyMatcher.test('/.well-knownX/assetlinks.json')).toBe(true);
   });
 });
