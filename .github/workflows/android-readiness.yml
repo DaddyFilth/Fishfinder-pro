@@ -37,14 +37,41 @@ jobs:
 
       - name: Guard against advanced CodeQL workflow
         run: |
-          if [ -f .github/workflows/codeql.yml ] && {
-            grep -Eq '^[[:space:]]*(push|pull_request|pull_request_target|schedule|workflow_run|workflow_call|repository_dispatch|merge_group):' .github/workflows/codeql.yml ||
-            grep -Eq '^[[:space:]]*jobs:' .github/workflows/codeql.yml;
-          }; then
-            echo "::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
-            echo "::error::Only a manual workflow_dispatch placeholder without jobs is allowed."
-            exit 1
-          fi
+          python - <<'PY'
+          import os
+          import sys
+          import yaml
+
+          path = ".github/workflows/codeql.yml"
+          if not os.path.exists(path):
+              raise SystemExit(0)
+
+          with open(path, encoding="utf-8") as file:
+              docs = list(yaml.safe_load_all(file))
+
+          if len(docs) != 1:
+              print("::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml.")
+              print("::error::Only a single-document manual workflow_dispatch placeholder without jobs is allowed.")
+              raise SystemExit(1)
+
+          workflow = docs[0] if isinstance(docs[0], dict) else {}
+          if not isinstance(workflow, dict):
+              print("::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml.")
+              print("::error::Only a manual workflow_dispatch placeholder without jobs is allowed.")
+              raise SystemExit(1)
+
+          on_value = workflow["on"] if "on" in workflow else workflow.get(True)
+          is_manual_only = (
+              on_value == "workflow_dispatch"
+              or (isinstance(on_value, list) and set(on_value) == {"workflow_dispatch"})
+              or (isinstance(on_value, dict) and set(on_value.keys()) == {"workflow_dispatch"})
+          )
+
+          if "jobs" in workflow or not is_manual_only:
+              print("::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml.")
+              print("::error::Only a manual workflow_dispatch placeholder without jobs is allowed.")
+              raise SystemExit(1)
+          PY
 
       - name: Run tests
         run: npm test
