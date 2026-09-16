@@ -490,7 +490,7 @@ export default function MobilePage() {
       <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
           <span style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
-          <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Fishfinder Pro</span>
+          <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>SeamCast</span>
         </div>
         <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
           <span style={{ fontSize:'9px', color:'#22c55e' }}>● LIVE</span>
@@ -518,7 +518,7 @@ export default function MobilePage() {
             whiteSpace: 'nowrap',
           }}
         >
-          Press Back again to exit Fishfinder Pro
+          Press Back again to exit SeamCast
         </div>
       )}
 

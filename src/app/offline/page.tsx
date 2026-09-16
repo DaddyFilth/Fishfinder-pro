@@ -33,7 +33,7 @@ export default function OfflinePage() {
             fontSize: '22px',
           }}
         >
-          Fishfinder Pro is offline
+          SeamCast is offline
         </h1>
 
         <p

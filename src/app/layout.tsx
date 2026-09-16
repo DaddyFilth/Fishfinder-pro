@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.fishfinder-pro.online"),
-  title: "Oklahoma Fishfinder Pro",
+  title: "Oklahoma SeamCast",
   description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
   manifest: "/manifest.json",
   icons: {
