@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "Oklahoma SeamCast",
   description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
   manifest: "/manifest.json",
+  verification: {
+    google: "google9b802e8e87b013ca.html",
+  },
   icons: {
     icon: [
       {
