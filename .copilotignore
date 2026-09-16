@@ -1,0 +1,20 @@
+# Reduce Copilot context to files that matter for normal engineering tasks.
+# These repository-root files are generated debug/export artifacts and are not
+# part of the app's runtime or test source.
+build_out.txt
+eslint_out.txt
+tsc_out.txt
+page.b64
+purge.txt
+fishfinder-headers.txt
+
+# Exclude duplicated assistant metadata and large media assets that are not
+# useful context for most code, CI, or review tasks.
+.agents/
+.claude/
+.cursor/
+.devin/
+public/fish/
+public/species/
+VERCEL_ENV.csv
+VERCEL_ENV.json
