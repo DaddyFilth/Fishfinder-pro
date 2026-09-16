@@ -24,6 +24,10 @@ function safeRedirectTo(value: string | undefined, requestUrl: URL) {
   return redirect.origin === requestUrl.origin && redirect.pathname === '/auth/callback' ? value : undefined
 }
 
+function hasSession(data: unknown): data is { session: unknown } {
+  return typeof data === 'object' && data !== null && 'session' in data
+}
+
 export async function POST(request: Request) {
   if (request.method !== 'POST') return methodNotAllowed('POST')
   if (requestBodyTooLarge(request, 8_192)) return tooLarge()
@@ -103,16 +107,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: safeError }, { status: 400 })
     }
 
-    const confirmed = Boolean(
-      result.data
-      && typeof result.data === 'object'
-      && 'session' in result.data
-      && result.data.session,
-    )
-
     return mode === 'forgot-password'
       ? NextResponse.json({ sent: true })
-      : NextResponse.json({ confirmed })
+      : NextResponse.json({ confirmed: Boolean(hasSession(result.data) && result.data.session) })
   } catch (error) {
     console.error('[auth] Auth route failure:', error instanceof Error ? error.message : 'unknown error')
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
