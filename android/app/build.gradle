@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+def capacitorCordovaPluginsDir = file('../capacitor-cordova-android-plugins')
+def capacitorCordovaLibsDir = new File(capacitorCordovaPluginsDir, 'src/main/libs')
+
 android {
     namespace = "online.fishfinderpro.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -26,7 +29,10 @@ android {
 
 repositories {
     flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+        dirs 'libs'
+        if (capacitorCordovaLibsDir.exists()) {
+            dirs '../capacitor-cordova-android-plugins/src/main/libs'
+        }
     }
 }
 
@@ -39,7 +45,9 @@ dependencies {
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    implementation project(':capacitor-cordova-android-plugins')
+    if (capacitorCordovaPluginsDir.exists()) {
+        implementation project(':capacitor-cordova-android-plugins')
+    }
 }
 
 apply from: 'capacitor.build.gradle'
