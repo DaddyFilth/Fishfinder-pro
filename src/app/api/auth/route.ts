@@ -103,9 +103,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: safeError }, { status: 400 })
     }
 
+    const confirmed = Boolean(
+      result.data
+      && typeof result.data === 'object'
+      && 'session' in result.data
+      && result.data.session,
+    )
+
     return mode === 'forgot-password'
       ? NextResponse.json({ sent: true })
-      : NextResponse.json({ confirmed: Boolean('session' in result.data && result.data.session) })
+      : NextResponse.json({ confirmed })
   } catch (error) {
     console.error('[auth] Auth route failure:', error instanceof Error ? error.message : 'unknown error')
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
