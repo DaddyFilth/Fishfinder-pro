@@ -1,0 +1,17 @@
+name: CodeQL Advanced
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notice:
+    name: Default setup notice
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Explain why this workflow is manual only
+        run: |
+          echo "GitHub default CodeQL setup is enabled for this repository."
+          echo "Advanced CodeQL workflows that run on push or pull_request conflict with default setup."
+          echo "This placeholder workflow keeps the historical path reserved without uploading CodeQL SARIF."
