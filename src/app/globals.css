@@ -58,8 +58,8 @@ html,
 body {
   height: 100%;
   margin: 0;
-  padding: 0;
   overscroll-behavior: none;
+  padding: 0;
 }
 
 button,
@@ -87,10 +87,10 @@ a:focus-visible {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
