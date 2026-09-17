@@ -37,13 +37,6 @@ interface UserLocation {
   lng: number;
 }
 
-interface CachedLocation extends UserLocation {
-  savedAt: number;
-}
-
-const LOCATION_CACHE_KEY = 'fishfinder:last-location';
-const LOCATION_CACHE_MAX_AGE_MS = 604800000;
-
 const ratingColor = (rating: string) =>
   rating === 'Hot'
     ? '#22c55e'
@@ -60,78 +53,13 @@ const scoreColor = (score: number) =>
         ? '#f97316'
         : '#6b7280';
 
-const isValidLocation = (value: unknown): value is CachedLocation => {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const candidate = value as Partial<CachedLocation>;
-
-  return (
-    typeof candidate.lat === 'number' &&
-    Number.isFinite(candidate.lat) &&
-    candidate.lat >= -90 &&
-    candidate.lat <= 90 &&
-    typeof candidate.lng === 'number' &&
-    Number.isFinite(candidate.lng) &&
-    candidate.lng >= -180 &&
-    candidate.lng <= 180 &&
-    typeof candidate.savedAt === 'number' &&
-    Number.isFinite(candidate.savedAt)
-  );
-};
-
-const getCachedLocation = (): UserLocation | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
-
-    if (!cached) {
-      return null;
-    }
-
-    const parsed: unknown = JSON.parse(cached);
-
-    if (!isValidLocation(parsed)) {
-      window.localStorage.removeItem(LOCATION_CACHE_KEY);
-      return null;
-    }
-
-    const age = Date.now() - parsed.savedAt;
-    const isFresh = age >= 0 && age < LOCATION_CACHE_MAX_AGE_MS;
-
-    if (!isFresh) {
-      window.localStorage.removeItem(LOCATION_CACHE_KEY);
-      return null;
-    }
-
-    return {
-      lat: parsed.lat,
-      lng: parsed.lng,
-    };
-  } catch {
-    try {
-      window.localStorage.removeItem(LOCATION_CACHE_KEY);
-    } catch {
-      // Local storage may be unavailable or restricted.
-    }
-
-    return null;
-  }
-};
-
 export default function SpotSuggester({ spots }: Props) {
   const [results, setResults] = useState<RankedSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalNearby, setTotalNearby] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(
-    getCachedLocation,
-  );
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   const runSuggestion = useCallback(
     async (lat?: number, lng?: number) => {
@@ -194,32 +122,7 @@ export default function SpotSuggester({ spots }: Props) {
     const location = { lat, lng };
     setUserLocation(location);
 
-    try {
-      window.localStorage.setItem(
-        LOCATION_CACHE_KEY,
-        JSON.stringify({
-          ...location,
-          savedAt: Date.now(),
-        }),
-      );
-    } catch {
-      // Local caching may be unavailable in private browsing.
-    }
-
     return location;
-  };
-
-  const runWithCachedLocation = () => {
-    const cachedLocation = getCachedLocation();
-
-    if (!cachedLocation) {
-      return false;
-    }
-
-    setUserLocation(cachedLocation);
-    void runSuggestion(cachedLocation.lat, cachedLocation.lng);
-
-    return true;
   };
 
   const handleFind = () => {
@@ -227,10 +130,7 @@ export default function SpotSuggester({ spots }: Props) {
 
     if (!navigator.geolocation) {
       setLocating(false);
-
-      if (!runWithCachedLocation()) {
-        void runSuggestion();
-      }
+      void runSuggestion();
 
       return;
     }
@@ -247,10 +147,7 @@ export default function SpotSuggester({ spots }: Props) {
       },
       () => {
         setLocating(false);
-
-        if (!runWithCachedLocation()) {
-          void runSuggestion();
-        }
+        void runSuggestion();
       },
       {
         enableHighAccuracy: false,
