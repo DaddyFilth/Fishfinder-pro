@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const redirectTo = 'https://www.fishfinder-pro.online/auth/reset'
+    const redirectTo = 'https://www.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate'
 
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
