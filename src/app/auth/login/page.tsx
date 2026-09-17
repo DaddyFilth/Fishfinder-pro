@@ -38,11 +38,14 @@ function mapAuthError(mode: Mode, message: string) {
   if (lower.includes('already registered') || lower.includes('already exists')) {
     return new Error('An account with this email already exists. Try logging in instead.')
   }
-  return new Error(
-    mode === 'login'
-      ? 'Invalid email or password.'
-      : 'Unable to create the account. Check your details and try again.',
-  )
+  if (mode === 'login') {
+    return new Error('Invalid email or password.')
+  }
+  const trimmed = message.replace(/\s+/g, ' ').trim().slice(0, 180)
+  if (!trimmed || /eyJ|bearer |sb_|service_role/i.test(trimmed)) {
+    return new Error('Unable to create the account. Check your details and try again.')
+  }
+  return new Error(trimmed)
 }
 
 export default function LoginPage() {
