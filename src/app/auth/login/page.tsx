@@ -41,11 +41,7 @@ function mapAuthError(mode: Mode, message: string) {
   if (mode === 'login') {
     return new Error('Invalid email or password.')
   }
-  const trimmed = message.replace(/\s+/g, ' ').trim().slice(0, 180)
-  if (!trimmed || /eyJ|bearer |sb_|service_role/i.test(trimmed)) {
-    return new Error('Unable to create the account. Check your details and try again.')
-  }
-  return new Error(trimmed)
+  return new Error(String(message).slice(0, 180) || 'Unable to create the account.')
 }
 
 export default function LoginPage() {
