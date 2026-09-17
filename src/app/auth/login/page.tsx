@@ -55,8 +55,9 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState('')
 
   const nextPath = useMemo(() => {
-    if (typeof window === 'undefined') return '/'
-    return getSafeNextPath(new URLSearchParams(window.location.search).get('next'))
+    if (typeof window === 'undefined') return '/auth/login'
+    const requestedPath = getSafeNextPath(new URLSearchParams(window.location.search).get('next'))
+    return requestedPath === '/' ? '/auth/login' : requestedPath
   }, [])
 
   async function onSubmit(event: FormEvent) {
@@ -142,10 +143,7 @@ export default function LoginPage() {
           boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
         }}
       >
-        <Link href="/" style={{ color: '#7dd3fc', fontSize: '12px', textDecoration: 'none' }}>
-          ← Back to SeamCast
-        </Link>
-        <div style={{ marginTop: '28px', marginBottom: '24px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <div
             style={{
               color: '#22d3ee',

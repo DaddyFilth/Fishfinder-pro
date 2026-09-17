@@ -6,13 +6,11 @@ const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
-  '/',
   '/robots.txt',
   '/sitemap.xml',
   '/auth/login',
   '/auth/callback',
   '/api/auth',
-  '/offline',
   '/manifest.json',
   '/sw.js',
 ];
@@ -32,7 +30,14 @@ function isPublicPath(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
-if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
+  if (request.nextUrl.pathname === '/') {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/auth/login';
+    loginUrl.search = '';
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
   return NextResponse.next();
 }
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
