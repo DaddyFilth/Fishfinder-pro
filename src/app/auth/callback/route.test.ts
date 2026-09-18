@@ -89,4 +89,18 @@ describe('GET /auth/callback', () => {
       'https://www.fishfinder-pro.online/auth/reset?error=invalid-link',
     )
   })
+
+  it('treats token_hash without type as callback failure', async () => {
+    const auth = mockAuthClient()
+
+    const response = await GET(
+      new Request('https://www.fishfinder-pro.online/auth/callback?token_hash=bad&next=%2Faccount'),
+    )
+
+    expect(auth.exchangeCodeForSession).not.toHaveBeenCalled()
+    expect(auth.verifyOtp).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBe(
+      'https://www.fishfinder-pro.online/auth/login?error=auth-callback',
+    )
+  })
 })

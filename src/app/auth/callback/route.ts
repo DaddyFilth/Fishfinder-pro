@@ -21,14 +21,16 @@ export async function GET(request: Request) {
   const otpType = type && OTP_TYPES.has(type) ? (type as EmailOtpType) : null
 
   let authFailed = false
-  if (code || (tokenHash && otpType)) {
+  if (code || tokenHash) {
     const supabase = await createClient()
     if (!supabase) {
       authFailed = true
     } else if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       authFailed = Boolean(error)
-    } else if (tokenHash && otpType) {
+    } else if (!otpType) {
+      authFailed = true
+    } else if (tokenHash) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: otpType,
