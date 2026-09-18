@@ -3,8 +3,10 @@
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { getSafeNextPath } from '@/lib/supabase/redirect'
+import {
+  getAuthCallbackUrl,
+  getSafeNextPath,
+} from '@/lib/supabase/redirect'
 
 type Mode = 'login' | 'signup'
 
@@ -75,45 +77,39 @@ export default function LoginPage() {
 
     setBusy(true)
     try {
-      const supabase = createClient()
-      if (!supabase) {
-        throw new Error('Authentication is not configured. Please try again later.')
+      const cleanEmail = email.trim()
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          email: cleanEmail,
+          password,
+          ...(mode === 'signup' ? { fullName: fullName.trim() } : {}),
+          redirectTo: getAuthCallbackUrl(window.location.origin),
+        }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string; confirmed?: boolean }
+      if (!response.ok || result.error) {
+        throw mapAuthError(mode, result.error || 'Unable to authenticate.')
       }
 
-      const redirectTo = `${window.location.origin}/auth/callback`
-
-      if (mode === 'signup') {
-        const created = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: fullName.trim() ? { full_name: fullName.trim() } : {},
-            emailRedirectTo: redirectTo,
-          },
-        })
-        if (created.error) throw mapAuthError('signup', created.error.message)
-
-        if (!created.data.session) {
-          const signedIn = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          })
-          if (signedIn.error || !signedIn.data.session) {
-            throw new Error('Account created. Log in with the same email and password.')
-          }
-        }
-      } else {
-        const signedIn = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-        if (signedIn.error) throw mapAuthError('login', signedIn.error.message)
+      if (mode === 'signup' && !result.confirmed) {
+        setMode('login')
+        setPassword('')
+        setSuccessMessage('Account created. Check your email to confirm your account, then log in.')
+        return
       }
 
       router.replace(nextPath)
       router.refresh()
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.')
+      const message = error instanceof Error ? error.message : 'Authentication failed. Please try again.'
+      if (/failed to fetch/i.test(message)) {
+        setErrorMessage('Could not reach the authentication service. Check your connection and try again.')
+      } else {
+        setErrorMessage(message)
+      }
     } finally {
       setBusy(false)
     }

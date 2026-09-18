@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { createServerClient } from '@supabase/ssr';
+import { getSupabaseProjectUrl, getSupabasePublishableKey } from '@/lib/supabase/config';
 
 const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
@@ -10,8 +11,10 @@ const PUBLIC_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
   '/auth/login',
+  '/auth/reset',
   '/auth/callback',
   '/api/auth',
+  '/api/auth/recover',
   '/offline',
   '/manifest.json',
   '/sw.js',
@@ -66,20 +69,8 @@ if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
     return response;
   }
 
-  const url = (
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL ||
-    process.env.SUPABASE_URL
-  )?.trim();
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim();
+  const url = getSupabaseProjectUrl();
+  const key = getSupabasePublishableKey();
 
   if (!url || !key) {
     return NextResponse.json(

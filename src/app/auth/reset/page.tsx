@@ -4,16 +4,22 @@ import { FormEvent, Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getPasswordResetRedirectTo } from '@/lib/supabase/redirect'
 
 function ResetPasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const callbackError = searchParams.get('error')
   const [email, setEmail] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(
+    callbackError === 'invalid-link'
+      ? 'This reset link is invalid or has expired. Request a new one.'
+      : '',
+  )
   const [sent, setSent] = useState(false)
   const isRecoverySession = Boolean(searchParams.get('code')) || searchParams.get('mode') === 'update'
 
@@ -34,7 +40,7 @@ function ResetPasswordContent() {
         body: JSON.stringify({
           mode: 'forgot-password',
           email: email.trim(),
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/auth/reset?mode=update')}`,
+          redirectTo: getPasswordResetRedirectTo(window.location.origin),
         }),
       })
       const result = await response.json().catch(() => ({})) as { error?: string }
