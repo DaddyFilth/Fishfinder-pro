@@ -23,17 +23,17 @@ export async function GET(request: Request) {
   let authFailed = false
   if (code || (tokenHash && otpType)) {
     const supabase = await createClient()
-    if (supabase) {
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        authFailed = Boolean(error)
-      } else if (tokenHash && otpType) {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: otpType,
-        })
-        authFailed = Boolean(error)
-      }
+    if (!supabase) {
+      authFailed = true
+    } else if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      authFailed = Boolean(error)
+    } else if (tokenHash && otpType) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: otpType,
+      })
+      authFailed = Boolean(error)
     }
   }
 
