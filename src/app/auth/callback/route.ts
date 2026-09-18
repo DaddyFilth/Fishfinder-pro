@@ -20,18 +20,28 @@ export async function GET(request: Request) {
   const next = getSafeNextPath(url.searchParams.get('next'))
   const otpType = type && OTP_TYPES.has(type) ? (type as EmailOtpType) : null
 
+  let authFailed = false
   if (code || (tokenHash && otpType)) {
     const supabase = await createClient()
     if (supabase) {
       if (code) {
-        await supabase.auth.exchangeCodeForSession(code)
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        authFailed = Boolean(error)
       } else if (tokenHash && otpType) {
-        await supabase.auth.verifyOtp({
+        const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: otpType,
         })
+        authFailed = Boolean(error)
       }
     }
+  }
+
+  if (authFailed) {
+    const fallbackPath = otpType === 'recovery'
+      ? '/auth/reset?error=invalid-link'
+      : '/auth/login?error=auth-callback'
+    return NextResponse.redirect(new URL(fallbackPath, url.origin))
   }
 
   return NextResponse.redirect(new URL(next, url.origin))
