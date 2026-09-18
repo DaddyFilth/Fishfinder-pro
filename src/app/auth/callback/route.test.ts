@@ -6,6 +6,11 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock('@/lib/supabase/redirect', () => ({
+  getSafeNextPath: (value: string | null | undefined) =>
+    value && value.startsWith('/') && !value.startsWith('//') ? value : '/',
+}))
+
 const createClientMock = vi.mocked(createClient)
 
 function mockAuthClient() {
