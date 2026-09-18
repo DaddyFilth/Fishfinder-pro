@@ -1,12 +1,13 @@
-"""Rewrite .env.local using Postfre host keys."""
+"""Rewrite .env.local using PostgREST host keys."""
 
 d = {}
-for line in open(".env.local"):
-    line = line.strip()
-    if "=" not in line:
-        continue
-    k, v = line.split("=", 1)
-    d[k.strip()] = v.strip()
+with open(".env.local") as handle:
+    for line in handle:
+        line = line.strip()
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        d[k.strip()] = v.strip()
 g = d.get
 out = [
     "NEXT_PUBLIC_SUPABASE_URL=" + g("POSTFRE_HOST_SUPABASE_URL", ""),
@@ -18,5 +19,6 @@ out = [
     "OLLAMA_MODEL=llama3.1",
     "OLLAMA_VISION_MODEL=llama3.2-vision",
 ]
-open(".env.local", "w").write(chr(10).join(out) + chr(10))
+with open(".env.local", "w") as handle:
+    handle.write(chr(10).join(out) + chr(10))
 print("rewritten")
