@@ -9,12 +9,17 @@ import { getPasswordResetRedirectTo } from '@/lib/supabase/redirect'
 function ResetPasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const callbackError = searchParams.get('error')
   const [email, setEmail] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(
+    callbackError === 'invalid-link'
+      ? 'This reset link is invalid or has expired. Request a new one.'
+      : '',
+  )
   const [sent, setSent] = useState(false)
   const isRecoverySession = Boolean(searchParams.get('code')) || searchParams.get('mode') === 'update'
 

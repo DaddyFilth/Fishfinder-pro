@@ -67,4 +67,26 @@ describe('GET /auth/callback', () => {
     expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('auth-code')
     expect(response.headers.get('location')).toBe('https://www.fishfinder-pro.online/')
   })
+
+  it('redirects recovery failures back to reset flow', async () => {
+    const verifyOtp = vi.fn().mockResolvedValue({ error: { message: 'invalid token' } })
+    createClientMock.mockResolvedValue({
+      auth: {
+        exchangeCodeForSession: vi.fn().mockResolvedValue({ error: null }),
+        verifyOtp,
+      },
+    } as never)
+
+    const response = await GET(
+      new Request('https://www.fishfinder-pro.online/auth/callback?token_hash=bad&type=recovery&next=%2Faccount'),
+    )
+
+    expect(verifyOtp).toHaveBeenCalledWith({
+      token_hash: 'bad',
+      type: 'recovery',
+    })
+    expect(response.headers.get('location')).toBe(
+      'https://www.fishfinder-pro.online/auth/reset?error=invalid-link',
+    )
+  })
 })
