@@ -20,7 +20,7 @@ describe('Copilot context guard', () => {
     expect(copilotIgnore).toContain('VERCEL_DEPLOYMENT_CHECKLIST.md')
     expect(copilotIgnore).toContain('VERCEL_ENV_SETUP.md')
     expect(copilotIgnore).toContain('audit_map.py')
-    expect(copilotIgnore).toContain('fix-env.py')
+    expect(copilotIgnore).toContain('fix_env.py')
     expect(copilotIgnore).toContain('fix_emojis.py')
     expect(copilotIgnore).toContain('fix_species.py')
     expect(copilotIgnore).toContain('fix_use_client.py')

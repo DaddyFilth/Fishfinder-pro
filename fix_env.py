@@ -1,3 +1,5 @@
+"""Rewrite .env.local using Postfre host keys."""
+
 d = {}
 for line in open(".env.local"):
     line = line.strip()
@@ -9,7 +11,8 @@ g = d.get
 out = [
     "NEXT_PUBLIC_SUPABASE_URL=" + g("POSTFRE_HOST_SUPABASE_URL", ""),
     "NEXT_PUBLIC_SUPABASE_ANON_KEY=" + g("POSTFRE_HOST_SUPABASE_ANON_KEY", ""),
-    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=" + g("NEXT_PUBLIC_POSTFRE_HOST_SUPABASE_PUBLISHABLE_KEY", ""),
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="
+    + g("NEXT_PUBLIC_POSTFRE_HOST_SUPABASE_PUBLISHABLE_KEY", ""),
     "SUPABASE_SERVICE_ROLE_KEY=" + g("POSTFRE_HOST_SUPABASE_SERVICE_ROLE_KEY", ""),
     "OLLAMA_BASE_URL=http://localhost:11434/v1",
     "OLLAMA_MODEL=llama3.1",
