@@ -20,8 +20,8 @@ export async function GET(request: Request) {
   const next = getSafeNextPath(url.searchParams.get('next'))
   const otpType = type && OTP_TYPES.has(type) ? (type as EmailOtpType) : null
 
-  let authFailed = false
-  if (code || tokenHash) {
+  let authFailed = !code && !tokenHash
+  if (!authFailed) {
     const supabase = await createClient()
     if (!supabase) {
       authFailed = true
