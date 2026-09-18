@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getPasswordResetRedirectTo } from '@/lib/supabase/redirect'
 import {
   enforceRateLimit,
   requestBodyTooLarge,
@@ -13,6 +14,7 @@ const ALLOWED_ORIGINS = new Set([
 ])
 
 export async function POST(request: Request) {
+  const requestUrl = new URL(request.url)
   const limited = enforceRateLimit(request, {
     name: 'auth-recovery',
     limit: 5,
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const redirectTo = 'https://www.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate'
+    const redirectTo = getPasswordResetRedirectTo(requestUrl.origin)
 
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
