@@ -103,4 +103,18 @@ describe('GET /auth/callback', () => {
       'https://www.fishfinder-pro.online/auth/login?error=auth-callback',
     )
   })
+
+  it('rejects callback requests without auth credentials', async () => {
+    const auth = mockAuthClient()
+
+    const response = await GET(
+      new Request('https://www.fishfinder-pro.online/auth/callback?next=%2Faccount'),
+    )
+
+    expect(auth.exchangeCodeForSession).not.toHaveBeenCalled()
+    expect(auth.verifyOtp).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBe(
+      'https://www.fishfinder-pro.online/auth/login?error=auth-callback',
+    )
+  })
 })
