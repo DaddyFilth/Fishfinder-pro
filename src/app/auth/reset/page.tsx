@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getPasswordResetRedirectTo } from '@/lib/supabase/redirect'
 
 function ResetPasswordContent() {
   const router = useRouter()
@@ -34,7 +35,7 @@ function ResetPasswordContent() {
         body: JSON.stringify({
           mode: 'forgot-password',
           email: email.trim(),
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/auth/reset?mode=update')}`,
+          redirectTo: getPasswordResetRedirectTo(window.location.origin),
         }),
       })
       const result = await response.json().catch(() => ({})) as { error?: string }

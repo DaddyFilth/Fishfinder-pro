@@ -4,7 +4,11 @@ import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getSafeNextPath } from '@/lib/supabase/redirect'
+import {
+  getAuthCallbackUrl,
+  getSafeNextPath,
+  shouldFollowUpPasswordSignIn,
+} from '@/lib/supabase/redirect'
 
 type Mode = 'login' | 'signup'
 
@@ -80,11 +84,12 @@ export default function LoginPage() {
         throw new Error('Authentication is not configured. Please try again later.')
       }
 
-      const redirectTo = `${window.location.origin}/auth/callback`
+      const cleanEmail = email.trim()
+      const redirectTo = getAuthCallbackUrl(window.location.origin)
 
       if (mode === 'signup') {
         const created = await supabase.auth.signUp({
-          email: email.trim(),
+          email: cleanEmail,
           password,
           options: {
             data: fullName.trim() ? { full_name: fullName.trim() } : {},
@@ -93,21 +98,33 @@ export default function LoginPage() {
         })
         if (created.error) throw mapAuthError('signup', created.error.message)
 
-        if (!created.data.session) {
+        if (shouldFollowUpPasswordSignIn(mode, created.data.session)) {
           const signedIn = await supabase.auth.signInWithPassword({
-            email: email.trim(),
+            email: cleanEmail,
             password,
           })
-          if (signedIn.error || !signedIn.data.session) {
-            throw new Error('Account created. Log in with the same email and password.')
+          if (signedIn.error) {
+            const message = signedIn.error.message.toLowerCase()
+            if (message.includes('confirm') || message.includes('verify')) {
+              setMode('login')
+              setPassword('')
+              setSuccessMessage('Account created. Check your email to confirm your account, then log in.')
+              return
+            }
+            throw new Error('Account created, but automatic sign-in failed. Log in manually.')
+          }
+          if (!signedIn.data.session) {
+            throw new Error('Account created, but automatic sign-in failed. Log in manually.')
           }
         }
       } else {
         const signedIn = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: cleanEmail,
           password,
         })
-        if (signedIn.error) throw mapAuthError('login', signedIn.error.message)
+        if (signedIn.error || !signedIn.data.session) {
+          throw mapAuthError('login', signedIn.error?.message || 'Unable to sign in.')
+        }
       }
 
       router.replace(nextPath)
