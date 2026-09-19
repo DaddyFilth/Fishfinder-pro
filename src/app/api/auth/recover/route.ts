@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getPasswordResetRedirectTo } from '@/lib/supabase/redirect'
+import {
+  getPasswordResetRedirectTo,
+  isAllowedAuthRequestOrigin,
+} from '@/lib/supabase/redirect'
 import {
   enforceRateLimit,
   requestBodyTooLarge,
   tooLarge,
 } from '@/lib/security'
-
-const ALLOWED_ORIGINS = new Set([
-  'https://fishfinder-pro.online',
-  'https://www.fishfinder-pro.online',
-  'http://localhost:3000',
-])
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
@@ -27,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const origin = request.headers.get('origin')
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  if (!isAllowedAuthRequestOrigin(origin, requestUrl, request.headers.get('sec-fetch-site'))) {
     return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   }
 
