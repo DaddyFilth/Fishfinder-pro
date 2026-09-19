@@ -100,7 +100,7 @@ describe('POST /api/auth login confirmation', () => {
   it('accepts preview deployment origins for login requests', async () => {
     mockLoginResult({ session: { access_token: 'test-token' } })
 
-    const response = await POST(previewLoginRequest('https://fishfinder-pro-git-other.vercel.app'))
+    const response = await POST(previewLoginRequest())
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ confirmed: true })
