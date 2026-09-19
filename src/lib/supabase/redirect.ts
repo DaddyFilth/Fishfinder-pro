@@ -39,9 +39,7 @@ export function isAllowedAuthRequestOrigin(
     return false
   }
 
-  if (origin === requestUrl.origin) return true
-
-  return secFetchSite === 'same-origin'
+  return origin === requestUrl.origin
 }
 
 export function getAuthCallbackUrl(origin: string, next?: string | null) {
