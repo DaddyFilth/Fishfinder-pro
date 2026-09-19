@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAuthContext } from '@/lib/auth/server';
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import {
   enforceRateLimit,
   isSameOrigin,
@@ -47,6 +47,20 @@ function validHazardExpiry(expiresAt: string | null | undefined) {
   return Number.isFinite(time) && time > Date.now() && time <= max;
 }
 
+async function fetchKnownSpot(
+  supabase: SupabaseClient,
+  knownSpotId: string,
+) {
+  const { data, error } = await supabase
+    .from('fishing_spots')
+    .select('id, lat, lng')
+    .eq('id', knownSpotId)
+    .maybeSingle();
+
+  if (error) return { knownSpot: null, lookupFailed: true } as const;
+  return { knownSpot: data, lookupFailed: false } as const;
+}
+
 export async function GET(request: NextRequest) {
   const context = await getAuthContext();
 
@@ -66,9 +80,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const knownSpot = DEFAULT_SPOTS.find((spot) => spot.id === knownSpotId);
+  const { knownSpot, lookupFailed } = await fetchKnownSpot(context.supabase, knownSpotId);
+  if (lookupFailed) {
+    return NextResponse.json(
+      { error: 'Unable to validate the selected spot.' },
+      { status: 500 },
+    );
+  }
 
-  if (!knownSpot) {
+  if (!knownSpot || typeof knownSpot.lat !== 'number' || typeof knownSpot.lng !== 'number') {
     return NextResponse.json(
       { error: 'Pins must be attached to a known public-access spot.' },
       { status: 400 },
@@ -140,16 +160,26 @@ export async function POST(request: NextRequest) {
   }
 
   const pin = parsed.data;
-  const knownSpot = DEFAULT_SPOTS.find((spot) => spot.id === pin.knownSpotId);
+  const knownSpotResult = await fetchKnownSpot(context.supabase, pin.knownSpotId);
+  if (knownSpotResult.lookupFailed) {
+    return NextResponse.json(
+      { error: 'Unable to validate the selected spot.' },
+      { status: 500 },
+    );
+  }
 
-  if (!knownSpot) {
+  if (
+    !knownSpotResult.knownSpot ||
+    typeof knownSpotResult.knownSpot.lat !== 'number' ||
+    typeof knownSpotResult.knownSpot.lng !== 'number'
+  ) {
     return NextResponse.json(
       { error: 'Pins must be attached to a known public-access spot.' },
       { status: 400 },
     );
   }
 
-  if (!isNearKnownSpot(knownSpot, pin)) {
+  if (!isNearKnownSpot(knownSpotResult.knownSpot, pin)) {
     return NextResponse.json(
       { error: 'This pin is too far from the selected public-access spot.' },
       { status: 400 },

@@ -7,7 +7,6 @@ import {
 } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { DEFAULT_SPOTS, getDefaultCondition } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
@@ -28,16 +27,9 @@ export async function GET(
   }
 
   const { id } = parsed.data;
-  const fallbackSpot = DEFAULT_SPOTS.find((spot) => spot.id === id);
   const supabase = getSupabaseAdmin();
 
   if (!supabase) {
-    if (fallbackSpot) {
-      return NextResponse.json(getDefaultCondition(fallbackSpot), {
-        headers: { 'x-fishfinder-data-mode': 'local-fallback' },
-      });
-    }
-
     return NextResponse.json(
       { error: 'Database is not configured' },
       { status: 503 },
@@ -51,12 +43,6 @@ export async function GET(
     .single();
 
   if (spotErr || !spot) {
-    if (fallbackSpot) {
-      return NextResponse.json(getDefaultCondition(fallbackSpot), {
-        headers: { 'x-fishfinder-data-mode': 'local-fallback' },
-      });
-    }
-
     return NextResponse.json(
       { error: 'Spot not found' },
       { status: 404 },
