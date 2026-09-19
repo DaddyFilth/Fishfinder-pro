@@ -267,6 +267,8 @@ export default function FishingMap({
   const hudStatusColor =
     spotDataMode === 'live'
       ? '#22c55e'
+      : spotDataMode === 'cached'
+        ? '#fbbf24'
       : spotDataMode === 'loading'
         ? '#94a3b8'
         : '#f59e0b';

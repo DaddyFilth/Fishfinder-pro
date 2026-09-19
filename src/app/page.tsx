@@ -31,7 +31,7 @@ function resolveSpotDataMode(
   isOnline: boolean,
 ): DataMode {
   if (source === 'loading') return 'loading';
-  if (!isOnline) return 'offline';
+  if (!isOnline && source === 'live') return 'offline';
   if (source === 'live') return 'live';
   return source;
 }
