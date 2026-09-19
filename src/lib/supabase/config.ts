@@ -18,8 +18,6 @@ export function getSupabaseProjectUrl() {
   const explicit = firstDefined([
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_URL,
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL,
   ])
 
   return normalizeSupabaseUrl(explicit)
@@ -31,9 +29,6 @@ export function getSupabasePublishableKey() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     process.env.SUPABASE_PUBLISHABLE_KEY,
     process.env.SUPABASE_ANON_KEY,
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_PUBLISHABLE_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_ANON_KEY,
   ])
 }
 
