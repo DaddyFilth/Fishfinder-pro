@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
-import { shouldFollowUpPasswordSignIn } from '@/lib/supabase/redirect'
+import { shouldFollowUpPasswordSignIn } from '../../../lib/supabase/redirect'
 
 const authSchema = z.discriminatedUnion('mode', [
   z.object({
