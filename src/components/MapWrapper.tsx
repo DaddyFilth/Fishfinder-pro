@@ -113,7 +113,6 @@ type SpotDataMode =
   | 'live'
   | 'cached'
   | 'fallback'
-  | 'offline'
   | 'offline-live'
   | 'offline-cached'
   | 'offline-fallback'
