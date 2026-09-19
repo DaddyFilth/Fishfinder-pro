@@ -24,6 +24,7 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     if (!supabase) {
       return NextResponse.json([...DEFAULT_SPOTS], {
+        status: 206,
         headers: fallbackHeaders,
       });
     }
@@ -35,6 +36,7 @@ export async function GET() {
 
     if (error) {
       return NextResponse.json([...DEFAULT_SPOTS], {
+        status: 206,
         headers: fallbackHeaders,
       });
     }
@@ -42,6 +44,7 @@ export async function GET() {
     const oklahomaSpots = (spots ?? []).filter(isOklahomaSpot);
     if (oklahomaSpots.length === 0) {
       return NextResponse.json([...DEFAULT_SPOTS], {
+        status: 206,
         headers: fallbackHeaders,
       });
     }
@@ -54,6 +57,7 @@ export async function GET() {
     });
   } catch {
     return NextResponse.json([...DEFAULT_SPOTS], {
+      status: 206,
       headers: fallbackHeaders,
     });
   }
