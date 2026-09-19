@@ -32,6 +32,7 @@ jobs:
         run: echo 'Skipping Contrast scan because required Contrast secrets or CONTRAST_ARTIFACT_PATH are not configured.'
 
       - name: Contrast Scan Action
+        id: contrast_scan
         if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != ''
         uses: Contrast-Security-OSS/contrastscan-action@7352a45d9678ec8a434cf061b07ffb51c1e351a1
         with:
@@ -41,7 +42,7 @@ jobs:
           authHeader: ${{ env.CONTRAST_AUTH_HEADER }}
 
       - name: Upload SARIF file
-        if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != ''
+        if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != '' && steps.contrast_scan.outcome == 'success' && hashFiles('results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
