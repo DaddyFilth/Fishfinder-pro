@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
-import { getSafeNextPath, shouldFollowUpPasswordSignIn } from '../../../lib/supabase/redirect'
+import {
+  getSafeNextPath,
+  isAllowedAuthRequestOrigin,
+  shouldFollowUpPasswordSignIn,
+} from '../../../lib/supabase/redirect'
 
 const authSchema = z.discriminatedUnion('mode', [
   z.object({
@@ -54,26 +58,8 @@ export async function POST(request: Request) {
   if (requestBodyTooLarge(request, 8_192)) return tooLarge()
   const requestUrl = new URL(request.url)
   const origin = request.headers.get('origin')
-  if (origin) {
-    try {
-      const requestOrigin = new URL(origin)
-      const requestHost = requestUrl.hostname
-      const isLoopback = (hostname: string) =>
-        hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
-      const isPreviewHost = (hostname: string) =>
-        isLoopback(hostname) ||
-        hostname.endsWith('.vercel.app') ||
-        hostname.endsWith('.vercel.run')
-      const sameOrigin = origin === requestUrl.origin || (
-        requestOrigin.protocol === requestUrl.protocol &&
-        isPreviewHost(requestHost) &&
-        isPreviewHost(requestOrigin.hostname)
-      )
-      const sameSiteRequest = request.headers.get('sec-fetch-site') === 'same-origin'
-      if (!sameOrigin && !sameSiteRequest) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
-    } catch {
-      return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
-    }
+  if (!isAllowedAuthRequestOrigin(origin, requestUrl, request.headers.get('sec-fetch-site'))) {
+    return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   }
   const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
   if (rateLimited) return rateLimited
