@@ -71,6 +71,7 @@ describe('auth request origins', () => {
   it('accepts same-origin auth requests', () => {
     const previewUrl = new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth')
     expect(isAllowedAuthRequestOrigin(previewUrl.origin, previewUrl)).toBe(true)
+    expect(isAllowedAuthRequestOrigin(null, previewUrl, 'same-origin')).toBe(true)
   })
 
   it('rejects unrelated cross-site origins', () => {
@@ -90,6 +91,12 @@ describe('auth request origins', () => {
       isAllowedAuthRequestOrigin(
         'https://fishfinder-pro-git-other.vercel.app',
         new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth'),
+      ),
+    ).toBe(false)
+    expect(
+      isAllowedAuthRequestOrigin(
+        null,
+        new URL('https://www.fishfinder-pro.online/api/auth'),
       ),
     ).toBe(false)
   })
