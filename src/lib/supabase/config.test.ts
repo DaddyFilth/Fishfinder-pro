@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getSupabaseProjectUrl } from './config'
+import { getSupabaseProjectUrl, getSupabasePublicConfig, getSupabasePublishableKey } from './config'
 
 describe('getSupabaseProjectUrl', () => {
   afterEach(() => {
@@ -23,5 +23,52 @@ describe('getSupabaseProjectUrl', () => {
   it('returns null for invalid URLs', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'not a url')
     expect(getSupabaseProjectUrl()).toBeNull()
+  })
+})
+
+describe('getSupabasePublishableKey', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns the publishable key when configured', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'publishable-key')
+    expect(getSupabasePublishableKey()).toBe('publishable-key')
+  })
+
+  it('falls back to NEXT_PUBLIC_SUPABASE_ANON_KEY', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key')
+    expect(getSupabasePublishableKey()).toBe('anon-key')
+  })
+})
+
+describe('getSupabasePublicConfig', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns the primary public Supabase settings', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co/auth/v1')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'publishable-key')
+
+    expect(getSupabasePublicConfig()).toEqual({
+      url: 'https://project.supabase.co',
+      key: 'publishable-key',
+    })
+  })
+
+  it('returns null when either public setting is missing', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co')
+    expect(getSupabasePublicConfig()).toBeNull()
+  })
+
+  it('combines the normalized URL with the anon-key fallback', () => {
+    vi.stubEnv('SUPABASE_URL', 'https://fallback.supabase.co/rest/v1')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key')
+
+    expect(getSupabasePublicConfig()).toEqual({
+      url: 'https://fallback.supabase.co',
+      key: 'anon-key',
+    })
   })
 })
