@@ -16,7 +16,7 @@ import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFil
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
-import { createClient, hasSupabasePublicConfig } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
@@ -183,7 +183,7 @@ async function getSpots(): Promise<SpotLoadResult> {
 
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
-  const [authReady, setAuthReady] = useState(() => !hasSupabasePublicConfig());
+  const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
