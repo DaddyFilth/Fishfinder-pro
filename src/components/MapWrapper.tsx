@@ -103,8 +103,12 @@ interface Cond {
   };
   data_sources: string[];
   cached: boolean;
+  stale?: boolean;
+  warning?: string;
   captured_at: string;
 }
+
+type SpotDataMode = 'live' | 'cached' | 'fallback' | 'offline' | 'loading';
 
 type Tab =
   | 'score'
@@ -188,6 +192,9 @@ export default function FishingMap({
   spots,
   baseLayer,
   layers,
+  isOnline,
+  spotDataMode,
+  spotDataStatusLabel,
   userLocation,
   selectedSpot,
   sheetOpen = false,
@@ -198,6 +205,9 @@ export default function FishingMap({
   spots: Spot[];
   baseLayer: BaseLayer;
   layers: MapLayers;
+  isOnline: boolean;
+  spotDataMode: SpotDataMode;
+  spotDataStatusLabel: string;
   userLocation?: { latitude: number; longitude: number } | null;
   selectedSpot?: Spot | null;
   sheetOpen?: boolean;
@@ -252,22 +262,43 @@ export default function FishingMap({
   );
 
   const hotSpots = rankedSpots.slice(0, 6);
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    const updateConnectionStatus = () => setIsOnline(navigator.onLine);
-
-    updateConnectionStatus();
-    window.addEventListener('online', updateConnectionStatus);
-    window.addEventListener('offline', updateConnectionStatus);
-
-    return () => {
-      window.removeEventListener('online', updateConnectionStatus);
-      window.removeEventListener('offline', updateConnectionStatus);
-    };
-  }, []);
-
   const recentPins = rankedSpots.slice(0, 18);
+  const hudStatusColor =
+    spotDataMode === 'live'
+      ? '#22c55e'
+      : spotDataMode === 'loading'
+        ? '#94a3b8'
+        : '#f59e0b';
+
+  function describeConditionState(condition: Cond) {
+    const fallback = condition.data_sources.includes('Local Oklahoma public-access fallback');
+
+    if (!isOnline) {
+      return {
+        label: fallback ? 'Offline data' : 'Offline cache',
+        tone: '#f59e0b',
+      };
+    }
+
+    if (fallback) {
+      return {
+        label: 'Offline data',
+        tone: '#f59e0b',
+      };
+    }
+
+    if (condition.cached || condition.stale) {
+      return {
+        label: condition.stale ? 'Offline cache' : 'Cached feed',
+        tone: '#fbbf24',
+      };
+    }
+
+    return {
+      label: 'Live feed',
+      tone: '#22c55e',
+    };
+  }
 
   const load = useCallback(async (id: string) => {
     if (conditions[id] || loading[id]) return;
@@ -380,11 +411,11 @@ export default function FishingMap({
             <span
               aria-live="polite"
               style={{
-                color: isOnline ? '#22c55e' : '#f59e0b',
+                color: hudStatusColor,
                 fontWeight: 700,
               }}
             >
-              {isOnline ? 'Live' : 'Offline'}
+              {spotDataStatusLabel}
             </span>
           </div>
         </div>
@@ -465,6 +496,7 @@ export default function FishingMap({
           {spots.map((spot) => {
             const c = conditions[spot.id];
             const activeTab = tabs[spot.id] || 'score';
+            const conditionState = c ? describeConditionState(c) : null;
 
             return (
               <Marker key={spot.id} position={[spot.lat, spot.lng]} eventHandlers={{ click: () => { load(spot.id); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}>
@@ -534,7 +566,7 @@ export default function FishingMap({
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: 11, color: '#cbd5e1' }}>
                                   <div>{depthLabel(c.water_level_m, c.flow_rate_cfs)}</div>
-                                  <div>{c.cached ? 'Cached feed' : 'Live feed'}</div>
+                                  <div style={{ color: conditionState?.tone }}>{conditionState?.label}</div>
                                 </div>
                               </div>
                             </div>
@@ -605,7 +637,7 @@ export default function FishingMap({
   />
 )} 
                         <div style={{ marginTop: 10, fontSize: 10, color: '#6b7280' }}>
-                          {c.cached ? 'Cached' : 'Live'} • {new Date(c.captured_at).toLocaleString()}
+                          {conditionState?.label ?? 'Loading'} • {new Date(c.captured_at).toLocaleString()}
                         </div>
                       </>
                     )}
