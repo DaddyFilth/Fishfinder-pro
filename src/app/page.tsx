@@ -14,7 +14,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -79,6 +79,15 @@ function mapStatusLabel(mode: DataMode) {
     default:
       return 'Loading';
   }
+}
+
+function isOklahomaSpot(spot: Pick<Spot, 'lat' | 'lng'>) {
+  return (
+    spot.lat >= OKLAHOMA_BOUNDS.minLat &&
+    spot.lat <= OKLAHOMA_BOUNDS.maxLat &&
+    spot.lng >= OKLAHOMA_BOUNDS.minLng &&
+    spot.lng <= OKLAHOMA_BOUNDS.maxLng
+  );
 }
 
 // ─── Shared style constants ───────────────────────────────────────────────────
@@ -227,6 +236,19 @@ async function getSpots(): Promise<SpotLoadResult> {
 
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
+      const filtered = data.filter(
+        (spot): spot is Spot =>
+          typeof spot?.id === 'string' &&
+          typeof spot?.name === 'string' &&
+          typeof spot?.lat === 'number' &&
+          typeof spot?.lng === 'number' &&
+          typeof spot?.water_type === 'string' &&
+          typeof spot?.spot_type === 'string' &&
+          isOklahomaSpot(spot),
+      );
+
+      if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
+
       const savedAt = new Date().toISOString();
       const dataMode = res.headers.get('x-fishfinder-data-mode');
       const source =
@@ -235,9 +257,9 @@ async function getSpots(): Promise<SpotLoadResult> {
           : dataMode === 'cached' || dataMode === 'stale-cache'
             ? 'cached'
             : 'live';
-      cacheSpots(data, savedAt);
+      cacheSpots(filtered, savedAt);
       return {
-        spots: data,
+        spots: filtered,
         source,
         savedAt,
       };

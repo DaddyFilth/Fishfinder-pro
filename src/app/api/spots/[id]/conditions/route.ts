@@ -19,8 +19,8 @@ function fallbackConditionResponse(id: string) {
   return NextResponse.json(
     {
       ...getDefaultCondition(fallbackSpot),
-      cached: true,
-      stale: true,
+      cached: false,
+      stale: false,
       data_mode: 'fallback',
       warning:
         'Live environmental data is unavailable. Showing bundled Oklahoma fallback conditions.',
