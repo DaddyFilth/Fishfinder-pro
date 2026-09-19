@@ -27,6 +27,7 @@ type DataMode =
   | 'cached'
   | 'fallback'
   | 'offline'
+  | 'offline-live'
   | 'offline-cached'
   | 'offline-fallback'
   | 'loading';
@@ -42,6 +43,7 @@ function resolveSpotDataMode(
   isOnline: boolean,
 ): DataMode {
   if (source === 'loading') return isOnline ? 'loading' : 'offline';
+  if (!isOnline && source === 'live') return 'offline-live';
   if (!isOnline && source === 'cached') return 'offline-cached';
   if (!isOnline && source === 'fallback') return 'offline-fallback';
   return source;
@@ -55,6 +57,8 @@ function badgeState(mode: DataMode) {
       return { label: '● CACHED', color: '#fbbf24' };
     case 'fallback':
       return { label: '● FALLBACK', color: '#f59e0b' };
+    case 'offline-live':
+      return { label: '● OFFLINE · LIVE DATA', color: '#f59e0b' };
     case 'offline-fallback':
       return { label: '● OFFLINE DATA', color: '#f59e0b' };
     case 'offline':
@@ -74,6 +78,8 @@ function mapStatusLabel(mode: DataMode) {
       return 'Cached';
     case 'fallback':
       return 'Fallback';
+    case 'offline-live':
+      return 'Offline · live data';
     case 'offline':
       return 'Offline';
     case 'offline-cached':

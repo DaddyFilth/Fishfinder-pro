@@ -114,6 +114,7 @@ type SpotDataMode =
   | 'cached'
   | 'fallback'
   | 'offline'
+  | 'offline-live'
   | 'offline-cached'
   | 'offline-fallback'
   | 'loading';
