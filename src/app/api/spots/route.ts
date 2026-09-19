@@ -23,8 +23,7 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
     if (!supabase) {
-      return NextResponse.json([...DEFAULT_SPOTS], {
-        status: 206,
+      return NextResponse.json({ spots: [...DEFAULT_SPOTS], data_mode: 'fallback' }, {
         headers: fallbackHeaders,
       });
     }
@@ -35,29 +34,26 @@ export async function GET() {
       .order('name');
 
     if (error) {
-      return NextResponse.json([...DEFAULT_SPOTS], {
-        status: 206,
+      return NextResponse.json({ spots: [...DEFAULT_SPOTS], data_mode: 'fallback' }, {
         headers: fallbackHeaders,
       });
     }
 
     const oklahomaSpots = (spots ?? []).filter(isOklahomaSpot);
     if (oklahomaSpots.length === 0) {
-      return NextResponse.json([...DEFAULT_SPOTS], {
-        status: 206,
+      return NextResponse.json({ spots: [...DEFAULT_SPOTS], data_mode: 'fallback' }, {
         headers: fallbackHeaders,
       });
     }
 
-    return NextResponse.json(oklahomaSpots, {
+    return NextResponse.json({ spots: oklahomaSpots, data_mode: 'live' }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600',
         'x-fishfinder-data-mode': 'live',
       },
     });
   } catch {
-    return NextResponse.json([...DEFAULT_SPOTS], {
-      status: 206,
+    return NextResponse.json({ spots: [...DEFAULT_SPOTS], data_mode: 'fallback' }, {
       headers: fallbackHeaders,
     });
   }
