@@ -28,10 +28,26 @@ function loginRequest() {
   })
 }
 
+function signupRequest(body: Record<string, unknown> = {}) {
+  return new Request('https://fishfinder-pro.online/api/auth', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      mode: 'signup',
+      email: 'angler@example.com',
+      password: 'very-secret',
+      fullName: 'River Runner',
+      ...body,
+    }),
+  })
+}
+
 function mockLoginResult(data: unknown) {
   createClientMock.mockResolvedValue({
     auth: {
+      signUp: vi.fn(),
       signInWithPassword: vi.fn().mockResolvedValue({ data, error: null }),
+      resetPasswordForEmail: vi.fn(),
     },
   } as never)
 }
@@ -64,5 +80,94 @@ describe('POST /api/auth login confirmation', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ confirmed: false })
+  })
+})
+
+describe('POST /api/auth signup follow-up sign-in', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('signs the user in when signup succeeds without an initial session', async () => {
+    const signUp = vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    })
+    createClientMock.mockResolvedValue({
+      auth: {
+        signUp,
+        signInWithPassword,
+        resetPasswordForEmail: vi.fn(),
+      },
+    } as never)
+
+    const response = await POST(signupRequest())
+
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'angler@example.com',
+      password: 'very-secret',
+      options: {
+        data: { full_name: 'River Runner' },
+      },
+    })
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: 'angler@example.com',
+      password: 'very-secret',
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ confirmed: true })
+  })
+
+  it('keeps the email confirmation flow when follow-up sign-in requires confirmation', async () => {
+    const signUp = vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Email not confirmed' },
+    })
+    createClientMock.mockResolvedValue({
+      auth: {
+        signUp,
+        signInWithPassword,
+        resetPasswordForEmail: vi.fn(),
+      },
+    } as never)
+
+    const response = await POST(signupRequest())
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      confirmed: false,
+      confirmationRequired: true,
+    })
+  })
+
+  it('passes callback next paths through signup redirects', async () => {
+    const signUp = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    })
+    createClientMock.mockResolvedValue({
+      auth: {
+        signUp,
+        signInWithPassword: vi.fn(),
+        resetPasswordForEmail: vi.fn(),
+      },
+    } as never)
+
+    const response = await POST(signupRequest({
+      redirectTo: 'https://fishfinder-pro.online/auth/callback?next=%2Faccount',
+    }))
+
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'angler@example.com',
+      password: 'very-secret',
+      options: {
+        data: { full_name: 'River Runner' },
+        emailRedirectTo: 'https://fishfinder-pro.online/auth/callback?next=%2Faccount',
+      },
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ confirmed: true })
   })
 })
