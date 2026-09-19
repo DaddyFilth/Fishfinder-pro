@@ -22,7 +22,14 @@ import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
-type DataMode = 'live' | 'cached' | 'fallback' | 'offline' | 'loading';
+type DataMode =
+  | 'live'
+  | 'cached'
+  | 'fallback'
+  | 'offline'
+  | 'offline-cached'
+  | 'offline-fallback'
+  | 'loading';
 
 interface SpotCondition { fishing_score?: number | null }
 
@@ -32,6 +39,8 @@ function resolveSpotDataMode(
 ): DataMode {
   if (source === 'loading') return 'loading';
   if (!isOnline && source === 'live') return 'offline';
+  if (!isOnline && source === 'cached') return 'offline-cached';
+  if (!isOnline && source === 'fallback') return 'offline-fallback';
   if (source === 'live') return 'live';
   return source;
 }
@@ -43,9 +52,13 @@ function badgeState(mode: DataMode) {
     case 'cached':
       return { label: '● CACHED', color: '#fbbf24' };
     case 'fallback':
+      return { label: '● FALLBACK', color: '#f59e0b' };
+    case 'offline-fallback':
       return { label: '● OFFLINE DATA', color: '#f59e0b' };
     case 'offline':
       return { label: '● OFFLINE', color: '#f59e0b' };
+    case 'offline-cached':
+      return { label: '● OFFLINE CACHE', color: '#fbbf24' };
     default:
       return { label: '● LOADING', color: '#94a3b8' };
   }
@@ -58,9 +71,13 @@ function mapStatusLabel(mode: DataMode) {
     case 'cached':
       return 'Cached';
     case 'fallback':
-      return 'Offline data';
+      return 'Fallback';
     case 'offline':
       return 'Offline';
+    case 'offline-cached':
+      return 'Offline cache';
+    case 'offline-fallback':
+      return 'Offline data';
     default:
       return 'Loading';
   }
