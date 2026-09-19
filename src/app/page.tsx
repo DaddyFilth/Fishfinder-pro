@@ -37,7 +37,7 @@ function resolveSpotDataMode(
   source: SpotLoadResult['source'] | 'loading',
   isOnline: boolean,
 ): DataMode {
-  if (source === 'loading') return 'loading';
+  if (source === 'loading') return isOnline ? 'loading' : 'offline';
   if (!isOnline && source === 'cached') return 'offline-cached';
   if (!isOnline && source === 'fallback') return 'offline-fallback';
   return source;

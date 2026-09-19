@@ -190,6 +190,21 @@ export async function GET(
   if (noLiveProviderData) {
     const fallback = fallbackConditionResponse(id);
     if (fallback) return fallback;
+
+    return NextResponse.json(
+      {
+        error:
+          'Live environmental data is temporarily unavailable and no cached or bundled fallback conditions exist for this spot.',
+        data_mode: 'unavailable',
+      },
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-store',
+          'x-fishfinder-data-mode': 'unavailable',
+        },
+      },
+    );
   }
 
   const dataSources = [
