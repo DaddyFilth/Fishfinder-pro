@@ -170,4 +170,32 @@ describe('POST /api/auth signup follow-up sign-in', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ confirmed: true })
   })
+
+  it('rejects unsafe callback next paths from redirectTo payloads', async () => {
+    const signUp = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    })
+    createClientMock.mockResolvedValue({
+      auth: {
+        signUp,
+        signInWithPassword: vi.fn(),
+        resetPasswordForEmail: vi.fn(),
+      },
+    } as never)
+
+    const response = await POST(signupRequest({
+      redirectTo: 'https://fishfinder-pro.online/auth/callback?next=%2F%5Cevil',
+    }))
+
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'angler@example.com',
+      password: 'very-secret',
+      options: {
+        data: { full_name: 'River Runner' },
+      },
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ confirmed: true })
+  })
 })

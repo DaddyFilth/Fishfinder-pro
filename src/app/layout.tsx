@@ -8,8 +8,28 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.fishfinder-pro.online"),
   verification: { google: 'a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38' },
-  title: "Oklahoma SeamCast",
+  title: {
+    default: 'Oklahoma SeamCast',
+    template: '%s | Oklahoma SeamCast',
+  },
   description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Oklahoma SeamCast',
+    title: 'Oklahoma SeamCast',
+    description: 'Oklahoma public fishing access, species, conditions, and AI-powered trip planning.',
+    url: '/',
+    images: [{ url: '/icons/icon-512.png' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Oklahoma SeamCast',
+    description: 'Oklahoma public fishing access, species, conditions, and AI-powered trip planning.',
+    images: ['/icons/icon-512.png'],
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [
