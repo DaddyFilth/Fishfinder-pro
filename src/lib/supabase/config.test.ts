@@ -47,6 +47,16 @@ describe('getSupabasePublicConfig', () => {
     vi.unstubAllEnvs()
   })
 
+  it('returns the primary public Supabase settings', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co/auth/v1')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'publishable-key')
+
+    expect(getSupabasePublicConfig()).toEqual({
+      url: 'https://project.supabase.co',
+      key: 'publishable-key',
+    })
+  })
+
   it('returns null when either public setting is missing', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co')
     expect(getSupabasePublicConfig()).toBeNull()
