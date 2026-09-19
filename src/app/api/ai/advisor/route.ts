@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
 import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
-function generateFallbackAnalysis(spotName: string): string {
-  return `### 🎣 FishBot Spot Briefing: ${spotName}
-- **Pattern:** Fish are staging around secondary drop-offs and shoreline cover.
-- **Top Baits:** 3/8oz bladed jig in shad patterns, squarebill crankbaits around riprap, or 4" finesse worms.
-- **Key Strategy:** Target windward banks in early morning, moving out to 10-15ft structure as the sun climbs.`;
-}
-
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-advisor', limit: 10, windowMs: 60_000 });
   if (limited) return limited;
@@ -51,8 +44,9 @@ Provide concise, high-impact tactical advice:
       return NextResponse.json({ advice });
     }
   } catch {
-    // API or network failure; safely fall back to verified lake guidance
+    return NextResponse.json(
+      { error: 'AI advisor is temporarily unavailable.' },
+      { status: 502 },
+    );
   }
-
-  return NextResponse.json({ advice: generateFallbackAnalysis(spotName) });
 }
