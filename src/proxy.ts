@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
+import { updateSession } from './lib/supabase/middleware';
 import { createServerClient } from '@supabase/ssr';
-import { getSupabaseProjectUrl, getSupabasePublishableKey } from '@/lib/supabase/config';
+import { getSupabaseProjectUrl, getSupabasePublishableKey } from './lib/supabase/config';
 
 const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
