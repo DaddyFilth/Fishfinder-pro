@@ -86,10 +86,14 @@ export default function LoginPage() {
           email: cleanEmail,
           password,
           ...(mode === 'signup' ? { fullName: fullName.trim() } : {}),
-          redirectTo: getAuthCallbackUrl(window.location.origin),
+          redirectTo: getAuthCallbackUrl(window.location.origin, nextPath),
         }),
       })
-      const result = await response.json().catch(() => ({})) as { error?: string; confirmed?: boolean }
+      const result = await response.json().catch(() => ({})) as {
+        error?: string
+        confirmed?: boolean
+        confirmationRequired?: boolean
+      }
       if (!response.ok || result.error) {
         throw mapAuthError(mode, result.error || 'Unable to authenticate.')
       }
@@ -97,7 +101,11 @@ export default function LoginPage() {
       if (mode === 'signup' && !result.confirmed) {
         setMode('login')
         setPassword('')
-        setSuccessMessage('Account created. Check your email to confirm your account, then log in.')
+        setSuccessMessage(
+          result.confirmationRequired
+            ? 'Account created. Check your email to confirm your account, then log in.'
+            : 'Account created. Log in to continue.',
+        )
         return
       }
 
