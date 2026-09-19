@@ -1,10 +1,24 @@
-const ALLOWED_ORIGINS = new Set([
-  'https://www.fishfinder-pro.online',
-  'https://fishfinder-pro.online',
-  'http://localhost:3000',
-])
-
+const DEFAULT_AUTH_ORIGIN = 'https://www.fishfinder-pro.online'
 const RESET_NEXT_PATH = '/auth/reset?mode=update'
+
+function isLoopbackHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+}
+
+function normalizeOrigin(value: string | null | undefined) {
+  if (!value?.trim()) return null
+
+  try {
+    const parsed = new URL(value)
+    if (isLoopbackHost(parsed.hostname)) {
+      return ['http:', 'https:'].includes(parsed.protocol) ? parsed.origin : null
+    }
+
+    return parsed.protocol === 'https:' ? parsed.origin : null
+  } catch {
+    return null
+  }
+}
 
 export function getSafeNextPath(value: string | null | undefined) {
   return value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')
@@ -12,9 +26,24 @@ export function getSafeNextPath(value: string | null | undefined) {
     : '/'
 }
 
+export function isAllowedAuthRequestOrigin(
+  origin: string | null,
+  requestUrl: URL,
+  secFetchSite?: string | null,
+) {
+  if (!origin) return secFetchSite === 'same-origin'
+
+  try {
+    new URL(origin)
+  } catch {
+    return false
+  }
+
+  return origin === requestUrl.origin
+}
+
 export function getAuthCallbackUrl(origin: string, next?: string | null) {
-  const base = origin.endsWith('/') ? origin.slice(0, -1) : origin
-  const safe = ALLOWED_ORIGINS.has(base) ? base : 'https://www.fishfinder-pro.online'
+  const safe = normalizeOrigin(origin) ?? DEFAULT_AUTH_ORIGIN
   const url = new URL('/auth/callback', safe)
   const nextPath = getSafeNextPath(next)
   if (nextPath !== '/') {

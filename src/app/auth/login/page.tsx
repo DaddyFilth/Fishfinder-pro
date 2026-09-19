@@ -1,8 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   getAuthCallbackUrl,
   getSafeNextPath,
@@ -47,19 +47,31 @@ function mapAuthError(mode: Mode, message: string) {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<main style={{ minHeight: '100dvh', background: '#030712' }} />}>
+      <LoginPageContent />
+    </Suspense>
+  )
+}
+
+function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [busy, setBusy] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState(
+    searchParams.get('error') === 'auth-callback'
+      ? 'Your login link expired or could not be verified. Please try again.'
+      : '',
+  )
   const [successMessage, setSuccessMessage] = useState('')
 
   const nextPath = useMemo(() => {
-    if (typeof window === 'undefined') return '/'
-    return getSafeNextPath(new URLSearchParams(window.location.search).get('next'))
-  }, [])
+    return getSafeNextPath(searchParams.get('next'))
+  }, [searchParams])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()

@@ -19,7 +19,26 @@ const createClientMock = vi.mocked(createClient)
 function loginRequest() {
   return new Request('https://fishfinder-pro.online/api/auth', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'sec-fetch-site': 'same-origin',
+    },
+    body: JSON.stringify({
+      mode: 'login',
+      email: 'angler@example.com',
+      password: 'secret',
+    }),
+  })
+}
+
+function previewLoginRequest(origin = 'https://fishfinder-pro-git-feature.vercel.app') {
+  return new Request('https://fishfinder-pro-git-feature.vercel.app/api/auth', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin,
+      'sec-fetch-site': 'same-origin',
+    },
     body: JSON.stringify({
       mode: 'login',
       email: 'angler@example.com',
@@ -31,7 +50,10 @@ function loginRequest() {
 function signupRequest(body: Record<string, unknown> = {}) {
   return new Request('https://fishfinder-pro.online/api/auth', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'sec-fetch-site': 'same-origin',
+    },
     body: JSON.stringify({
       mode: 'signup',
       email: 'angler@example.com',
@@ -80,6 +102,15 @@ describe('POST /api/auth login confirmation', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ confirmed: false })
+  })
+
+  it('accepts preview deployment origins for login requests', async () => {
+    mockLoginResult({ session: { access_token: 'test-token' } })
+
+    const response = await POST(previewLoginRequest())
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ confirmed: true })
   })
 })
 

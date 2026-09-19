@@ -3,6 +3,7 @@ import {
   getAuthCallbackUrl,
   getPasswordResetRedirectTo,
   getSafeNextPath,
+  isAllowedAuthRequestOrigin,
   shouldFollowUpPasswordSignIn,
 } from './redirect'
 
@@ -31,14 +32,23 @@ describe('auth callback and reset URLs', () => {
     )
   })
 
-  it('does not send reset links to an unknown origin', () => {
-    expect(getPasswordResetRedirectTo('https://evil.example')).toBe(
-      'https://www.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
+  it('keeps HTTPS reset links on the current origin', () => {
+    expect(getPasswordResetRedirectTo('https://staging.fishfinder-pro.online')).toBe(
+      'https://staging.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
     )
   })
 
   it('allows local development', () => {
     expect(getAuthCallbackUrl('http://localhost:3000/')).toBe('http://localhost:3000/auth/callback')
+  })
+
+  it('keeps preview and custom HTTPS origins for callbacks', () => {
+    expect(getAuthCallbackUrl('https://fishfinder-pro-git-feature.vercel.app', '/account')).toBe(
+      'https://fishfinder-pro-git-feature.vercel.app/auth/callback?next=%2Faccount',
+    )
+    expect(getAuthCallbackUrl('https://app.example.com', '/account')).toBe(
+      'https://app.example.com/auth/callback?next=%2Faccount',
+    )
   })
 
   it('preserves safe next paths for auth callbacks', () => {
@@ -48,6 +58,47 @@ describe('auth callback and reset URLs', () => {
     expect(getAuthCallbackUrl('https://www.fishfinder-pro.online', 'https://evil.example')).toBe(
       'https://www.fishfinder-pro.online/auth/callback',
     )
+  })
+
+  it('falls back to production when the origin is invalid', () => {
+    expect(getAuthCallbackUrl('http://staging.fishfinder-pro.online', '/account')).toBe(
+      'https://www.fishfinder-pro.online/auth/callback?next=%2Faccount',
+    )
+  })
+})
+
+describe('auth request origins', () => {
+  it('accepts same-origin auth requests', () => {
+    const previewUrl = new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth')
+    expect(isAllowedAuthRequestOrigin(previewUrl.origin, previewUrl)).toBe(true)
+    expect(isAllowedAuthRequestOrigin(null, previewUrl, 'same-origin')).toBe(true)
+  })
+
+  it('rejects unrelated cross-site origins', () => {
+    expect(
+      isAllowedAuthRequestOrigin(
+        'https://evil.example',
+        new URL('https://www.fishfinder-pro.online/api/auth'),
+      ),
+    ).toBe(false)
+    expect(
+      isAllowedAuthRequestOrigin(
+        'http://127.0.0.1:3001',
+        new URL('http://localhost:3000/api/auth'),
+      ),
+    ).toBe(false)
+    expect(
+      isAllowedAuthRequestOrigin(
+        'https://fishfinder-pro-git-other.vercel.app',
+        new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth'),
+      ),
+    ).toBe(false)
+    expect(
+      isAllowedAuthRequestOrigin(
+        null,
+        new URL('https://www.fishfinder-pro.online/api/auth'),
+      ),
+    ).toBe(false)
   })
 })
 
