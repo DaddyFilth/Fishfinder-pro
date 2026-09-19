@@ -1,18 +1,17 @@
-const SUPABASE_PROJECT_REF = 'dkafqgapepebzjtoghos'
-const SUPABASE_PROJECT_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
-
-function isProjectUrl(value: string | undefined) {
-  if (!value) return false
-  try {
-    const parsed = new URL(value)
-    return parsed.hostname === `${SUPABASE_PROJECT_REF}.supabase.co`
-  } catch {
-    return false
-  }
-}
-
 function firstDefined(candidates: Array<string | undefined>) {
   return candidates.find((value) => Boolean(value?.trim()))?.trim()
+}
+
+function normalizeSupabaseUrl(value: string | undefined) {
+  if (!value) return null
+
+  try {
+    const parsed = new URL(value)
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null
+    return parsed.origin
+  } catch {
+    return null
+  }
 }
 
 export function getSupabaseProjectUrl() {
@@ -23,8 +22,7 @@ export function getSupabaseProjectUrl() {
     process.env.NEXT_PUBLIC_SUPABASE_URL_SUPABASE_URL,
   ])
 
-  if (explicit && !isProjectUrl(explicit)) return null
-  return SUPABASE_PROJECT_URL
+  return normalizeSupabaseUrl(explicit)
 }
 
 export function getSupabasePublishableKey() {
