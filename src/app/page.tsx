@@ -32,6 +32,10 @@ type DataMode =
   | 'loading';
 
 interface SpotCondition { fishing_score?: number | null }
+interface SpotApiPayload {
+  spots?: unknown;
+  data_mode?: string;
+}
 
 function resolveSpotDataMode(
   source: SpotLoadResult['source'] | 'loading',
@@ -234,9 +238,14 @@ async function getSpots(): Promise<SpotLoadResult> {
     const res = await fetch('/api/spots', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      const filtered = data.filter(
+    const payload = (await res.json()) as SpotApiPayload | Spot[];
+    const rawSpots = Array.isArray(payload) ? payload : payload.spots;
+    const dataModeHeader = res.headers.get('x-fishfinder-data-mode');
+    const dataModeBody = Array.isArray(payload) ? null : payload.data_mode;
+    const dataMode = dataModeHeader ?? dataModeBody ?? null;
+
+    if (Array.isArray(rawSpots) && rawSpots.length > 0) {
+      const filtered = rawSpots.filter(
         (spot): spot is Spot =>
           typeof spot?.id === 'string' &&
           typeof spot?.name === 'string' &&
@@ -246,11 +255,10 @@ async function getSpots(): Promise<SpotLoadResult> {
           typeof spot?.spot_type === 'string' &&
           isOklahomaSpot(spot),
       );
-
       if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
-
+      if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
       const savedAt = new Date().toISOString();
-      const dataMode = res.headers.get('x-fishfinder-data-mode');
+      const savedAt = new Date().toISOString();
       const source =
         dataMode === 'fallback'
           ? 'fallback'
