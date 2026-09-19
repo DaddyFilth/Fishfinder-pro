@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
-import { createClient, hasSupabasePublicConfig } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 export default function AuthAccountButton() {
   const [user, setUser] = useState<User | null>(null)
-  const [ready, setReady] = useState(() => !hasSupabasePublicConfig())
+  const [ready, setReady] = useState(() => false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
