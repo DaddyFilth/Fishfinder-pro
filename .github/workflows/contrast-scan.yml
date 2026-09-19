@@ -1,6 +1,12 @@
 name: Contrast Scan
 
 on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "25 7 * * 1"
   workflow_dispatch:
 
 permissions:
