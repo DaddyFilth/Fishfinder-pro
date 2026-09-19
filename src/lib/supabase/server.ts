@@ -1,10 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { getSupabaseProjectUrl, getSupabasePublishableKey } from './config'
+import { getSupabaseProjectUrl, getSupabaseServerKey } from './config'
 
 export async function createClient() {
   const url = getSupabaseProjectUrl()
-  const key = getSupabasePublishableKey()
+  const key = getSupabaseServerKey()
 
   if (!url || !key) return null
 
