@@ -283,13 +283,6 @@ export default function FishingMap({
   function describeConditionState(condition: Cond) {
     const mode = condition.data_mode;
 
-    if (!isOnline) {
-      return {
-        label: mode === 'fallback' ? 'Offline data' : 'Offline cache',
-        tone: '#f59e0b',
-      };
-    }
-
     if (mode === 'fallback') {
       return {
         label: 'Offline data',
@@ -312,7 +305,7 @@ export default function FishingMap({
     }
 
     return {
-      label: 'Live feed',
+      label: !isOnline && mode === 'live' ? 'Live snapshot' : 'Live feed',
       tone: '#22c55e',
     };
   }
