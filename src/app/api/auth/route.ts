@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
-import { shouldFollowUpPasswordSignIn } from '../../../lib/supabase/redirect'
+import { getSafeNextPath, shouldFollowUpPasswordSignIn } from '../../../lib/supabase/redirect'
 
 const authSchema = z.discriminatedUnion('mode', [
   z.object({
@@ -21,8 +21,28 @@ const authSchema = z.discriminatedUnion('mode', [
 
 function safeRedirectTo(value: string | undefined, requestUrl: URL) {
   if (!value) return undefined
-  const redirect = new URL(value)
-  return redirect.origin === requestUrl.origin && redirect.pathname === '/auth/callback' ? value : undefined
+  let redirect: URL
+  try {
+    redirect = new URL(value)
+  } catch {
+    return undefined
+  }
+
+  if (redirect.origin !== requestUrl.origin || redirect.pathname !== '/auth/callback') {
+    return undefined
+  }
+
+  const next = redirect.searchParams.get('next')
+  const safeNext = getSafeNextPath(next)
+  if (next && safeNext !== next) {
+    return undefined
+  }
+
+  const callbackUrl = new URL('/auth/callback', requestUrl.origin)
+  if (safeNext !== '/') {
+    callbackUrl.searchParams.set('next', safeNext)
+  }
+  return callbackUrl.toString()
 }
 
 function hasSession(data: unknown): data is { session: unknown } {
