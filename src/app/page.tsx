@@ -245,7 +245,7 @@ async function getSpots(): Promise<SpotLoadResult> {
     const dataModeBody = Array.isArray(payload) ? null : payload.data_mode;
     const dataMode = dataModeHeader ?? dataModeBody ?? null;
 
-    if (Array.isArray(rawSpots) && rawSpots.length > 0) {
+    if (Array.isArray(rawSpots)) {
       const filtered = rawSpots.filter(
         (spot): spot is Spot =>
           typeof spot?.id === 'string' &&
@@ -256,15 +256,19 @@ async function getSpots(): Promise<SpotLoadResult> {
           typeof spot?.spot_type === 'string' &&
           isOklahomaSpot(spot),
       );
-      if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
-      const savedAt = new Date().toISOString();
+      if (rawSpots.length > 0 && filtered.length === 0) {
+        throw new Error('No supported Oklahoma spots returned');
+      }
+
       const source =
         dataMode === 'fallback'
           ? 'fallback'
           : dataMode === 'cached' || dataMode === 'stale-cache'
             ? 'cached'
             : 'live';
-      cacheSpots(filtered, savedAt);
+
+      const savedAt = filtered.length > 0 ? new Date().toISOString() : null;
+      if (savedAt) cacheSpots(filtered, savedAt);
       return {
         spots: filtered,
         source,

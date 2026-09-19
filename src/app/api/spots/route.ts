@@ -40,12 +40,6 @@ export async function GET() {
     }
 
     const oklahomaSpots = (spots ?? []).filter(isOklahomaSpot);
-    if (oklahomaSpots.length === 0) {
-      return NextResponse.json({ spots: [...DEFAULT_SPOTS], data_mode: 'fallback' }, {
-        headers: fallbackHeaders,
-      });
-    }
-
     return NextResponse.json({ spots: oklahomaSpots, data_mode: 'live' }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600',
