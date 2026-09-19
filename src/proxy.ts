@@ -34,6 +34,20 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function applySecurityHeaders(response: NextResponse, protocol: string) {
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('X-DNS-Prefetch-Control', 'off');
+
+  if (protocol === 'https:') {
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  }
+
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
 if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
   return NextResponse.next();
@@ -53,31 +67,21 @@ if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
     }
   }
 
-  const response = await updateSession(request);
-
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('X-DNS-Prefetch-Control', 'off');
-
-  if (request.nextUrl.protocol === 'https:') {
-    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
-  }
-
   if (isPublicPath(request.nextUrl.pathname)) {
-    return response;
+    return applySecurityHeaders(NextResponse.next({ request }), request.nextUrl.protocol);
   }
 
   const url = getSupabaseProjectUrl();
   const key = getSupabasePublishableKey();
 
   if (!url || !key) {
-    return NextResponse.json(
+    return applySecurityHeaders(NextResponse.json(
       { error: 'Authentication is unavailable because Supabase is not configured.' },
       { status: 503 },
-    );
+    ), request.nextUrl.protocol);
   }
+
+  const response = applySecurityHeaders(await updateSession(request), request.nextUrl.protocol);
 
   const supabase = createServerClient(url, key, {
     cookies: {
