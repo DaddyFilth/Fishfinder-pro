@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { shouldFollowUpPasswordSignIn } from '../../../lib/supabase/redirect'
 
 const authSchema = z.discriminatedUnion('mode', [
   z.object({
@@ -74,44 +75,72 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
     }
 
-    const result = mode === 'forgot-password'
-      ? await supabase.auth.resetPasswordForEmail(email, {
-          ...(redirectTo ? { redirectTo } : {}),
-        })
-      : mode === 'signup'
-        ? await supabase.auth.signUp({
-            email,
-            password: parsed.data.password,
-            options: {
-              data: { full_name: parsed.data.fullName || null },
-              ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
-            },
-          })
-        : await supabase.auth.signInWithPassword({ email, password: parsed.data.password })
+    if (mode === 'forgot-password') {
+      const result = await supabase.auth.resetPasswordForEmail(email, {
+        ...(redirectTo ? { redirectTo } : {}),
+      })
 
-    if (result.error) {
-      if (mode === 'forgot-password') {
+      if (result.error) {
         const message = result.error.message.toLowerCase()
         if (message.includes('rate')) return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 })
         return NextResponse.json({ sent: true })
       }
 
+      return NextResponse.json({ sent: true })
+    }
+
+    if (mode === 'signup') {
+      const signup = await supabase.auth.signUp({
+        email,
+        password: parsed.data.password,
+        options: {
+          data: { full_name: parsed.data.fullName || null },
+          ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
+        },
+      })
+
+      if (signup.error) {
+        const message = signup.error.message.toLowerCase()
+        const safeError = message.includes('confirm')
+          ? 'Please confirm your email before logging in.'
+          : message.includes('rate')
+            ? 'Too many attempts. Please try again later.'
+            : 'Unable to create the account. Check your details and try again.'
+        return NextResponse.json({ error: safeError }, { status: 400 })
+      }
+
+      let confirmed = hasSession(signup.data) && Boolean(signup.data.session)
+      let confirmationRequired = false
+
+      if (shouldFollowUpPasswordSignIn(mode, hasSession(signup.data) ? signup.data.session as { access_token?: string } | null | undefined : undefined)) {
+        const followUp = await supabase.auth.signInWithPassword({ email, password: parsed.data.password })
+        if (followUp.error) {
+          confirmationRequired = followUp.error.message.toLowerCase().includes('confirm')
+        } else {
+          confirmed = hasSession(followUp.data) && Boolean(followUp.data.session)
+        }
+      }
+
+      return NextResponse.json(
+        confirmed
+          ? { confirmed: true }
+          : { confirmed: false, confirmationRequired },
+      )
+    }
+
+    const result = await supabase.auth.signInWithPassword({ email, password: parsed.data.password })
+    if (result.error) {
       const message = result.error.message.toLowerCase()
       const safeError = message.includes('confirm')
         ? 'Please confirm your email before logging in.'
         : message.includes('rate')
           ? 'Too many attempts. Please try again later.'
-          : mode === 'login'
-            ? 'Invalid email or password.'
-            : 'Unable to create the account. Check your details and try again.'
+          : 'Invalid email or password.'
       return NextResponse.json({ error: safeError }, { status: 400 })
     }
 
     const confirmed = hasSession(result.data) && Boolean(result.data.session)
-
-    return mode === 'forgot-password'
-      ? NextResponse.json({ sent: true })
-      : NextResponse.json({ confirmed })
+    return NextResponse.json({ confirmed })
   } catch (error) {
     console.error('[auth] Auth route failure:', error instanceof Error ? error.message : 'unknown error')
     return NextResponse.json({ error: 'Authentication service unavailable.' }, { status: 503 })
