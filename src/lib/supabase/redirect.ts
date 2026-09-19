@@ -31,7 +31,7 @@ export function isAllowedAuthRequestOrigin(
   requestUrl: URL,
   secFetchSite?: string | null,
 ) {
-  if (!origin) return true
+  if (!origin) return secFetchSite === 'same-origin'
 
   try {
     new URL(origin)

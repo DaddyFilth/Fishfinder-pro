@@ -19,7 +19,10 @@ const createClientMock = vi.mocked(createClient)
 function loginRequest() {
   return new Request('https://fishfinder-pro.online/api/auth', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'sec-fetch-site': 'same-origin',
+    },
     body: JSON.stringify({
       mode: 'login',
       email: 'angler@example.com',
@@ -34,6 +37,7 @@ function previewLoginRequest(origin = 'https://fishfinder-pro-git-feature.vercel
     headers: {
       'content-type': 'application/json',
       origin,
+      'sec-fetch-site': 'same-origin',
     },
     body: JSON.stringify({
       mode: 'login',
@@ -46,7 +50,10 @@ function previewLoginRequest(origin = 'https://fishfinder-pro-git-feature.vercel
 function signupRequest(body: Record<string, unknown> = {}) {
   return new Request('https://fishfinder-pro.online/api/auth', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'sec-fetch-site': 'same-origin',
+    },
     body: JSON.stringify({
       mode: 'signup',
       email: 'angler@example.com',
