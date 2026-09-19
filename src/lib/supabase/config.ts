@@ -38,3 +38,12 @@ export function getSupabaseServiceRoleKey() {
     process.env.SUPABASE_SECRET_KEY,
   ])
 }
+
+export function getSupabasePublicConfig() {
+  const url = getSupabaseProjectUrl()
+  const key = getSupabasePublishableKey()
+
+  if (!url || !key) return null
+
+  return { url, key }
+}
