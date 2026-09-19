@@ -1,5 +1,8 @@
 """Rewrite .env.local using PostgREST host keys."""
 
+import os
+import tempfile
+
 d = {}
 with open(".env.local") as handle:
     for line in handle:
@@ -19,6 +22,16 @@ out = [
     "OLLAMA_MODEL=llama3.1",
     "OLLAMA_VISION_MODEL=llama3.2-vision",
 ]
-with open(".env.local", "w") as handle:
-    handle.write(chr(10).join(out) + chr(10))
+directory = os.path.dirname(os.path.abspath(".env.local")) or "."
+fd, temp_path = tempfile.mkstemp(dir=directory, prefix=".env.local.", text=True)
+try:
+    with os.fdopen(fd, "w") as handle:
+        handle.write(chr(10).join(out) + chr(10))
+    os.replace(temp_path, ".env.local")
+except Exception:
+    try:
+        os.unlink(temp_path)
+    except FileNotFoundError:
+        pass
+    raise
 print("rewritten")
