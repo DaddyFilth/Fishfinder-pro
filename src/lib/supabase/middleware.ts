@@ -1,13 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getSupabasePublicConfig } from './config'
+import { requireSupabasePublicConfig } from './config'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
-  const config = getSupabasePublicConfig()
-  if (!config) return supabaseResponse
+  const config = requireSupabasePublicConfig()
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
