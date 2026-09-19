@@ -109,7 +109,14 @@ interface Cond {
   captured_at: string;
 }
 
-type SpotDataMode = 'live' | 'cached' | 'fallback' | 'offline' | 'loading';
+type SpotDataMode =
+  | 'live'
+  | 'cached'
+  | 'fallback'
+  | 'offline'
+  | 'offline-cached'
+  | 'offline-fallback'
+  | 'loading';
 
 type Tab =
   | 'score'
@@ -267,7 +274,7 @@ export default function FishingMap({
   const hudStatusColor =
     spotDataMode === 'live'
       ? '#22c55e'
-      : spotDataMode === 'cached'
+      : spotDataMode === 'cached' || spotDataMode === 'offline-cached'
         ? '#fbbf24'
       : spotDataMode === 'loading'
         ? '#94a3b8'
