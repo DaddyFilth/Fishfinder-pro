@@ -3,6 +3,7 @@
 import NextBestAction from '@/components/NextBestAction';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 import SpeciesTab from "@/components/SpeciesTab";
 import BiteTimesTab from "@/components/BiteTimesTab";
@@ -282,7 +283,7 @@ export default function MobilePage() {
     };
 
     void syncSession();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
       setIsAuthenticated(signedIn);
@@ -393,6 +394,15 @@ export default function MobilePage() {
     const enabled = permission === 'granted';
     setNotificationsPreferred(enabled);
     saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, String(enabled));
+
+    if (enabled && 'serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification('SeamCast notifications enabled', {
+        body: 'You will receive fishing updates from this browser when alerts are available.',
+        icon: '/icons/icon-192.png',
+        tag: 'seamcast-notifications-enabled',
+      });
+    }
   };
 
   const locationSettingStatus = (

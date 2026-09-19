@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { User } from '@supabase/supabase-js'
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { createClient, hasSupabasePublicConfig } from '@/lib/supabase/client'
 
 export default function AuthAccountButton() {
@@ -15,7 +15,7 @@ export default function AuthAccountButton() {
     if (!supabase) return
 
     let mounted = true
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
       if (!mounted) return
       setUser(data.user)
       setReady(true)
@@ -23,7 +23,7 @@ export default function AuthAccountButton() {
       if (mounted) setReady(true)
     })
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return
       setUser(session?.user ?? null)
       setReady(true)
