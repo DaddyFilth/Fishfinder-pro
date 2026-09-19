@@ -11,7 +11,7 @@ import {
 const TripSchema = z.object({
   title: z.string().trim().min(1).max(120),
   waterBody: z.string().trim().min(1).max(160),
-  date: z.string().regex(/^d{4}-d{2}-d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   weather: z.string().trim().max(300).default(''),
   species: z.string().trim().max(160).default(''),
   catchesCount: z.number().int().min(0).max(10000).default(0),
