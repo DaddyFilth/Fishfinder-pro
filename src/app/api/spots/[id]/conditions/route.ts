@@ -21,6 +21,7 @@ function fallbackConditionResponse(id: string) {
       ...getDefaultCondition(fallbackSpot),
       cached: true,
       stale: true,
+      data_mode: 'fallback',
       warning:
         'Live environmental data is unavailable. Showing bundled Oklahoma fallback conditions.',
     },
@@ -100,6 +101,7 @@ export async function GET(
         ...cached,
         cached: true,
         stale: false,
+        data_mode: 'cached',
       },
       {
         headers: {
@@ -172,6 +174,7 @@ export async function GET(
         ...cached,
         cached: true,
         stale: true,
+        data_mode: 'stale-cache',
         warning:
           'Live environmental data is temporarily unavailable. Showing the latest cached conditions.',
       },
@@ -257,6 +260,7 @@ export async function GET(
         captured_at: new Date().toISOString(),
         cached: false,
         stale: false,
+        data_mode: 'live',
       },
       {
         headers: {
@@ -273,6 +277,7 @@ export async function GET(
       ...inserted,
       cached: false,
       stale: false,
+      data_mode: 'live',
     },
     {
       headers: {

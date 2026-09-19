@@ -103,6 +103,7 @@ interface Cond {
   };
   data_sources: string[];
   cached: boolean;
+  data_mode?: 'live' | 'cached' | 'stale-cache' | 'fallback';
   stale?: boolean;
   warning?: string;
   captured_at: string;
@@ -271,25 +272,32 @@ export default function FishingMap({
         : '#f59e0b';
 
   function describeConditionState(condition: Cond) {
-    const fallback = condition.data_sources.includes('Local Oklahoma public-access fallback');
+    const mode = condition.data_mode;
 
     if (!isOnline) {
       return {
-        label: fallback ? 'Offline data' : 'Offline cache',
+        label: mode === 'fallback' ? 'Offline data' : 'Offline cache',
         tone: '#f59e0b',
       };
     }
 
-    if (fallback) {
+    if (mode === 'fallback') {
       return {
         label: 'Offline data',
         tone: '#f59e0b',
       };
     }
 
-    if (condition.cached || condition.stale) {
+    if (mode === 'stale-cache' || condition.stale) {
       return {
-        label: condition.stale ? 'Offline cache' : 'Cached feed',
+        label: 'Offline cache',
+        tone: '#fbbf24',
+      };
+    }
+
+    if (mode === 'cached' || condition.cached) {
+      return {
+        label: 'Cached feed',
         tone: '#fbbf24',
       };
     }
