@@ -83,6 +83,12 @@ describe('auth request origins', () => {
         new URL('https://www.fishfinder-pro.online/api/auth'),
       ),
     ).toBe(false)
+    expect(
+      isAllowedAuthRequestOrigin(
+        'http://127.0.0.1:3001',
+        new URL('http://localhost:3000/api/auth'),
+      ),
+    ).toBe(false)
   })
 })
 

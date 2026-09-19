@@ -46,11 +46,10 @@ export function isAllowedAuthRequestOrigin(
 
   if (origin === requestUrl.origin) return true
 
-  const comparableHost = (hostname: string) => isLoopbackHost(hostname) || isPreviewHost(hostname)
   const samePreviewOrigin = (
     requestOrigin.protocol === requestUrl.protocol &&
-    comparableHost(requestUrl.hostname) &&
-    comparableHost(requestOrigin.hostname)
+    isPreviewHost(requestUrl.hostname) &&
+    isPreviewHost(requestOrigin.hostname)
   )
 
   return samePreviewOrigin || secFetchSite === 'same-origin'
