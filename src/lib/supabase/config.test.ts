@@ -6,13 +6,22 @@ describe('getSupabaseProjectUrl', () => {
     vi.unstubAllEnvs()
   })
 
-  it('returns the pinned project URL when env matches the same project', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://dkafqgapepebzjtoghos.supabase.co')
-    expect(getSupabaseProjectUrl()).toBe('https://dkafqgapepebzjtoghos.supabase.co')
+  it('returns null when the Supabase URL is missing', () => {
+    expect(getSupabaseProjectUrl()).toBeNull()
   })
 
-  it('returns null when an explicit env URL points to a different project', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://wrongproject.supabase.co')
+  it('returns the configured Supabase URL origin', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://newproject.supabase.co/path/ignored')
+    expect(getSupabaseProjectUrl()).toBe('https://newproject.supabase.co')
+  })
+
+  it('falls back to SUPABASE_URL', () => {
+    vi.stubEnv('SUPABASE_URL', 'https://fallback.supabase.co')
+    expect(getSupabaseProjectUrl()).toBe('https://fallback.supabase.co')
+  })
+
+  it('returns null for invalid URLs', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'not a url')
     expect(getSupabaseProjectUrl()).toBeNull()
   })
 })
