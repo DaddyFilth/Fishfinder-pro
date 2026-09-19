@@ -22,7 +22,49 @@ import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
+type DataMode = 'live' | 'cached' | 'fallback' | 'offline' | 'loading';
+
 interface SpotCondition { fishing_score?: number | null }
+
+function resolveSpotDataMode(
+  source: SpotLoadResult['source'] | 'loading',
+  isOnline: boolean,
+): DataMode {
+  if (source === 'loading') return 'loading';
+  if (!isOnline) return 'offline';
+  if (source === 'live') return 'live';
+  return source;
+}
+
+function badgeState(mode: DataMode) {
+  switch (mode) {
+    case 'live':
+      return { label: '● LIVE', color: '#22c55e' };
+    case 'cached':
+      return { label: '● CACHED', color: '#fbbf24' };
+    case 'fallback':
+      return { label: '● OFFLINE DATA', color: '#f59e0b' };
+    case 'offline':
+      return { label: '● OFFLINE', color: '#f59e0b' };
+    default:
+      return { label: '● LOADING', color: '#94a3b8' };
+  }
+}
+
+function mapStatusLabel(mode: DataMode) {
+  switch (mode) {
+    case 'live':
+      return 'Live';
+    case 'cached':
+      return 'Cached';
+    case 'fallback':
+      return 'Offline data';
+    case 'offline':
+      return 'Offline';
+    default:
+      return 'Loading';
+  }
+}
 
 // ─── Shared style constants ───────────────────────────────────────────────────
 const PAGE_STYLES = {
@@ -170,8 +212,13 @@ async function getSpots(): Promise<SpotLoadResult> {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         const savedAt = new Date().toISOString();
-        cacheSpots(data);
-        return { spots: data, source: 'live', savedAt };
+        const dataMode = res.headers.get('x-fishfinder-data-mode');
+        cacheSpots(data, savedAt);
+        return {
+          spots: data,
+          source: dataMode === 'fallback' ? 'fallback' : 'live',
+          savedAt,
+        };
       }
     }
   } catch {
@@ -215,6 +262,8 @@ export default function MobilePage() {
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
+  const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
+  const appBadge = badgeState(spotDataMode);
 
 
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
@@ -503,7 +552,7 @@ export default function MobilePage() {
           <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>SeamCast</span>
         </div>
         <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
-          <span style={{ fontSize:'9px', color:'#22c55e' }}>● LIVE</span>
+          <span style={{ fontSize:'9px', color:appBadge.color }}>{appBadge.label}</span>
           <AuthAccountButton />
         </div>
       </header>
@@ -543,6 +592,9 @@ export default function MobilePage() {
               spots={visibleSpots}
               baseLayer={baseLayer}
               layers={mapLayers}
+              isOnline={isOnline}
+              spotDataMode={spotDataMode}
+              spotDataStatusLabel={mapStatusLabel(spotDataMode)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
               sheetOpen={sheetOpen}
@@ -885,4 +937,3 @@ export default function MobilePage() {
     </div>
   );
 }
-
