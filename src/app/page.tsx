@@ -228,10 +228,16 @@ async function getSpots(): Promise<SpotLoadResult> {
       if (Array.isArray(data) && data.length > 0) {
         const savedAt = new Date().toISOString();
         const dataMode = res.headers.get('x-fishfinder-data-mode');
+        const source =
+          dataMode === 'fallback'
+            ? 'fallback'
+            : dataMode === 'cached' || dataMode === 'stale-cache'
+              ? 'cached'
+              : 'live';
         cacheSpots(data, savedAt);
         return {
           spots: data,
-          source: dataMode === 'fallback' ? 'fallback' : 'live',
+          source,
           savedAt,
         };
       }
