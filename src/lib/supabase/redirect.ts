@@ -10,14 +10,21 @@ export function getSafeNextPath(value: string | null | undefined) {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : '/'
 }
 
-export function getAuthCallbackUrl(origin: string) {
+export function getAuthCallbackUrl(origin: string, next?: string | null) {
   const base = origin.endsWith('/') ? origin.slice(0, -1) : origin
   const safe = ALLOWED_ORIGINS.has(base) ? base : 'https://www.fishfinder-pro.online'
-  return safe + '/auth/callback'
+  const url = new URL('/auth/callback', safe)
+  const nextPath = getSafeNextPath(next)
+  if (nextPath !== '/') {
+    url.searchParams.set('next', nextPath)
+  }
+  return url.toString()
 }
 
 export function getPasswordResetRedirectTo(origin: string) {
-  return getAuthCallbackUrl(origin) + '?next=' + encodeURIComponent(RESET_NEXT_PATH)
+  const url = new URL(getAuthCallbackUrl(origin))
+  url.searchParams.set('next', RESET_NEXT_PATH)
+  return url.toString()
 }
 
 export function shouldFollowUpPasswordSignIn(

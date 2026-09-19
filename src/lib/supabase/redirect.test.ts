@@ -39,6 +39,15 @@ describe('auth callback and reset URLs', () => {
   it('allows local development', () => {
     expect(getAuthCallbackUrl('http://localhost:3000/')).toBe('http://localhost:3000/auth/callback')
   })
+
+  it('preserves safe next paths for auth callbacks', () => {
+    expect(getAuthCallbackUrl('https://www.fishfinder-pro.online', '/account')).toBe(
+      'https://www.fishfinder-pro.online/auth/callback?next=%2Faccount',
+    )
+    expect(getAuthCallbackUrl('https://www.fishfinder-pro.online', 'https://evil.example')).toBe(
+      'https://www.fishfinder-pro.online/auth/callback',
+    )
+  })
 })
 
 describe('signup follow-up sign-in', () => {
