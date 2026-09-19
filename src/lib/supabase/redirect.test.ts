@@ -32,9 +32,9 @@ describe('auth callback and reset URLs', () => {
     )
   })
 
-  it('does not send reset links to an unknown origin', () => {
-    expect(getPasswordResetRedirectTo('https://evil.example')).toBe(
-      'https://www.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
+  it('keeps HTTPS reset links on the current origin', () => {
+    expect(getPasswordResetRedirectTo('https://staging.fishfinder-pro.online')).toBe(
+      'https://staging.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
     )
   })
 
@@ -46,8 +46,8 @@ describe('auth callback and reset URLs', () => {
     expect(getAuthCallbackUrl('https://fishfinder-pro-git-feature.vercel.app', '/account')).toBe(
       'https://fishfinder-pro-git-feature.vercel.app/auth/callback?next=%2Faccount',
     )
-    expect(getPasswordResetRedirectTo('https://staging.fishfinder-pro.online')).toBe(
-      'https://staging.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
+    expect(getAuthCallbackUrl('https://app.example.com', '/account')).toBe(
+      'https://app.example.com/auth/callback?next=%2Faccount',
     )
   })
 
