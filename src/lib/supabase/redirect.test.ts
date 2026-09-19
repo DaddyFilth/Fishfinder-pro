@@ -3,6 +3,7 @@ import {
   getAuthCallbackUrl,
   getPasswordResetRedirectTo,
   getSafeNextPath,
+  isAllowedAuthRequestOrigin,
   shouldFollowUpPasswordSignIn,
 } from './redirect'
 
@@ -41,6 +42,15 @@ describe('auth callback and reset URLs', () => {
     expect(getAuthCallbackUrl('http://localhost:3000/')).toBe('http://localhost:3000/auth/callback')
   })
 
+  it('keeps preview and custom HTTPS origins for callbacks', () => {
+    expect(getAuthCallbackUrl('https://fishfinder-pro-git-feature.vercel.app', '/account')).toBe(
+      'https://fishfinder-pro-git-feature.vercel.app/auth/callback?next=%2Faccount',
+    )
+    expect(getPasswordResetRedirectTo('https://staging.fishfinder-pro.online')).toBe(
+      'https://staging.fishfinder-pro.online/auth/callback?next=%2Fauth%2Freset%3Fmode%3Dupdate',
+    )
+  })
+
   it('preserves safe next paths for auth callbacks', () => {
     expect(getAuthCallbackUrl('https://www.fishfinder-pro.online', '/account')).toBe(
       'https://www.fishfinder-pro.online/auth/callback?next=%2Faccount',
@@ -48,6 +58,31 @@ describe('auth callback and reset URLs', () => {
     expect(getAuthCallbackUrl('https://www.fishfinder-pro.online', 'https://evil.example')).toBe(
       'https://www.fishfinder-pro.online/auth/callback',
     )
+  })
+
+  it('falls back to production when the origin is invalid', () => {
+    expect(getAuthCallbackUrl('http://staging.fishfinder-pro.online', '/account')).toBe(
+      'https://www.fishfinder-pro.online/auth/callback?next=%2Faccount',
+    )
+  })
+})
+
+describe('auth request origins', () => {
+  it('accepts same-origin and preview-origin auth requests', () => {
+    const previewUrl = new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth')
+    expect(isAllowedAuthRequestOrigin(previewUrl.origin, previewUrl)).toBe(true)
+    expect(
+      isAllowedAuthRequestOrigin('https://fishfinder-pro-git-other.vercel.app', previewUrl),
+    ).toBe(true)
+  })
+
+  it('rejects unrelated cross-site origins', () => {
+    expect(
+      isAllowedAuthRequestOrigin(
+        'https://evil.example',
+        new URL('https://www.fishfinder-pro.online/api/auth'),
+      ),
+    ).toBe(false)
   })
 })
 
