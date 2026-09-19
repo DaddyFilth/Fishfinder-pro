@@ -47,3 +47,12 @@ export function getSupabasePublicConfig() {
 
   return { url, key }
 }
+
+export function requireSupabasePublicConfig() {
+  const config = getSupabasePublicConfig()
+  if (!config) {
+    throw new Error('Supabase public configuration is missing.')
+  }
+
+  return config
+}

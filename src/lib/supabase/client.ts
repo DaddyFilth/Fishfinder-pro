@@ -1,9 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { getSupabasePublicConfig } from './config'
+import { requireSupabasePublicConfig } from './config'
 
 export function createClient() {
-  const config = getSupabasePublicConfig()
-  if (!config) return null
-
+  const config = requireSupabasePublicConfig()
   return createBrowserClient(config.url, config.key)
 }
