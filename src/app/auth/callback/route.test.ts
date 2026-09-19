@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/supabase/redirect', () => ({
   getSafeNextPath: (value: string | null | undefined) =>
-    value && value.startsWith('/') && !value.startsWith('//') ? value : '/',
+    value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/',
 }))
 
 const createClientMock = vi.mocked(createClient)
@@ -62,6 +62,17 @@ describe('GET /auth/callback', () => {
 
     const response = await GET(
       new Request('https://www.fishfinder-pro.online/auth/callback?code=auth-code&next=https%3A%2F%2Fevil.example'),
+    )
+
+    expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('auth-code')
+    expect(response.headers.get('location')).toBe('https://www.fishfinder-pro.online/')
+  })
+
+  it('ignores backslash-based next values', async () => {
+    const auth = mockAuthClient()
+
+    const response = await GET(
+      new Request('https://www.fishfinder-pro.online/auth/callback?code=auth-code&next=%2F%5Cevil'),
     )
 
     expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('auth-code')
