@@ -38,10 +38,8 @@ function resolveSpotDataMode(
   isOnline: boolean,
 ): DataMode {
   if (source === 'loading') return 'loading';
-  if (!isOnline && source === 'live') return 'offline';
   if (!isOnline && source === 'cached') return 'offline-cached';
   if (!isOnline && source === 'fallback') return 'offline-fallback';
-  if (source === 'live') return 'live';
   return source;
 }
 
