@@ -223,24 +223,24 @@ async function getSpots(): Promise<SpotLoadResult> {
   const cached = readCachedSpots();
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const savedAt = new Date().toISOString();
-        const dataMode = res.headers.get('x-fishfinder-data-mode');
-        const source =
-          dataMode === 'fallback'
-            ? 'fallback'
-            : dataMode === 'cached' || dataMode === 'stale-cache'
-              ? 'cached'
-              : 'live';
-        cacheSpots(data, savedAt);
-        return {
-          spots: data,
-          source,
-          savedAt,
-        };
-      }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      const savedAt = new Date().toISOString();
+      const dataMode = res.headers.get('x-fishfinder-data-mode');
+      const source =
+        dataMode === 'fallback'
+          ? 'fallback'
+          : dataMode === 'cached' || dataMode === 'stale-cache'
+            ? 'cached'
+            : 'live';
+      cacheSpots(data, savedAt);
+      return {
+        spots: data,
+        source,
+        savedAt,
+      };
     }
   } catch {
     // Fall through to browser cache or bundled Oklahoma fixtures.
