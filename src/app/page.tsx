@@ -256,8 +256,6 @@ async function getSpots(): Promise<SpotLoadResult> {
           isOklahomaSpot(spot),
       );
       if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
-      if (filtered.length === 0) throw new Error('No supported Oklahoma spots returned');
-      const savedAt = new Date().toISOString();
       const savedAt = new Date().toISOString();
       const source =
         dataMode === 'fallback'
