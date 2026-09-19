@@ -15,6 +15,7 @@ describe('getSafeNextPath', () => {
   it('rejects open redirects', () => {
     expect(getSafeNextPath('https://evil.example')).toBe('/')
     expect(getSafeNextPath('//evil.example')).toBe('/')
+    expect(getSafeNextPath('/\\evil.example')).toBe('/')
     expect(getSafeNextPath('')).toBe('/')
     expect(getSafeNextPath(null)).toBe('/')
   })

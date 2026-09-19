@@ -7,7 +7,9 @@ const ALLOWED_ORIGINS = new Set([
 const RESET_NEXT_PATH = '/auth/reset?mode=update'
 
 export function getSafeNextPath(value: string | null | undefined) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/'
+  return value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')
+    ? value
+    : '/'
 }
 
 export function getAuthCallbackUrl(origin: string, next?: string | null) {
