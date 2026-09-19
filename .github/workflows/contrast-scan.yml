@@ -1,53 +1,48 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# This workflow will initiate a Contrast Scan on your built artifact, and subsequently upload the results SARIF to Github.
-# Because Contrast Scan is designed to run against your deployable artifact, you need to build an artifact that will be passed to the Contrast Scan Action.
-# Contrast Scan currently supports Java, JavaScript and .NET artifacts.
-# For more information about the Contrast Scan GitHub Action see here: https://github.com/Contrast-Security-OSS/contrastscan-action
-
-# Pre-requisites:
-# All Contrast related account secrets should be configured as GitHub secrets to be passed as inputs to the Contrast Scan Action.
-# The required secrets are CONTRAST_API_KEY, CONTRAST_ORGANIZATION_ID and CONTRAST_AUTH_HEADER.
+name: Contrast Scan
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "main" ]
+    branches: ["main"]
   schedule:
-    - cron: '25 7 * * 1'
+    - cron: "25 7 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
+  actions: read
 
-name: Scan analyze workflow
 jobs:
-  build-and-scan:
-    permissions:
-        contents: read # for actions/checkout
-        security-events: write # for github/codeql-action/upload-sarif
-        actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+  contrast-scan:
     runs-on: ubuntu-latest
-    # check out project
+    env:
+      CONTRAST_API_KEY: ${{ secrets.CONTRAST_API_KEY }}
+      CONTRAST_ORGANIZATION_ID: ${{ secrets.CONTRAST_ORGANIZATION_ID }}
+      CONTRAST_AUTH_HEADER: ${{ secrets.CONTRAST_AUTH_HEADER }}
+      CONTRAST_ARTIFACT_PATH: ${{ vars.CONTRAST_ARTIFACT_PATH }}
+
     steps:
-    - uses: actions/checkout@v4
-    # Since Contrast Scan is designed to run against your deployable artifact, the steps to build your artifact should go here.
-    # -name: Build Project
-    # ...
-    # Scan Artifact
-    - name: Contrast Scan Action
-      uses: Contrast-Security-OSS/contrastscan-action@7352a45d9678ec8a434cf061b07ffb51c1e351a1
-      with:
-        artifact: mypath/target/myartifact.jar # replace this path with the path to your built artifact
-        apiKey: ${{ secrets.CONTRAST_API_KEY }}
-        orgId: ${{ secrets.CONTRAST_ORGANIZATION_ID }}
-        authHeader: ${{ secrets.CONTRAST_AUTH_HEADER }}
-    #Upload the results to GitHub
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif # The file name must be 'results.sarif', as this is what the Github Action will output
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Skip when Contrast configuration is missing
+        if: env.CONTRAST_API_KEY == '' || env.CONTRAST_ORGANIZATION_ID == '' || env.CONTRAST_AUTH_HEADER == '' || env.CONTRAST_ARTIFACT_PATH == ''
+        run: echo 'Skipping Contrast scan because required Contrast secrets or CONTRAST_ARTIFACT_PATH are not configured.'
+
+      - name: Contrast Scan Action
+        id: contrast_scan
+        if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != ''
+        uses: Contrast-Security-OSS/contrastscan-action@7352a45d9678ec8a434cf061b07ffb51c1e351a1
+        with:
+          artifact: ${{ env.CONTRAST_ARTIFACT_PATH }}
+          apiKey: ${{ env.CONTRAST_API_KEY }}
+          orgId: ${{ env.CONTRAST_ORGANIZATION_ID }}
+          authHeader: ${{ env.CONTRAST_AUTH_HEADER }}
+
+      - name: Upload SARIF file
+        if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != '' && steps.contrast_scan.outcome == 'success' && hashFiles('results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

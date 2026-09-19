@@ -32,7 +32,7 @@ SECURITY.md
 VERCEL_DEPLOYMENT_CHECKLIST.md
 VERCEL_ENV_SETUP.md
 audit_map.py
-fix-env.py
+fix_env.py
 fix_emojis.py
 fix_species.py
 fix_use_client.py
