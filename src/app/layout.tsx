@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import Script from "next/script";
 import type { ReactNode } from "react";
 import ConnectionStatus from '@/components/offline/ConnectionStatus';
 import ServiceWorkerRegistration from '@/components/offline/ServiceWorkerRegistration';
@@ -90,12 +89,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className="h-full antialiased"
     >
-      <Script
-        id="structured-data"
-        type="application/ld+json"
-        strategy="beforeInteractive"
-        dangerouslySetInnerHTML={{ __html: siteStructure }}
-      />
+      <head>
+        <script
+          id="structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: siteStructure }}
+        />
+      </head>
       <body style={{ height: "100%", margin: 0 }} className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
         <ConnectionStatus />
