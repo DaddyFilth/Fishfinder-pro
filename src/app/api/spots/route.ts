@@ -116,6 +116,7 @@ async function fetchWeatherGovPointForecast(lat: number, lon: number) {
 
 function parseWindSpeedMph(windSpeedText: string | null): number | null {
   if (!windSpeedText) return null
+  // Typical formats: "10 mph", "5 to 15 mph"
   const match = windSpeedText.match(/(d+)s*(?:tos*(d+))?s*mph/i)
   if (!match) return null
   const low = Number(match[1])
