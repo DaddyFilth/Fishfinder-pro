@@ -1,7 +1,4 @@
 
-git add .env.local src/lib/seamcastSpotsClient.ts src/components/MapWrapper.tsx src/lib/aiSpots.ts
-git commit -m "Wire Fishfinder-pro to live seamcast-spots AI API"
-git push origin main
 
 curl "https://seamcast-g0jya8jpj-daddyfilths-projects.vercel.app/api/spots?lat=34.999&lon=-97.366" | head -c 400'use client';
 
