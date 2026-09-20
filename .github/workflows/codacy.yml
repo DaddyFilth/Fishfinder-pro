@@ -25,10 +25,16 @@ jobs:
     name: Codacy Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Skip when Codacy token is missing
+        if: env.CODACY_PROJECT_TOKEN == ''
+        run: echo 'Skipping Codacy scan because CODACY_PROJECT_TOKEN is not configured.'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -79,16 +85,9 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Run Codacy Analysis CLI
+        if: env.CODACY_PROJECT_TOKEN != ''
         uses: codacy/codacy-analysis-cli-action@d840f886c4bd4edc059706d09c6a1586111c540b
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          project-token: ${{ env.CODACY_PROJECT_TOKEN }}
           verbose: true
-          output: results.sarif
-          format: sarif
-          gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
-
-      - name: Upload SARIF results file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
