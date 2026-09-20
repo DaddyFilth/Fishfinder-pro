@@ -68,6 +68,15 @@ function parseQuery(req: NextRequest): SpotsQuery {
   return { lat, lon, species, time }
 }
 
+interface ForecastPeriod {
+  startTime: string
+  temperature: number
+  windSpeed: string
+  windDirection: string
+  shortForecast: string
+  isDaytime: boolean
+}
+
 async function fetchWeatherGovPointForecast(lat: number, lon: number) {
   // Round to 4 decimal places per weather.gov requirements[web:34]
   const latRounded = Number(lat.toFixed(4))
@@ -106,12 +115,12 @@ async function fetchWeatherGovPointForecast(lat: number, lon: number) {
   }
 
   const forecastJson = await forecastRes.json()
-  const periods = forecastJson.properties?.periods as any[] | undefined
+  const periods = forecastJson.properties?.periods as ForecastPeriod[] | undefined
   if (!Array.isArray(periods) || periods.length === 0) {
     throw new Error('weather.gov forecast response missing periods')
   }
 
-  const p = periods[0]
+  const p: ForecastPeriod = periods[0]
   return {
     issuedAt: p.startTime as string,
     temperatureF: typeof p.temperature === 'number' ? p.temperature : null,
@@ -208,8 +217,7 @@ function computeBiteScore(
 function predictSpecies(
   query: SpotsQuery,
   bite: BiteScore,
-  temperatureF: number | null,
-  shortForecast: string | null
+  temperatureF: number | null
 ): SpeciesPrediction[] {
   const base: SpeciesPrediction[] = [
     {
@@ -386,8 +394,7 @@ export async function GET(req: NextRequest) {
     const speciesLikely = predictSpecies(
       query,
       bite,
-      wx.temperatureF,
-      wx.shortForecast
+      wx.temperatureF
     )
 
     const recommendedBaits = recommendBaits(
@@ -422,12 +429,13 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json(response, { status: 200 })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('spots api error', err)
+    const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
       {
         error: 'Spots API error',
-        message: err?.message ?? 'Unknown error',
+        message,
       },
       { status: 400 }
     )
