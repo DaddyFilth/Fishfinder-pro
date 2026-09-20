@@ -14,7 +14,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -22,7 +22,78 @@ import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
+type DataMode =
+  | 'live'
+  | 'cached'
+  | 'fallback'
+  | 'offline-live'
+  | 'offline-cached'
+  | 'offline-fallback'
+  | 'loading';
+
 interface SpotCondition { fishing_score?: number | null }
+interface SpotApiPayload {
+  spots?: unknown;
+  data_mode?: string;
+}
+
+function resolveSpotDataMode(
+  source: SpotLoadResult['source'] | 'loading',
+  isOnline: boolean,
+): DataMode {
+  if (source === 'loading') return 'loading';
+  if (!isOnline && source === 'live') return 'offline-live';
+  if (!isOnline && source === 'cached') return 'offline-cached';
+  if (!isOnline && source === 'fallback') return 'offline-fallback';
+  return source;
+}
+
+function badgeState(mode: DataMode) {
+  switch (mode) {
+    case 'live':
+      return { label: '● LIVE', color: '#22c55e' };
+    case 'cached':
+      return { label: '● CACHED', color: '#fbbf24' };
+    case 'fallback':
+      return { label: '● FALLBACK', color: '#f59e0b' };
+    case 'offline-live':
+      return { label: '● OFFLINE · LIVE DATA', color: '#f59e0b' };
+    case 'offline-fallback':
+      return { label: '● OFFLINE DATA', color: '#f59e0b' };
+    case 'offline-cached':
+      return { label: '● OFFLINE CACHE', color: '#fbbf24' };
+    default:
+      return { label: '● LOADING', color: '#94a3b8' };
+  }
+}
+
+function mapStatusLabel(mode: DataMode) {
+  switch (mode) {
+    case 'live':
+      return 'Live';
+    case 'cached':
+      return 'Cached';
+    case 'fallback':
+      return 'Fallback';
+    case 'offline-live':
+      return 'Offline · live data';
+    case 'offline-cached':
+      return 'Offline cache';
+    case 'offline-fallback':
+      return 'Offline data';
+    default:
+      return 'Loading';
+  }
+}
+
+function isOklahomaSpot(spot: Pick<Spot, 'lat' | 'lng'>) {
+  return (
+    spot.lat >= OKLAHOMA_BOUNDS.minLat &&
+    spot.lat <= OKLAHOMA_BOUNDS.maxLat &&
+    spot.lng >= OKLAHOMA_BOUNDS.minLng &&
+    spot.lng <= OKLAHOMA_BOUNDS.maxLng
+  );
+}
 
 // ─── Shared style constants ───────────────────────────────────────────────────
 const PAGE_STYLES = {
@@ -166,13 +237,43 @@ async function getSpots(): Promise<SpotLoadResult> {
   const cached = readCachedSpots();
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const savedAt = new Date().toISOString();
-        cacheSpots(data);
-        return { spots: data, source: 'live', savedAt };
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const payload = (await res.json()) as SpotApiPayload | Spot[];
+    const rawSpots = Array.isArray(payload) ? payload : payload.spots;
+    const dataModeHeader = res.headers.get('x-fishfinder-data-mode');
+    const dataModeBody = Array.isArray(payload) ? null : payload.data_mode;
+    const dataMode = dataModeHeader ?? dataModeBody ?? null;
+
+    if (Array.isArray(rawSpots)) {
+      const filtered = rawSpots.filter(
+        (spot): spot is Spot =>
+          typeof spot?.id === 'string' &&
+          typeof spot?.name === 'string' &&
+          typeof spot?.lat === 'number' &&
+          typeof spot?.lng === 'number' &&
+          typeof spot?.water_type === 'string' &&
+          typeof spot?.spot_type === 'string' &&
+          isOklahomaSpot(spot),
+      );
+      if (rawSpots.length > 0 && filtered.length === 0) {
+        throw new Error('No supported Oklahoma spots returned');
       }
+
+      const source =
+        dataMode === 'fallback'
+          ? 'fallback'
+          : dataMode === 'cached' || dataMode === 'stale-cache'
+            ? 'cached'
+            : 'live';
+
+      const savedAt = filtered.length > 0 ? new Date().toISOString() : null;
+      if (savedAt) cacheSpots(filtered, savedAt);
+      return {
+        spots: filtered,
+        source,
+        savedAt,
+      };
     }
   } catch {
     // Fall through to browser cache or bundled Oklahoma fixtures.
@@ -215,6 +316,8 @@ export default function MobilePage() {
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
+  const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
+  const appBadge = badgeState(spotDataMode);
 
 
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
@@ -503,7 +606,7 @@ export default function MobilePage() {
           <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>SeamCast</span>
         </div>
         <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
-          <span style={{ fontSize:'9px', color:'#22c55e' }}>● LIVE</span>
+          <span style={{ fontSize:'9px', color:appBadge.color }}>{appBadge.label}</span>
           <AuthAccountButton />
         </div>
       </header>
@@ -543,6 +646,9 @@ export default function MobilePage() {
               spots={visibleSpots}
               baseLayer={baseLayer}
               layers={mapLayers}
+              isOnline={isOnline}
+              spotDataMode={spotDataMode}
+              spotDataStatusLabel={mapStatusLabel(spotDataMode)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
               sheetOpen={sheetOpen}
@@ -885,4 +991,3 @@ export default function MobilePage() {
     </div>
   );
 }
-
