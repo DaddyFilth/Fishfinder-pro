@@ -1,14 +1,13 @@
 'use client';
 
 import React from 'react';
-import { DataSource, useLiveSpotsContext } from '../contexts/LiveSpotsContext';
+import { useLiveSpotsContext } from '../contexts/LiveSpotsContext';
 
-const badgeColor = (ds: DataSource) =>
-  ds === 'LIVE' ? '#16a34a' : ds === 'CACHE' ? '#f59e0b' : '#6b7280';
+const badgeColor = (isOnline: boolean) => (isOnline ? '#16a34a' : '#6b7280');
 
 export const DataSourceBadge: React.FC = () => {
   const { dataSource } = useLiveSpotsContext();
-  const color = badgeColor(dataSource);
+  const color = badgeColor(dataSource === 'ONLINE');
   const style: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',

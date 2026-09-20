@@ -48,42 +48,14 @@ function resolveSpotDataMode(
   return source;
 }
 
-function badgeState(mode: DataMode) {
-  switch (mode) {
-    case 'live':
-      return { label: '● LIVE', color: '#22c55e' };
-    case 'cached':
-      return { label: '● CACHED', color: '#fbbf24' };
-    case 'fallback':
-      return { label: '● FALLBACK', color: '#f59e0b' };
-    case 'offline-live':
-      return { label: '● OFFLINE · LIVE DATA', color: '#f59e0b' };
-    case 'offline-fallback':
-      return { label: '● OFFLINE DATA', color: '#f59e0b' };
-    case 'offline-cached':
-      return { label: '● OFFLINE CACHE', color: '#fbbf24' };
-    default:
-      return { label: '● LOADING', color: '#94a3b8' };
-  }
+function badgeState(isOnline: boolean) {
+  return isOnline
+    ? { label: '● ONLINE', color: '#22c55e' }
+    : { label: '● OFFLINE', color: '#94a3b8' };
 }
 
-function mapStatusLabel(mode: DataMode) {
-  switch (mode) {
-    case 'live':
-      return 'Live';
-    case 'cached':
-      return 'Cached';
-    case 'fallback':
-      return 'Fallback';
-    case 'offline-live':
-      return 'Offline · live data';
-    case 'offline-cached':
-      return 'Offline cache';
-    case 'offline-fallback':
-      return 'Offline data';
-    default:
-      return 'Loading';
-  }
+function mapStatusLabel(isOnline: boolean) {
+  return isOnline ? 'Online' : 'Offline';
 }
 
 function isOklahomaSpot(spot: Pick<Spot, 'lat' | 'lng'>) {
@@ -317,7 +289,7 @@ export default function MobilePage() {
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
-  const appBadge = badgeState(spotDataMode);
+  const appBadge = badgeState(isOnline);
 
 
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
@@ -649,7 +621,7 @@ export default function MobilePage() {
               layers={mapLayers}
               isOnline={isOnline}
               spotDataMode={spotDataMode}
-              spotDataStatusLabel={mapStatusLabel(spotDataMode)}
+              spotDataStatusLabel={mapStatusLabel(isOnline)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
               sheetOpen={sheetOpen}
