@@ -1,21 +1,12 @@
-+import type { Spot } from "@/lib/mapFilters";
-+
-+// Live data model returned by the Seamcast Spots API
-+export interface LiveSpot {
-+  id?: string;
-+  name?: string;
-+  lat?: number;
-+  lon?: number;
-+  latitude?: number;
-+  longitude?: number;
-+  waterType?: string;
-+  spotType?: string;
-+  accessType?: string;
-+  region?: string;
-+  source?: string;
-+  notes?: string;
-+  description?: string;
-+  [k: string]: any;
-+}
-+
-+// Adapter: map a LiveSpot to the apps
+export async function fetchSeamcastAiSpots(lat: number, lon: number) {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SPOTS_API_URL || 'https://seamcast-spots.vercel.app';
+  const url = `${baseUrl}/api/spots?lat=${lat}&lon=${lon}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Spots API failed: ${res.status}`);
+  }
+
+  return res.json();
+}

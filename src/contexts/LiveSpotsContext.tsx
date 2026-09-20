@@ -28,7 +28,7 @@ function resolveDataSource(): DataSource {
 export const LiveSpotsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const dataSource = useMemo(resolveDataSource, []);
+  const dataSource = useMemo(() => resolveDataSource(), []);
   return (
     <LiveSpotsContext.Provider value={{ dataSource }}>
       {children}
