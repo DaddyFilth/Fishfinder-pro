@@ -110,6 +110,8 @@ export default function FishBot({ spot, conditions }: Props) {
           message: userMsg,
           spot,
           conditions,
+          lat: typeof spotData.lat === 'number' ? spotData.lat : undefined,
+          lon: typeof (spotData.lng ?? spotData.lon) === 'number' ? (spotData.lng ?? spotData.lon) as number : undefined,
           history: messages.map((message) => ({
             role: message.role === 'bot' ? 'assistant' : 'user',
             content: message.text,
@@ -121,6 +123,7 @@ export default function FishBot({ spot, conditions }: Props) {
       const payload = data && typeof data === 'object' ? data as Record<string, unknown> : {};
       const reply =
         typeof payload.reply === 'string' ? payload.reply :
+        typeof payload.response === 'string' ? payload.response :
         typeof payload.advice === 'string' ? payload.advice :
         null;
       const error = typeof payload.error === 'string' ? payload.error : null;
