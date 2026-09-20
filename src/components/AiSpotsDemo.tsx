@@ -18,18 +18,17 @@ export default function AiSpotsDemo() {
     async function load() {
       setState({ status: 'loading' });
       try {
-        // Purcell default; replace with user-selected coords if needed
         const data = await fetchSeamcastAiSpots(34.999, -97.366);
         if (!cancelled) {
           setState({ status: 'ok', data });
         }
       } catch (err: unknown) {
         if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : 'Unknown error loading AI spots';
           setState({
             status: 'error',
-            message: err?.message
-              ? String(err.message)
-              : 'Unknown error loading AI spots',
+            message,
           });
         }
       }
