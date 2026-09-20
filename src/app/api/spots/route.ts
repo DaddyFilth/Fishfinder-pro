@@ -35,6 +35,7 @@ type MicroSpot = {
   biteScore: BiteScore
   bestSpecies: SpeciesPrediction[]
   bestBaits: BaitRecommendation[]
+  reasoning: string
 }
 
 type SpotsResponse = {
@@ -46,12 +47,24 @@ type SpotsResponse = {
     windSpeedMph: number | null
     windDirection: string | null
     shortForecast: string | null
+    detailedForecast: string | null
     isDaytime: boolean | null
   }
   overallBite: BiteScore
+  summary: string
   speciesLikely: SpeciesPrediction[]
   recommendedBaits: BaitRecommendation[]
   microSpots: MicroSpot[]
+}
+
+interface ForecastPeriod {
+  startTime: string
+  temperature: number
+  windSpeed: string
+  windDirection: string
+  shortForecast: string
+  detailedForecast: string
+  isDaytime: boolean
 }
 
 function parseQuery(req: NextRequest): SpotsQuery {
@@ -72,20 +85,8 @@ function parseQuery(req: NextRequest): SpotsQuery {
   return { lat, lon, species, time }
 }
 
-interface ForecastPeriod {
-  startTime: string
-  temperature: number
-  windSpeed: string
-  windDirection: string
-  shortForecast: string
-  isDaytime: boolean
-}
-
 async function fetchWeatherGovPointForecast(lat: number, lon: number) {
-  // Round to 4 decimal places per weather.gov requirements[web:34]
-  const latRounded = Number(lat.toFixed(4))
-  const lonRounded = Number(lon.toFixed(4))
-  const pointsUrl = `https://api.weather.gov/points/${latRounded},${lonRounded}`
+  const pointsUrl = `https://api.weather.gov/points/${lat},${lon}`
   const pointsRes = await fetch(pointsUrl, {
     headers: {
       'Accept': 'application/geo+json',
@@ -94,10 +95,7 @@ async function fetchWeatherGovPointForecast(lat: number, lon: number) {
   })
 
   if (!pointsRes.ok) {
-    console.error('weather.gov points failed', {
-      url: pointsUrl,
-      status: pointsRes.status,
-    })
+    console.error('weather.gov points failed', { url: pointsUrl, status: pointsRes.status })
     throw new Error(`weather.gov points error: ${pointsRes.status}`)
   }
 
@@ -124,37 +122,64 @@ async function fetchWeatherGovPointForecast(lat: number, lon: number) {
     throw new Error('weather.gov forecast response missing periods')
   }
 
-  const p: ForecastPeriod = periods[0]
+  const p = periods[0]
   return {
-    issuedAt: p.startTime as string,
-    temperatureF: typeof p.temperature === 'number' ? p.temperature : null,
-    windSpeedText: typeof p.windSpeed === 'string' ? p.windSpeed : null,
-    windDirection: typeof p.windDirection === 'string' ? p.windDirection : null,
-    shortForecast: typeof p.shortForecast === 'string' ? p.shortForecast : null,
-    isDaytime: typeof p.isDaytime === 'boolean' ? p.isDaytime : null,
+    issuedAt: p.startTime,
+    temperatureF: p.temperature,
+    windSpeedText: p.windSpeed,
+    windDirection: p.windDirection,
+    shortForecast: p.shortForecast,
+    detailedForecast: p.detailedForecast || '',
+    isDaytime: p.isDaytime,
   }
 }
 
-function parseWindSpeedMph(windSpeedText: string | null): number | null {
-  if (!windSpeedText) return null
-  // Typical formats: "10 mph", "5 to 15 mph"
-  const match = windSpeedText.match(/(d+)s*(?:tos*(d+))?s*mph/i)
-  if (!match) return null
-  const low = Number(match[1])
-  const high = match[2] ? Number(match[2]) : low
-  if (Number.isNaN(low) || Number.isNaN(high)) return null
-  return (low + high) / 2
+function parseWindSpeedMph(windSpeedText: string | null, detailedText: string | null): number | null {
+  // Try explicit speed first: "10 mph", "5 to 15 mph"
+  if (windSpeedText) {
+    const match = windSpeedText.match(/(d+)s*(?:tos*(d+))?s*mph/i)
+    if (match) {
+      const low = Number(match[1])
+      const high = match[2] ? Number(match[2]) : low
+      if (!Number.isNaN(low) && !Number.isNaN(high)) return (low + high) / 2
+    }
+    if (windSpeedText.toLowerCase().includes('calm')) return 0
+  }
+
+  // Fallback to detailed forecast text
+  if (detailedText) {
+    const text = detailedText.toLowerCase()
+    if (text.includes('calm')) return 0
+    const windMatch = text.match(/winds+(d+)s*(?:tos*(d+))?s*mph/i)
+    if (windMatch) {
+      const low = Number(windMatch[1])
+      const high = windMatch[2] ? Number(windMatch[2]) : low
+      return (low + high) / 2
+    }
+  }
+  return null
+}
+
+function isNearTwilight(isoTime: string): boolean {
+  const date = new Date(isoTime)
+  const hour = date.getHours()
+  // Dawn: 5-8am, Dusk: 5-8pm
+  return (hour >= 5 && hour <= 8) || (hour >= 17 && hour <= 20)
 }
 
 function computeBiteScore(
   temperatureF: number | null,
   windSpeedMph: number | null,
   shortForecast: string | null,
-  isDaytime: boolean | null
+  detailedForecast: string | null,
+  isDaytime: boolean | null,
+  issuedAt: string
 ): BiteScore {
   let score = 50
   const reasons: string[] = []
+  const text = ((shortForecast || '') + ' ' + (detailedForecast || '')).toLowerCase()
 
+  // Temperature
   if (temperatureF != null) {
     if (temperatureF >= 60 && temperatureF <= 80) {
       score += 15
@@ -162,52 +187,54 @@ function computeBiteScore(
     } else if (temperatureF < 45 || temperatureF > 85) {
       score -= 15
       reasons.push('Suboptimal temperature for active feeding')
-    } else {
-      reasons.push('Neutral temperature band')
     }
-  } else {
-    reasons.push('No temperature data; neutral baseline')
   }
 
+  // Wind
   if (windSpeedMph != null) {
     if (windSpeedMph >= 5 && windSpeedMph <= 15) {
-      score += 10
-      reasons.push('Moderate wind increases oxygenation and pushes bait to banks/points')
+      score += 12
+      reasons.push('Moderate wind oxygenates water and positions baitfish')
     } else if (windSpeedMph > 20) {
       score -= 10
-      reasons.push('Very strong wind can reduce fishability despite active fish')
+      reasons.push('High wind makes boat control difficult')
     } else if (windSpeedMph < 3) {
       score -= 5
-      reasons.push('Flat calm often yields tougher bites in clear water')
+      reasons.push('Calm, slick conditions often mean tougher bites')
     }
   } else {
-    reasons.push('No wind data; neutral wind assumption')
+    reasons.push('Wind data unclear; assuming neutral conditions')
   }
 
-  const text = (shortForecast || '').toLowerCase()
-  if (text.includes('cloudy') || text.includes('mostly cloudy') || text.includes('partly cloudy')) {
+  // Sky & Pressure indicators from text
+  if (text.includes('cloudy') || text.includes('overcast')) {
     score += 10
-    reasons.push('Cloud cover extends feeding windows and lets fish roam shallower')
+    reasons.push('Cloud cover extends feeding windows')
   }
   if (text.includes('rain') || text.includes('showers') || text.includes('storms')) {
-    score += 5
-    reasons.push('Precipitation/front conditions can trigger feeding activity before and during the system')
+    score += 8
+    reasons.push('Precipitation and falling pressure trigger feeding activity')
   }
   if (text.includes('sunny') || text.includes('clear')) {
     score -= 5
-    reasons.push('Bright, clear conditions often push fish deeper or tight to cover')
+    reasons.push('Bright skies push fish deeper or into shade')
+  }
+  if (text.includes('front') || text.includes('approaching') || text.includes('falling')) {
+    score += 5
+    reasons.push('Pre-frontal conditions often create aggressive bites')
   }
 
-  if (isDaytime != null) {
-    if (!isDaytime) {
-      reasons.push('Nighttime conditions; some species feed heavily after dark')
-    } else {
-      reasons.push('Daytime conditions; focus on low-light windows')
-    }
+  // Time of day
+  if (isNearTwilight(issuedAt)) {
+    score += 15
+    reasons.push('Prime feeding window (dawn/dusk)')
+  } else if (isDaytime === false) {
+    score += 5
+    reasons.push('Nighttime; some species feed heavily after dark')
   }
 
-  if (score < 0) score = 0
-  if (score > 100) score = 100
+  // Clamp
+  score = Math.max(0, Math.min(100, score))
 
   let level: BiteScore['level'] = 'fair'
   if (score <= 30) level = 'poor'
@@ -242,9 +269,7 @@ function predictSpecies(
   ]
 
   if (query.species) {
-    const target = base.find(
-      s => s.species.toLowerCase().includes(query.species!.toLowerCase())
-    )
+    const target = base.find(s => s.species.toLowerCase().includes(query.species!.toLowerCase()))
     if (target) {
       target.probability = Math.min(0.9, target.probability + 0.25)
       target.notes.push('User-selected target species boosted')
@@ -265,6 +290,10 @@ function predictSpecies(
         delta += 0.05
         s.notes.push('Temperature favorable for warm-water bass activity')
       }
+      if (s.species === 'Channel Catfish' && temperatureF > 70) {
+        delta += 0.05
+        s.notes.push('Warm water increases catfish metabolism')
+      }
     }
 
     s.probability = Math.max(0.05, Math.min(0.95, s.probability + delta))
@@ -272,161 +301,183 @@ function predictSpecies(
 
   const sum = base.reduce((acc, s) => acc + s.probability, 0)
   if (sum > 0) {
-    base.forEach(s => {
-      s.probability = s.probability / sum
-    })
+    base.forEach(s => { s.probability = s.probability / sum })
   }
 
-  return base
+  return base.sort((a, b) => b.probability - a.probability)
 }
 
 function recommendBaits(
   species: SpeciesPrediction[],
   bite: BiteScore,
   shortForecast: string | null,
+  detailedForecast: string | null,
   windSpeedMph: number | null
 ): BaitRecommendation[] {
-  const text = (shortForecast || '').toLowerCase()
-
+  const text = ((shortForecast || '') + ' ' + (detailedForecast || '')).toLowerCase()
   const recs: BaitRecommendation[] = []
-
-  const biteAggressive = bite.level === 'good' || bite.level === 'excellent'
+  const aggressive = bite.level === 'good' || bite.level === 'excellent'
   const windy = windSpeedMph != null && windSpeedMph >= 5
-  const hasCloud = text.includes('cloudy') || text.includes('rain') || text.includes('showers') || text.includes('storms')
+  const cloudy = text.includes('cloudy') || text.includes('rain')
 
   species.forEach(sp => {
     if (sp.species === 'Largemouth Bass') {
-      if (biteAggressive && (hasCloud || windy)) {
+      if (aggressive && (cloudy || windy)) {
         recs.push({
-          baitType: 'Moving baits (spinnerbaits, crankbaits, swimbaits) on wind-blown banks and points',
-          confidence: 0.9,
-          conditionsMatch: [
-            'Aggressive bite score',
-            'Wind/cloud conditions favor reaction strikes',
-          ],
+          baitType: 'Spinnerbaits, chatterbaits, or swim jigs on wind-blown banks',
+          confidence: 0.92,
+          conditionsMatch: ['High activity score', 'Wind/cloud creates reaction strike conditions'],
+        })
+      } else if (aggressive) {
+        recs.push({
+          baitType: 'Topwater frogs or walking baits in low light',
+          confidence: 0.85,
+          conditionsMatch: ['High activity', 'Low light or dawn/dusk timing'],
         })
       } else {
         recs.push({
-          baitType: 'Finesse plastics and jigs around cover (docks, timber, rock)',
+          baitType: 'Finesse worms or jigs dragged slowly through cover',
           confidence: 0.8,
-          conditionsMatch: [
-            'More neutral/negative bite score',
-            'Clear or calm conditions favor slower presentations',
-          ],
+          conditionsMatch: ['Tougher bite', 'Requires slow, bottom-oriented presentation'],
         })
       }
     }
-
     if (sp.species === 'Crappie') {
       recs.push({
-        baitType: 'Small jigs or minnows vertically fished around brush piles and standing timber',
-        confidence: 0.8,
-        conditionsMatch: [
-          'Crappie respond well to vertical presentations',
-          'Brush and timber concentrate schools',
-        ],
+        baitType: 'Small jigs (1/16-1/8 oz) or live minnows under floats near brush',
+        confidence: 0.82,
+        conditionsMatch: ['Schooling fish near structure', 'Vertical presentation best'],
       })
     }
-
     if (sp.species === 'Channel Catfish') {
       recs.push({
-        baitType: 'Prepared stink baits or cut bait on bottom near channels or wind-blown banks',
-        confidence: 0.75,
-        conditionsMatch: [
-          'Catfish feed by scent; wind-blown banks concentrate food',
-        ],
+        baitType: 'Cut shad or stink bait on bottom near channel edges',
+        confidence: 0.78,
+        conditionsMatch: ['Scent-based feeders', 'Wind-blown banks concentrate bait'],
       })
     }
   })
 
-  const byType = new Map<string, BaitRecommendation>()
-  for (const r of recs) {
-    const existing = byType.get(r.baitType)
-    if (!existing || r.confidence > existing.confidence) {
-      byType.set(r.baitType, r)
-    }
-  }
-
-  return Array.from(byType.values()).sort((a, b) => b.confidence - a.confidence)
+  return recs.sort((a, b) => b.confidence - a.confidence)
 }
 
 function buildMicroSpots(
   query: SpotsQuery,
   bite: BiteScore,
   species: SpeciesPrediction[],
-  baits: BaitRecommendation[]
+  baits: BaitRecommendation[],
+  windDirection: string | null
 ): MicroSpot[] {
   const baseLat = query.lat
   const baseLon = query.lon
+  const wd = (windDirection || '').toUpperCase()
 
-  const offsets = [
-    { id: 'north-wind-bank', dLat: 0.001, dLon: 0 },
-    { id: 'point-east', dLat: 0, dLon: 0.001 },
-    { id: 'creek-channel-south', dLat: -0.001, dLon: 0 },
+  const spots: MicroSpot[] = [
+    {
+      id: 'windward-bank',
+      label: 'Windward Bank',
+      lat: baseLat + 0.001,
+      lon: baseLon,
+      biteScore: bite,
+      bestSpecies: species,
+      bestBaits: baits,
+      reasoning: 'Wind pushes baitfish here; predators follow',
+    },
+    {
+      id: 'main-point',
+      label: 'Main Lake Point',
+      lat: baseLat,
+      lon: baseLon + 0.001,
+      biteScore: bite,
+      bestSpecies: species,
+      bestBaits: baits,
+      reasoning: 'Current break and ambush spot for roaming fish',
+    },
+    {
+      id: 'creek-channel',
+      label: 'Creek Channel Edge',
+      lat: baseLat - 0.001,
+      lon: baseLon,
+      biteScore: bite,
+      bestSpecies: species,
+      bestBaits: baits,
+      reasoning: 'Depth change and structure attract bait and predators',
+    },
   ]
 
-  return offsets.map((o, idx) => ({
-    id: o.id,
-    label:
-      idx === 0
-        ? 'Wind-blown bank'
-        : idx === 1
-        ? 'Main lake point'
-        : 'Creek channel edge',
-    lat: baseLat + o.dLat,
-    lon: baseLon + o.dLon,
-    biteScore: bite,
-    bestSpecies: species,
-    bestBaits: baits,
-  }))
+  // Adjust for wind direction
+  if (wd.includes('S') || wd.includes('SE') || wd.includes('SW')) {
+    spots[0].label = 'North Shore (Wind-Blown)'
+    spots[0].lat = baseLat + 0.0015
+    spots[0].reasoning = 'South winds push warm surface water and baitfish to north banks'
+  } else if (wd.includes('N') || wd.includes('NE') || wd.includes('NW')) {
+    spots[0].label = 'South Shore (Wind-Blown)'
+    spots[0].lat = baseLat - 0.0015
+    spots[0].reasoning = 'North winds concentrate bait on south-facing structure'
+  }
+
+  return spots
+}
+
+function generateHumanSummary(
+  bite: BiteScore,
+  conditions: SpotsResponse['conditions'],
+  topSpecies: SpeciesPrediction[],
+  topBait: BaitRecommendation
+): string {
+  const timeStr = conditions.isDaytime ? 'today' : 'tonight'
+  const temp = conditions.temperatureF ? `${conditions.temperatureF}°F` : 'moderate temps'
+  const sky = conditions.shortForecast?.toLowerCase() || 'current conditions'
+  const wind = conditions.windSpeedMph 
+    ? `${Math.round(conditions.windSpeedMph)} mph winds` 
+    : 'light winds'
+
+  let vibe = ''
+  if (bite.level === 'excellent') vibe = 'Excellent conditions—fish should be actively feeding and aggressive.'
+  else if (bite.level === 'good') vibe = 'Solid fishing expected with good activity levels.'
+  else if (bite.level === 'fair') vibe = 'Fair conditions; fish will bite but require patience and precise presentations.'
+  else vibe = 'Tough bite expected. Focus on the best windows and slow down your approach.'
+
+  return `${vibe} Expect ${timeStr}'s bite to center around ${topSpecies[0]?.species || 'gamefish'} given the ${temp} and ${sky}. With ${wind}, focus on ${topBait.baitType.toLowerCase()}. ${bite.reasons[0] ? bite.reasons[0].toLowerCase() : ''}`
 }
 
 export async function GET(req: NextRequest) {
   try {
     const query = parseQuery(req)
-
     const wx = await fetchWeatherGovPointForecast(query.lat, query.lon)
 
-    const windSpeedMph = parseWindSpeedMph(wx.windSpeedText)
+    const windSpeedMph = parseWindSpeedMph(wx.windSpeedText, wx.detailedForecast)
     const bite = computeBiteScore(
       wx.temperatureF,
       windSpeedMph,
       wx.shortForecast,
-      wx.isDaytime
+      wx.detailedForecast,
+      wx.isDaytime,
+      wx.issuedAt
     )
 
-    const speciesLikely = predictSpecies(
-      query,
-      bite,
-      wx.temperatureF
-    )
+    const speciesLikely = predictSpecies(query, bite, wx.temperatureF)
+    const recommendedBaits = recommendBaits(speciesLikely, bite, wx.shortForecast, wx.detailedForecast, windSpeedMph)
+    const microSpots = buildMicroSpots(query, bite, speciesLikely, recommendedBaits, wx.windDirection)
 
-    const recommendedBaits = recommendBaits(
-      speciesLikely,
-      bite,
-      wx.shortForecast,
-      windSpeedMph
-    )
+    const conditions = {
+      source: 'api.weather.gov' as const,
+      issuedAt: wx.issuedAt,
+      temperatureF: wx.temperatureF,
+      windSpeedMph,
+      windDirection: wx.windDirection,
+      shortForecast: wx.shortForecast,
+      detailedForecast: wx.detailedForecast,
+      isDaytime: wx.isDaytime,
+    }
 
-    const microSpots = buildMicroSpots(
-      query,
-      bite,
-      speciesLikely,
-      recommendedBaits
-    )
+    const summary = generateHumanSummary(bite, conditions, speciesLikely, recommendedBaits[0])
 
     const response: SpotsResponse = {
       query,
-      conditions: {
-        source: 'api.weather.gov',
-        issuedAt: wx.issuedAt,
-        temperatureF: wx.temperatureF,
-        windSpeedMph,
-        windDirection: wx.windDirection,
-        shortForecast: wx.shortForecast,
-        isDaytime: wx.isDaytime,
-      },
+      conditions,
       overallBite: bite,
+      summary,
       speciesLikely,
       recommendedBaits,
       microSpots,
@@ -437,10 +488,7 @@ export async function GET(req: NextRequest) {
     console.error('spots api error', err)
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
-      {
-        error: 'Spots API error',
-        message,
-      },
+      { error: 'Spots API error', message },
       { status: 400 }
     )
   }
