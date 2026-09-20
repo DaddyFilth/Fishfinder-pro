@@ -56,14 +56,18 @@ type SpotsResponse = {
 
 function parseQuery(req: NextRequest): SpotsQuery {
   const sp = req.nextUrl.searchParams
-  const lat = Number(sp.get('lat'))
-  const lon = Number(sp.get('lon'))
+  const rawLat = Number(sp.get('lat'))
+  const rawLon = Number(sp.get('lon'))
   const species = sp.get('species') || undefined
   const time = sp.get('time') || undefined
 
-  if (Number.isNaN(lat) || Number.isNaN(lon)) {
+  if (Number.isNaN(rawLat) || Number.isNaN(rawLon)) {
     throw new Error('lat and lon are required and must be numbers')
   }
+
+  // Clamp and round to 4 decimals to match Weather.gov constraints
+  const lat = Number(Math.min(Math.max(rawLat, -90), 90).toFixed(4))
+  const lon = Number(Math.min(Math.max(rawLon, -180), 180).toFixed(4))
 
   return { lat, lon, species, time }
 }
