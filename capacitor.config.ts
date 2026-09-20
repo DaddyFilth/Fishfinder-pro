@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'SeamCast',
   webDir: 'public',
   server: {
-    url: 'https://www.seamcast.online',
+    url: 'https://www.fishfinder-pro.online',
     cleartext: false,
   },
   android: {
