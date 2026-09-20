@@ -7,9 +7,32 @@ import {
 } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { DEFAULT_SPOTS, getDefaultCondition } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+function fallbackConditionResponse(id: string) {
+  const fallbackSpot = DEFAULT_SPOTS.find((spot) => spot.id === id);
+  if (!fallbackSpot) return null;
+
+  return NextResponse.json(
+    {
+      ...getDefaultCondition(fallbackSpot),
+      cached: false,
+      stale: false,
+      data_mode: 'fallback',
+      warning:
+        'Live environmental data is unavailable. Showing bundled Oklahoma fallback conditions.',
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+        'x-fishfinder-data-mode': 'fallback',
+      },
+    },
+  );
+}
 
 export async function GET(
   _req: NextRequest,
@@ -30,10 +53,10 @@ export async function GET(
   const supabase = getSupabaseAdmin();
 
   if (!supabase) {
-    return NextResponse.json(
-      { error: 'Database is not configured' },
-      { status: 503 },
-    );
+    const fallback = fallbackConditionResponse(id);
+    if (fallback) return fallback;
+
+    return NextResponse.json({ error: 'Database is not configured' }, { status: 503 });
   }
 
   const { data: spot, error: spotErr } = await supabase
@@ -43,6 +66,9 @@ export async function GET(
     .single();
 
   if (spotErr || !spot) {
+    const fallback = fallbackConditionResponse(id);
+    if (fallback) return fallback;
+
     return NextResponse.json(
       { error: 'Spot not found' },
       { status: 404 },
@@ -75,9 +101,13 @@ export async function GET(
         ...cached,
         cached: true,
         stale: false,
+        data_mode: 'cached',
       },
       {
-        headers: { 'Cache-Control': 'public, max-age=1800' },
+        headers: {
+          'Cache-Control': 'public, max-age=1800',
+          'x-fishfinder-data-mode': 'cached',
+        },
       },
     );
   }
@@ -144,6 +174,7 @@ export async function GET(
         ...cached,
         cached: true,
         stale: true,
+        data_mode: 'stale-cache',
         warning:
           'Live environmental data is temporarily unavailable. Showing the latest cached conditions.',
       },
@@ -151,6 +182,26 @@ export async function GET(
         headers: {
           'Cache-Control': 'no-store',
           'x-fishfinder-data-mode': 'stale-cache',
+        },
+      },
+    );
+  }
+
+  if (noLiveProviderData) {
+    const fallback = fallbackConditionResponse(id);
+    if (fallback) return fallback;
+
+    return NextResponse.json(
+      {
+        error:
+          'Live environmental data is temporarily unavailable and no cached or bundled fallback conditions exist for this spot.',
+        data_mode: 'unavailable',
+      },
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-store',
+          'x-fishfinder-data-mode': 'unavailable',
         },
       },
     );
@@ -224,11 +275,13 @@ export async function GET(
         captured_at: new Date().toISOString(),
         cached: false,
         stale: false,
+        data_mode: 'live',
       },
       {
         headers: {
           'Cache-Control': 'no-store',
           'x-fishfinder-cache': 'write-failed',
+          'x-fishfinder-data-mode': 'live',
         },
       },
     );
@@ -239,9 +292,13 @@ export async function GET(
       ...inserted,
       cached: false,
       stale: false,
+      data_mode: 'live',
     },
     {
-      headers: { 'Cache-Control': 'public, max-age=1800' },
+      headers: {
+        'Cache-Control': 'public, max-age=1800',
+        'x-fishfinder-data-mode': 'live',
+      },
     },
   );
 }
