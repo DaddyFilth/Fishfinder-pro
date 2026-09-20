@@ -69,7 +69,11 @@ function parseQuery(req: NextRequest): SpotsQuery {
 }
 
 async function fetchWeatherGovPointForecast(lat: number, lon: number) {
-  const pointsRes = await fetch(`https://api.weather.gov/points/${lat},${lon}`, {
+  // Round to 4 decimal places per weather.gov requirements[web:34]
+  const latRounded = Number(lat.toFixed(4))
+  const lonRounded = Number(lon.toFixed(4))
+  const pointsUrl = `https://api.weather.gov/points/${latRounded},${lonRounded}`
+  const pointsRes = await fetch(pointsUrl, {
     headers: {
       'Accept': 'application/geo+json',
       'User-Agent': 'seamcast/1.0 (spots api; contact: your-email@example.com)',
@@ -77,6 +81,10 @@ async function fetchWeatherGovPointForecast(lat: number, lon: number) {
   })
 
   if (!pointsRes.ok) {
+    console.error('weather.gov points failed', {
+      url: pointsUrl,
+      status: pointsRes.status,
+    })
     throw new Error(`weather.gov points error: ${pointsRes.status}`)
   }
 
