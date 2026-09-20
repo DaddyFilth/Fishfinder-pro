@@ -1,4 +1,4 @@
-"""Apply small source fixes that are not convenient to perform manually."""
+o"""Apply small source fixes that are not convenient to perform manually."""
 
 from pathlib import Path
 
