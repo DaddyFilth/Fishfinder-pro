@@ -14,10 +14,9 @@ export const Phase1LiveWrapper: React.FC<{ children: React.ReactNode }> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 8,
         }}
       >
-        <span style={{ fontWeight: 700 }}>FishFinder</span>
+        <span>FishFinder</span>
         <DataSourceBadge />
       </div>
       {children}
