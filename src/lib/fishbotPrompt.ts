@@ -39,10 +39,11 @@ type SpotsContext = {
   recommendedBaits?: Array<{
     baitType?: string
   }>
+  summary?: string
 }
 
 export function buildContextMessage(spotsData?: SpotsContext): string {
-  if (!spotsData) return ''
+  if (!spotsData) return 'No live conditions available. Provide general Oklahoma fishing advice.'
   
   const temp = spotsData.conditions?.temperatureF ?? 'unknown'
   const windSpeed = spotsData.conditions?.windSpeedMph ?? 'calm'
@@ -53,13 +54,14 @@ export function buildContextMessage(spotsData?: SpotsContext): string {
   const topSpecies = spotsData.speciesLikely?.[0]
   const topBait = spotsData.recommendedBaits?.[0]
   
-  return `CURRENT CONDITIONS AT SPOT:
+  return `CURRENT LIVE CONDITIONS:
 - Temperature: ${temp}°F
 - Wind: ${windSpeed} mph ${windDir}
 - Sky: ${sky}
 - Bite Score: ${score}/100 (${level})
-- Top Species: ${topSpecies?.species ?? 'bass'} (${Math.round((topSpecies?.probability ?? 0) * 100)}%)
-- Recommended Bait: ${topBait?.baitType ?? 'various'}
+- Top Species: ${topSpecies?.species ?? 'bass'} (${Math.round((topSpecies?.probability ?? 0) * 100)}% chance)
+- Best Bait: ${topBait?.baitType ?? 'various'}
+- Summary: ${spotsData.summary ?? 'None'}
 
-Use this to give specific, actionable advice.`
+CRITICAL: Use these specific numbers in your response. Reference the temperature, wind, and bite score directly.`
 }

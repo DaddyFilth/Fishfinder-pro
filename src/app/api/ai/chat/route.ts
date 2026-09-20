@@ -18,16 +18,48 @@ type RequestBody = {
 async function fetchSpotsContext(lat?: number, lon?: number) {
   if (!lat || !lon) return null
   try {
-    // Call our own spots API internally
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/spots?lat=${lat}&lon=${lon}`, {
-      next: { revalidate: 300 } // Cache for 5 mins
+    const res = await fetch(`https://seamcast-spots.vercel.app/api/spots?lat=${lat}&lon=${lon}`, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 300 }
     })
     if (!res.ok) return null
     return await res.json()
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch spots context:', error)
     return null
   }
+}
+
+async function callGroq(messages: ChatMessage[]): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY not configured')
+  }
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 1024,
+      top_p: 0.9,
+      stream: false
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Groq API error:', response.status, errorText)
+    throw new Error(`Groq API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content || 'No response from Fishbot'
 }
 
 export async function POST(req: NextRequest) {
@@ -39,11 +71,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    // Fetch live conditions if coordinates provided
+    // Fetch live conditions
     const spotsData = await fetchSpotsContext(lat, lon)
     const context = buildContextMessage(spotsData)
 
-    // Build messages array for LLM
+    // Build conversation with system prompt and context
     const messages: ChatMessage[] = [
       { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
       { role: 'system', content: context },
@@ -51,55 +83,27 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: message }
     ]
 
-    // Check which AI provider to use (Ollama, OpenAI, etc.)
-    const ollamaUrl = process.env.OLLAMA_BASE_URL
-    const openaiKey = process.env.OPENAI_API_KEY
-
     let aiResponse: string
 
-    if (ollamaUrl) {
-      // Ollama integration
-      const res = await fetch(`${ollamaUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3.1', // or your preferred model
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
-          stream: false,
-          options: {
-            temperature: 0.7,
-            top_p: 0.9,
-          }
-        })
-      })
+    try {
+      aiResponse = await callGroq(messages)
+    } catch (groqError) {
+      console.error('Groq failed:', groqError)
       
-      if (!res.ok) throw new Error(`Ollama error: ${res.status}`)
-      const data = await res.json()
-      aiResponse = data.message?.content || "I'm having trouble thinking right now. Try again?"
-    } 
-    else if (openaiKey) {
-      // OpenAI integration
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 300
-        })
-      })
-      
-      if (!res.ok) throw new Error(`OpenAI error: ${res.status}`)
-      const data = await res.json()
-      aiResponse = data.choices?.[0]?.message?.content || "I'm having trouble thinking right now."
-    }
-    else {
-      // Fallback if no AI configured
-      aiResponse = `I see you're asking about "${message}". Right now I'm running in offline mode, but based on general Oklahoma patterns: ${spotsData ? `The bite is ${spotsData.overallBite?.level} with a score of ${spotsData.overallBite?.score}. ` : ''}Try ${spotsData?.recommendedBaits?.[0]?.baitType || 'moving baits'} around wind-blown structure. What specific species are you targeting?`
+      // Smart fallback using spots data if Groq fails or is not configured
+      if (spotsData) {
+        const temp = spotsData.conditions?.temperatureF
+        const wind = spotsData.conditions?.windSpeedMph
+        const sky = spotsData.conditions?.shortForecast
+        const score = spotsData.overallBite?.score
+        const level = spotsData.overallBite?.level
+        const topSpecies = spotsData.speciesLikely?.[0]?.species || 'bass'
+        const topBait = spotsData.recommendedBaits?.[0]?.baitType || 'moving baits'
+        
+        aiResponse = `Right now we're looking at ${temp}°F with ${wind || 'light'} wind and ${sky || 'current'} conditions. The bite is ${level} (${score}/100). For ${topSpecies}, start with ${topBait.toLowerCase()}. Focus on the wind-blown structure I marked on the map. (Note: Running in offline mode - add GROQ_API_KEY for full AI)`
+      } else {
+        aiResponse = "I need coordinates to give you live conditions, but generally in Oklahoma right now, look for wind-blown points with moving baits if it's cloudy, or slow down with plastics if it's bright and calm."
+      }
     }
 
     return NextResponse.json({
