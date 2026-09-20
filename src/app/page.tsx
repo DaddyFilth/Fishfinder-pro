@@ -602,14 +602,15 @@ export default function MobilePage() {
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
-          <span style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
-          <span style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>SeamCast</span>
+          <span aria-hidden="true" style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
+          <h1 style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', margin:0, background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Oklahoma SeamCast</h1>
         </div>
         <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
           <span style={{ fontSize:'9px', color:appBadge.color }}>{appBadge.label}</span>
           <AuthAccountButton />
         </div>
       </header>
+      <p style={{ position:'absolute', width:'1px', height:'1px', padding:0, margin:'-1px', overflow:'hidden', clip:'rect(0,0,0,0)', whiteSpace:'nowrap', border:0 }}>Oklahoma public fishing access, species, conditions, and AI-powered trip planning.</p>
 
       {backHint && (
         <div

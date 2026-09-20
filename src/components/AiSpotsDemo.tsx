@@ -23,7 +23,7 @@ export default function AiSpotsDemo() {
         if (!cancelled) {
           setState({ status: 'ok', data });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!cancelled) {
           setState({
             status: 'error',

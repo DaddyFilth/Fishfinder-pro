@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import Script from "next/script";
 import type { ReactNode } from "react";
 import ConnectionStatus from '@/components/offline/ConnectionStatus';
 import ServiceWorkerRegistration from '@/components/offline/ServiceWorkerRegistration';
@@ -58,12 +59,43 @@ export const viewport: Viewport = {
   themeColor: "#0a0f1e",
 };
 
+const siteUrl = "https://www.fishfinder-pro.online";
+const siteStructure = JSON.stringify([
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Oklahoma SeamCast",
+    url: siteUrl,
+    logo: siteUrl + "/icons/icon-512.png",
+    inLanguage: "en-US",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Oklahoma SeamCast",
+    url: siteUrl,
+    description: "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
+    publisher: {
+      "@type": "Organization",
+      name: "Oklahoma SeamCast",
+      logo: siteUrl + "/icons/icon-512.png",
+    },
+    inLanguage: "en-US",
+  },
+]);
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
       className="h-full antialiased"
     >
+      <Script
+        id="structured-data"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: siteStructure }}
+      />
       <body style={{ height: "100%", margin: 0 }} className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
         <ConnectionStatus />

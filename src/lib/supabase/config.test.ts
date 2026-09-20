@@ -7,6 +7,10 @@ describe('getSupabaseProjectUrl', () => {
   })
 
   it('returns null when the Supabase URL is missing', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+    vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', undefined)
+    vi.stubEnv('SUPABASE_ANON_KEY', undefined)
     expect(getSupabaseProjectUrl()).toBeNull()
   })
 
@@ -58,6 +62,10 @@ describe('getSupabasePublicConfig', () => {
   })
 
   it('returns null when either public setting is missing', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+    vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', undefined)
+    vi.stubEnv('SUPABASE_ANON_KEY', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co')
     expect(getSupabasePublicConfig()).toBeNull()
   })

@@ -50,7 +50,7 @@ export default function FishIdentifier() {
       <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
       {preview && (
         <div style={{ position: 'relative', marginBottom: '8px' }}>
-          <img src={preview} alt="catch" style={{ width: '100%', borderRadius: '8px', maxHeight: '140px', objectFit: 'cover' }} />
+          <img src={preview} alt="Catch photo for species identification" style={{ width: '100%', borderRadius: '8px', maxHeight: '140px', objectFit: 'cover' }} />
           {loading && (
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: '#7dd3fc', fontSize: '12px' }}>AI identifying species...</span>

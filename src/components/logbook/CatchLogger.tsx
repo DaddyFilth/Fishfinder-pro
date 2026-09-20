@@ -120,7 +120,7 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display:'none' }} />
           </div>
           {form.photo_url && (
-            <img src={form.photo_url} alt="catch" style={{ width:'100%', borderRadius:'6px', maxHeight:'100px', objectFit:'cover', marginBottom:'6px' }} />
+            <img src={form.photo_url} alt="Catch photo preview" style={{ width:'100%', borderRadius:'6px', maxHeight:'100px', objectFit:'cover', marginBottom:'6px' }} />
           )}
           <button onClick={save} disabled={saving}
             style={{ width:'100%', background: saving?'#1e3a5f':'#0369a1', color:'white', border:'none', padding:'7px', borderRadius:'6px', fontSize:'12px', fontWeight:'bold', cursor: saving?'default':'pointer' }}>
@@ -135,7 +135,7 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
 
       {catches.map(c => (
         <div key={c.id} style={{ background:'#0f172a', borderRadius:'6px', padding:'8px', marginBottom:'6px' }}>
-          {c.photo_url && <img src={c.photo_url} alt="catch" style={{ width:'100%', borderRadius:'4px', maxHeight:'80px', objectFit:'cover', marginBottom:'6px' }} />}
+          {c.photo_url && <img src={c.photo_url} alt={c.species ? `${c.species} catch` : 'Catch photo'} style={{ width:'100%', borderRadius:'4px', maxHeight:'80px', objectFit:'cover', marginBottom:'6px' }} />}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
               <div style={{ fontSize:'12px', fontWeight:'bold', color:'#22d3ee' }}>{c.species}</div>
