@@ -1,7 +1,3 @@
-nano src/lib/aiSpots.ts
-
-# Inside nano (manual edit):
-# - Replace any old fetch to /api/spots OR use of offlineSpots/defaultSpots
 #   with a call to fetchSeamcastAiSpots(lat, lon) from the helper.
 #   Example pattern inside your map logic:
 #   import { fetchSeamcastAiSpots } from '@/lib/seamcastSpotsClient';
