@@ -113,7 +113,7 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
         )}
 
         {imagePreview && (
-          <Image src={imagePreview} alt="preview" width={640} height={180} unoptimized style={{ width:'100%', borderRadius:'8px', maxHeight:'180px', objectFit:'cover', marginBottom:'12px' }} />
+          <Image src={imagePreview} alt="Uploaded fish photo for identification" width={640} height={180} unoptimized style={{ width:'100%', borderRadius:'8px', maxHeight:'180px', objectFit:'cover', marginBottom:'12px' }} />
         )}
 
         {loading && <div style={{ textAlign:'center',padding:'20px 0',color:'#38bdf8',fontWeight:'bold' }}>⚡ Analyzing fish markings & shape...</div>}
@@ -122,7 +122,7 @@ export default function FishIdentifierModal({ isOpen, onClose, onApplyToCatch }:
         {result && (
           <div style={{ background:'#1e293b',borderRadius:'8px',padding:'12px',border:'1px solid #334155' }}>
             <div style={{ display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px' }}>
-              <Image src={getSpeciesImage(result.species || '')} alt={result.species || 'species'} width={48} height={48} unoptimized style={{ borderRadius:'8px', objectFit:'cover' }} />
+              <Image src={getSpeciesImage(result.species || '')} alt={result.species ? `${result.species} identified` : 'Identified fish'} width={48} height={48} unoptimized style={{ borderRadius:'8px', objectFit:'cover' }} />
               <div>
                 <div style={{ fontWeight:'bold',fontSize:'16px',color:'#38bdf8' }}>{result.species}</div>
                 <div style={{ fontSize:'11px',color:'#94a3b8',fontStyle:'italic' }}>{result.scientific_name}</div>
