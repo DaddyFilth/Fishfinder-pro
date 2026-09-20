@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
 import WaypointMarkers from '@/components/WaypointMarkers';
