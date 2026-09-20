@@ -1,52 +1,59 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
+import { NextRequest, NextResponse } from 'next/server'
+import { FISHBOT_SYSTEM_PROMPT, buildContextMessage } from '../../../../lib/fishbotPrompt'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'ai-advisor', limit: 10, windowMs: 60_000 });
-  if (limited) return limited;
-  if (requestBodyTooLarge(req)) return tooLarge();
-
-  let body: { conditions?: unknown; spot?: unknown; species?: unknown; solunar?: unknown };
-
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON request' }, { status: 400 });
-  }
-
-  const { conditions, spot, species, solunar } = body;
-  const spotData = (spot && typeof spot === 'object' ? spot : {}) as Record<string, unknown>;
-  const spotName = typeof spotData.name === 'string' ? spotData.name : 'this spot';
-
-  try {
-    const openai = getOllama();
-    const prompt = `You are FishBot, an expert Oklahoma fishing guide.
-Spot: "${spotName}" (${spotData.water_type || 'lake'}, ${spotData.spot_type || 'public access'}).
-Target species: ${species || 'General Gamefish'}.
-Conditions: ${JSON.stringify(conditions || {})}.
-Solunar: ${JSON.stringify(solunar || {})}.
-
-Provide concise, high-impact tactical advice:
-1. Best current depth and structure
-2. Top 2 specific lure/presentation recommendations
-3. Optimal bite timing window Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
-
-    const response = await openai.chat.completions.create({
-      model: OLLAMA_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.6,
-      max_tokens: 450,
-    });
-
-    const advice = response.choices[0]?.message?.content?.trim();
-    if (advice) {
-      return NextResponse.json({ advice });
+    const { lat, lon, targetSpecies } = await req.json()
+    
+    if (!lat || !lon) {
+      return NextResponse.json({ error: 'Coordinates required' }, { status: 400 })
     }
-  } catch {
-    return NextResponse.json(
-      { error: 'AI advisor is temporarily unavailable.' },
-      { status: 502 },
-    );
+
+    // Fetch spots data
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const spotsRes = await fetch(`${baseUrl}/api/spots?lat=${lat}&lon=${lon}${targetSpecies ? `&species=${targetSpecies}` : ''}`)
+    
+    if (!spotsRes.ok) {
+      throw new Error('Failed to fetch spots data')
+    }
+    
+    const spotsData = await spotsRes.json()
+    const context = buildContextMessage(spotsData)
+
+    // Generate advice using same AI logic as chat
+    const prompt = `Give me a quick fishing strategy for ${targetSpecies || 'the best species'} at this spot right now.`
+
+    // Use same AI provider logic (simplified here)
+    const ollamaUrl = process.env.OLLAMA_BASE_URL
+    let advice = ""
+
+    if (ollamaUrl) {
+      const res = await fetch(`${ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama3.1',
+          messages: [
+            { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
+            { role: 'system', content: context },
+            { role: 'user', content: prompt }
+          ],
+          stream: false
+        })
+      })
+      const data = await res.json()
+      advice = data.message?.content
+    }
+
+    return NextResponse.json({
+      advice: advice || `Hit the ${spotsData.microSpots?.[0]?.label || 'windward bank'} with ${spotsData.recommendedBaits?.[0]?.baitType || 'moving baits'}. The ${spotsData.speciesLikely?.[0]?.species || 'bass'} should be active given the ${spotsData.overallBite?.level || 'current'} conditions.`,
+      spotsData
+    })
+
+  } catch (err) {
+    console.error('Advisor error:', err)
+    return NextResponse.json({ error: 'Advisor unavailable' }, { status: 500 })
   }
 }
