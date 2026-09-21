@@ -254,7 +254,10 @@ async function getSpots(): Promise<SpotLoadResult> {
   return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
 }
 
-export default function MobilePage() {
+export default function MobilePage() {  const [mounted, setMounted] = useState(false);  useEffect(() => { setMounted(true); }, []);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [spots, setSpots] = useState<Spot[]>([]);
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
