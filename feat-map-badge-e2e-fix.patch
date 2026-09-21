@@ -1,0 +1,244 @@
+  *** Begin Patch
+     *** Update File: src/app/page.tsx
+     @@
+
+  - const [mounted, setMounted] = useState(false);
+  - process.env.__NEXT_PRIVATE_MINIMIZE_MACRO_FALSE &&
+    useEffect(()=>{
+
+
+  -
+         setMounted(true);
+
+  - }, []);
+
+  - const [mounted, setMounted] = useState(false);
+  - useEffect(() => {
+  - setMounted(true);
+  - }, []);
+    *** End Patch
+
+  2. Add MapDataSourceBadge component
+     *** Begin Patch
+     *** Add File: src/components/MapDataSourceBadge.tsx
+     +import React from 'react';
+     +import { useLiveSpotsContext } from '../contexts/
+     LiveSpotsContext';
+
+
+  +type Props = { style?: React.CSSProperties };
+  +
+  +export const MapDataSourceBadge: React.FC<Props> =
+  ({ style }) => {
+
+  - const { dataSource } = useLiveSpotsContext();
+  - const color =
+  - dataSource === 'LIVE' ? '#16a34a' :
+  - dataSource === 'CACHE' ? '#f59e0b' :
+  - '#6b7280';
+  - const base: React.CSSProperties = {
+  - display: 'inline-flex',
+  - alignItems: 'center',
+  - padding: '6px 12px',
+  - borderRadius: 999,
+  - background: color,
+  - color: '#fff',
+  - fontSize: 12,
+  - fontWeight: 700,
+  - };
+  - return (
+    <div
+
+  -
+         aria-label={`map-data-source-${dataSource}`}
+
+
+  -
+         style={{ ...base, position: 'absolute', top: 8,
+         right: 8, ...style }}
+
+
+  -
+         {dataSource}
+
+    </div>
+  - );
+    +};
+
+
+  +export default MapDataSourceBadge;
+  *** End Patch
+
+  3. Wire badge into MapWrapper
+     *** Begin Patch
+     *** Update File: src/components/MapWrapper.tsx
+     @@
+     -import React from 'react';
+     +import React from 'react';
+     +import { MapDataSourceBadge } from './
+     MapDataSourceBadge';
+     @@
+     -export default function MapWrapper() {
+
+  - return (
+    <div className="map-wrapper">
+
+  -
+         Map content goes here
+
+    </div>
+  - );
+    +export default function MapWrapper() {
+
+  - return (
+    <div className="map-wrapper" style={{ position:
+    'relative' }}>
+
+
+  -
+         Map content goes here
+
+
+  -
+         <MapDataSourceBadge style={{ top: 8, right: 8 }} /
+         >
+
+    </div>
+  - );
+    }
+    *** End Patch
+
+  4. Phase 5 e2e test
+     *** Begin Patch
+     *** Add File: tests/e2e/liveSpotsPhase5.spec.ts
+     +import { test, expect } from '@playwright/test';
+
+
+  +test('Phase 5: Map overlay badge and header badge are
+  visible', async ({ page }) => {
+
+  - await page.goto('/');
+  - const headerBadge = page.locator('[aria-label^="data-
+    source-"]');
+
+  - const mapBadge = page.locator('[aria-label^="map-data-
+    source-"]');
+
+  - await expect(headerBadge).toBeVisible();
+  - await expect(mapBadge).toBeVisible();
+    +});
+    *** End Patch
+
+  5. Phase 6 e2e test
+     *** Begin Patch
+     *** Add File: tests/e2e/liveSpotsPhase6.spec.ts
+     +import { test, expect } from '@playwright/test';
+
+
+  +test('Phase 6: QA toggle persists and updates both
+  header and map badge', async ({ page }) => {
+
+  - await page.goto('/');
+  - const headerBadge = page.locator('[aria-label^="data-
+    source-"]');
+
+  - const mapBadge = page.locator('[aria-label^="map-data-
+    source-"]');
+
+  - await expect(headerBadge).toBeVisible();
+  - await expect(mapBadge).toBeVisible();
+  - // Set to CACHE and reload
+  - await page.evaluate(() =>
+    localStorage.setItem('fishfinder.liveSpotsQA.enabled',
+    'CACHE'));
+
+  - await page.reload();
+  - const headerAfter = page.locator('[aria-label^="data-
+    source-"]');
+
+  - const mapAfter = page.locator('[aria-label^="map-data-
+    source-"]');
+
+  - await expect(headerAfter).toContainText('CACHE');
+  - await expect(mapAfter).toContainText('CACHE');
+    +});
+    *** End Patch
+
+  6. CI workflow update to run two tests
+     *** Begin Patch
+     *** Update File: .github/workflows/e2e.yml
+     @@
+
+      - run: npx playwright test
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }}
+
+      - run: npx playwright test
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }} tests/e2e/
+
+
+  -
+           liveSpotsPhase5.spec.ts
+
+      - run: npx playwright test
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }} tests/e2e/
+
+
+  -
+           liveSpotsPhase6.spec.ts
+
+
+  -
+           - run: npx playwright test
+
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }} tests/e2e/
+
+
+  -
+           liveSpotsPhase6.spec.ts
+
+      - run: npx playwright test
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }} tests/e2e/
+           liveSpotsPhase5.spec.ts
+
+      - run: npx playwright test
+
+  -
+           --config=playwright.config.ts
+
+
+  -
+           --project=${{ matrix.browser }} tests/e2e/
+           liveSpotsPhase6.spec.ts
+
+  *** End Patch
+
