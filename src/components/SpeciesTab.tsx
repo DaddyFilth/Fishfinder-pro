@@ -6,9 +6,6 @@ function getFallbackImage(speciesName: string) {
   return `/api/species-image/${encodeURIComponent(speciesName)}`;
 }
 
-function getImageSource(image: string) {
-  return image.startsWith('/fish/') ? image.replace('/fish/', '/species/') : image;
-}
 import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import {
   SPECIES,
@@ -58,7 +55,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
             ← Back to Species
           </button>
           <img
-            src={getImageSource(selected.image)}
+            src={selected.image}
             onError={(event) => {
               const image = event.currentTarget;
               if (image.src.endsWith(getFallbackImage(selected.name))) return;
@@ -192,7 +189,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
             style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '12px', padding: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.2s' }}
           >
             <img
-              src={getImageSource(species.image)}
+              src={species.image}
               onError={(event) => {
                 const image = event.currentTarget;
                 const fallback = getFallbackImage(species.name);
