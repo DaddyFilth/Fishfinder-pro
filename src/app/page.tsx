@@ -463,20 +463,37 @@ export default function MobilePage() {
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    setNotificationState(permission);
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setNotificationState('denied');
+      setNotificationsPreferred(false);
+      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
+      return;
+    }
 
-    const enabled = permission === 'granted';
-    setNotificationsPreferred(enabled);
-    saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, String(enabled));
+    try {
+      const permission = Notification.permission === 'denied'
+        ? Notification.permission
+        : await Notification.requestPermission();
+      setNotificationState(permission);
 
-    if (enabled && 'serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.showNotification('SeamCast notifications enabled', {
-        body: 'You will receive fishing updates from this browser when alerts are available.',
-        icon: '/icons/icon-192.png',
-        tag: 'seamcast-notifications-enabled',
-      });
+      const enabled = permission === 'granted';
+      setNotificationsPreferred(enabled);
+      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, String(enabled));
+
+      if (enabled && 'serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration('/');
+        if (registration) {
+          await registration.showNotification('SeamCast notifications enabled', {
+            body: 'You will receive fishing updates from this browser when alerts are available.',
+            icon: '/icons/icon-192.png',
+            tag: 'seamcast-notifications-enabled',
+          });
+        }
+      }
+    } catch {
+      setNotificationState('denied');
+      setNotificationsPreferred(false);
+      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
     }
   };
 

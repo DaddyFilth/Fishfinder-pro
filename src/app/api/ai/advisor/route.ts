@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage } from '../../../../lib/fishbotPrompt'
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,14 +45,23 @@ async function callGroq(messages: Array<{role: string, content: string}>): Promi
 }
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-advisor', limit: 12, windowMs: 60_000 })
+  if (limited) return limited
+  if (requestBodyTooLarge(req, 16_384)) return tooLarge()
+
   try {
     const { lat, lon, targetSpecies } = await req.json()
     
-    if (!lat || !lon) {
+    if (
+      typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
+      typeof lon !== 'number' || !Number.isFinite(lon) || lon < -180 || lon > 180
+    ) {
       return NextResponse.json({ error: 'Coordinates required' }, { status: 400 })
     }
 
-    const spotsData = await fetchSpotsContext(lat, lon, targetSpecies)
+    const safeSpecies = typeof targetSpecies === 'string' ? targetSpecies.trim().slice(0, 80) : ''
+
+    const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
     const context = buildContextMessage(spotsData)
 
     let advice = ""
@@ -60,7 +70,7 @@ export async function POST(req: NextRequest) {
       advice = await callGroq([
         { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
         { role: 'system', content: context },
-        { role: 'user', content: `Give me a quick fishing strategy for ${targetSpecies || 'the best species'} at this exact spot right now. Be specific about lures and locations.` }
+        { role: 'user', content: `Give me a quick fishing strategy for ${safeSpecies || 'the best species'} at this exact spot right now. Be specific about lures and locations.` }
       ])
     } catch {
       // Fallback to spots data summary

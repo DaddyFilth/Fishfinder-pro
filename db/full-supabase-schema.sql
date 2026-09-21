@@ -15,12 +15,32 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   username text UNIQUE,
   full_name text,
   avatar_url text,
-  role text DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
+  role text DEFAULT 'angler' CHECK (role IN ('angler', 'user', 'admin', 'moderator')),
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
 
+-- Keep the deployed table compatible with the app's role names while accepting
+-- the legacy `user` value during migration.
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check
+  CHECK (role IN ('angler', 'user', 'admin', 'moderator'));
+UPDATE public.profiles SET role = 'angler' WHERE role = 'user';
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
 
 DROP POLICY IF EXISTS "profiles_select_public" ON public.profiles;
 CREATE POLICY "profiles_select_public"
@@ -37,6 +57,12 @@ CREATE POLICY "profiles_update_own"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "profiles_update_admin" ON public.profiles;
+CREATE POLICY "profiles_update_admin"
+  ON public.profiles FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- Automatically create profile on new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

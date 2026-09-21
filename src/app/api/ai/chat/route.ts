@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage } from '../../../../lib/fishbotPrompt'
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,8 +65,7 @@ async function callGroq(messages: ChatMessage[]): Promise<string> {
   })
 
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Groq API error:', response.status, errorText)
+    console.error('Groq API error:', response.status)
     throw new Error(`Groq API error: ${response.status}`)
   }
 
@@ -74,13 +74,30 @@ async function callGroq(messages: ChatMessage[]): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-chat', limit: 12, windowMs: 60_000 })
+  if (limited) return limited
+  if (requestBodyTooLarge(req, 64_000)) return tooLarge()
+
   try {
     const body: RequestBody = await req.json()
     const { message, lat, lon, spot, conditions, history = [] } = body
 
-    if (typeof message !== 'string' || !message.trim()) {
+    if (typeof message !== 'string' || !message.trim() || message.length > 4_000) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
+
+    const safeHistory = Array.isArray(history)
+      ? history
+          .filter((item): item is ChatMessage =>
+            Boolean(
+              item &&
+                (item.role === 'user' || item.role === 'assistant') &&
+                typeof item.content === 'string' &&
+                item.content.length <= 4_000,
+            ),
+          )
+          .slice(-6)
+      : []
 
     const spotLat = lat ?? coordinate(spot?.lat ?? spot?.latitude)
     const spotLon = lon ?? coordinate(spot?.lon ?? spot?.lng ?? spot?.longitude)
@@ -92,7 +109,7 @@ export async function POST(req: NextRequest) {
     const messages: ChatMessage[] = [
       { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
       { role: 'system', content: context },
-      ...history.slice(-6), // Keep last 6 messages for context
+      ...safeHistory, // Keep only bounded user/assistant messages for context
       { role: 'user', content: message }
     ]
 
@@ -127,12 +144,11 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (err: unknown) {
-    console.error('Fishbot error:', err)
-    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Fishbot error:', err instanceof Error ? err.message : 'unknown error')
     return NextResponse.json(
       { 
-        error: 'Fishbot is temporarily unavailable', 
-        message,
+        error: 'Fishbot is temporarily unavailable.',
+        message: 'Try asking about specific conditions or locations in Oklahoma.',
         fallback: "Try asking about specific conditions or locations in Oklahoma."
       },
       { status: 500 }
