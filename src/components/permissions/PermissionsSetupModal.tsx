@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 
-export function PermissionsSetupModal() {
+function PermissionsSetupModal() {
   const {
     setupCompleted,
     gpsStatus,
@@ -15,19 +15,17 @@ export function PermissionsSetupModal() {
   } = usePermissions();
 
   const [busy, setBusy] = useState(false);
-  const [insecureWarn, setInsecureWarn] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
-      setInsecureWarn(true);
-    }
-  }, []);
+  const isInsecure =
+    typeof window !== 'undefined' &&
+    !window.isSecureContext &&
+    window.location.hostname !== 'localhost';
 
   if (setupCompleted) return null;
 
   const handleEnableAll = async () => {
     setBusy(true);
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       await requestNotifications();
     }
     await requestGps();
@@ -43,9 +41,9 @@ export function PermissionsSetupModal() {
           Enable GPS and notifications for real-time Oklahoma lake alerts, water conditions, and nearby spot tracking.
         </p>
 
-        {insecureWarn && (
+        {isInsecure && (
           <div className="my-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300">
-            Warning: Browser blocks GPS & Notifications over LAN HTTP. Please open <strong>http://localhost:3000</strong> directly on this device or use HTTPS.
+            Warning: Browser blocks GPS and notifications over LAN HTTP. Please open <strong>http://localhost:3000</strong> directly on this device or use HTTPS.
           </div>
         )}
 
@@ -53,7 +51,7 @@ export function PermissionsSetupModal() {
           <div className="flex items-center justify-between rounded-lg bg-slate-800/80 p-3">
             <div>
               <p className="text-sm font-semibold">GPS Location</p>
-              <p className="text-xs text-slate-400">Lake spot navigation & ramps</p>
+              <p className="text-xs text-slate-400">Lake spot navigation &amp; ramps</p>
             </div>
             <button
               type="button"
@@ -66,8 +64,8 @@ export function PermissionsSetupModal() {
 
           <div className="flex items-center justify-between rounded-lg bg-slate-800/80 p-3">
             <div>
-              <p className="text-sm font-semibold">Alerts & Windows</p>
-              <p className="text-xs text-slate-400">Severe wind & bite times</p>
+              <p className="text-sm font-semibold">Alerts &amp; Windows</p>
+              <p className="text-xs text-slate-400">Severe wind &amp; bite times</p>
             </div>
             <button
               type="button"
@@ -89,6 +87,7 @@ export function PermissionsSetupModal() {
         >
           {busy ? 'Activating...' : 'Continue'}
         </button>
+
         <button
           type="button"
           onClick={completeSetup}
@@ -100,4 +99,5 @@ export function PermissionsSetupModal() {
     </div>
   );
 }
+
 export default PermissionsSetupModal;
