@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export function PermissionsSetupModal() {
@@ -15,13 +15,9 @@ export function PermissionsSetupModal() {
   } = usePermissions();
 
   const [busy, setBusy] = useState(false);
-  const [insecureWarn, setInsecureWarn] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
-      setInsecureWarn(true);
-    }
-  }, []);
+  const [insecureWarn] = useState(() =>
+    typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost',
+  );
 
   if (setupCompleted) return null;
 

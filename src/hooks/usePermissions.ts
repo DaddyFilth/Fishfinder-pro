@@ -8,37 +8,48 @@ interface PermissionsState {
   gpsStatus: PermissionStatusType;
   notificationStatus: PermissionStatusType;
   gpsEnabled: boolean;
+  notificationsEnabled: boolean;
   setupCompleted: boolean;
   coords: { latitude: number; longitude: number } | null;
   error: string | null;
 }
 
-const STORAGE_KEY = 'seamcast_permissions_v1';
+const STORAGE_KEY = 'seamcast_permissions_v2';
+
+function isSecurePermissionContext() {
+  return typeof window !== 'undefined' && (window.isSecureContext || window.location.hostname === 'localhost');
+}
+
+function getInitialPreferences() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    return cached ? JSON.parse(cached) as Partial<PermissionsState> : {};
+  } catch {
+    return {};
+  }
+}
 
 export function usePermissions() {
-  const [state, setState] = useState<PermissionsState>({
-    gpsStatus: 'prompt',
-    notificationStatus: 'prompt',
-    gpsEnabled: false,
-    setupCompleted: false,
-    coords: null,
-    error: null,
+  const [state, setState] = useState<PermissionsState>(() => {
+    const preferences = getInitialPreferences();
+    return {
+      gpsStatus: 'prompt',
+      notificationStatus: typeof window !== 'undefined' && 'Notification' in window
+        ? window.Notification.permission as PermissionStatusType
+        : 'unsupported',
+      gpsEnabled: !!preferences.gpsEnabled,
+      notificationsEnabled: !!preferences.notificationsEnabled,
+      setupCompleted: !!preferences.setupCompleted,
+      coords: null,
+      error: null,
+    };
   });
 
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setState((prev) => ({
-          ...prev,
-          gpsEnabled: !!parsed.gpsEnabled,
-          setupCompleted: !!parsed.setupCompleted,
-        }));
-      }
-    } catch {}
+    if (typeof window === 'undefined') return;
 
-    if (typeof window !== 'undefined' && 'permissions' in navigator) {
+    if ('permissions' in navigator) {
       navigator.permissions
         .query({ name: 'geolocation' })
         .then((status) => {
@@ -50,16 +61,8 @@ export function usePermissions() {
         .catch(() => {
           setState((prev) => ({ ...prev, gpsStatus: 'prompt' }));
         });
-
-      if ('Notification' in window) {
-        setState((prev) => ({
-          ...prev,
-          notificationStatus: Notification.permission as PermissionStatusType,
-        }));
-      } else {
-        setState((prev) => ({ ...prev, notificationStatus: 'unsupported' }));
-      }
     }
+
   }, []);
 
   const persistSettings = useCallback((updates: Partial<PermissionsState>) => {
@@ -70,17 +73,25 @@ export function usePermissions() {
           STORAGE_KEY,
           JSON.stringify({
             gpsEnabled: next.gpsEnabled,
+            notificationsEnabled: next.notificationsEnabled,
             setupCompleted: next.setupCompleted,
-          })
+          }),
         );
-      } catch {}
+      } catch {
+        // Ignore storage failures; the in-memory state remains authoritative.
+      }
       return next;
     });
   }, []);
 
   const requestGps = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      setState((prev) => ({ ...prev, gpsStatus: 'unsupported', error: 'GPS unsupported on device' }));
+      setState((prev) => ({ ...prev, gpsStatus: 'unsupported', gpsEnabled: false, error: 'GPS is not supported on this device.' }));
+      return false;
+    }
+    if (!isSecurePermissionContext()) {
+      setState((prev) => ({ ...prev, gpsStatus: 'denied', gpsEnabled: false, error: 'Location requires HTTPS or localhost.' }));
+      persistSettings({ gpsEnabled: false });
       return false;
     }
 
@@ -91,10 +102,7 @@ export function usePermissions() {
             ...prev,
             gpsStatus: 'granted',
             gpsEnabled: true,
-            coords: {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            },
+            coords: { latitude: position.coords.latitude, longitude: position.coords.longitude },
             error: null,
           }));
           persistSettings({ gpsEnabled: true });
@@ -102,66 +110,69 @@ export function usePermissions() {
         },
         (err) => {
           const isDenied = err.code === err.PERMISSION_DENIED;
+          const message = isDenied
+            ? 'Location access is blocked. Re-enable it in your browser or device settings.'
+            : err.message || 'Unable to determine your location.';
           setState((prev) => ({
             ...prev,
             gpsStatus: isDenied ? 'denied' : prev.gpsStatus,
             gpsEnabled: false,
-            error: err.message,
+            error: message,
           }));
           persistSettings({ gpsEnabled: false });
           resolve(false);
         },
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
       );
     });
   }, [persistSettings]);
 
   const requestNotifications = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      setState((prev) => ({ ...prev, notificationStatus: 'unsupported' }));
+      setState((prev) => ({ ...prev, notificationStatus: 'unsupported', notificationsEnabled: false, error: 'Notifications are not supported in this app shell.' }));
+      persistSettings({ notificationsEnabled: false });
+      return false;
+    }
+    if (!isSecurePermissionContext()) {
+      setState((prev) => ({ ...prev, notificationStatus: 'denied', notificationsEnabled: false, error: 'Notifications require HTTPS or localhost.' }));
+      persistSettings({ notificationsEnabled: false });
+      return false;
+    }
+    if (Notification.permission === 'denied') {
+      setState((prev) => ({ ...prev, notificationStatus: 'denied', notificationsEnabled: false, error: 'Notifications are blocked. Re-enable them in your browser or device settings.' }));
+      persistSettings({ notificationsEnabled: false });
       return false;
     }
 
     try {
       const permission = await Notification.requestPermission();
+      const granted = permission === 'granted';
       setState((prev) => ({
         ...prev,
         notificationStatus: permission as PermissionStatusType,
+        notificationsEnabled: granted,
+        error: granted ? null : 'Notifications were not enabled.',
       }));
-      return permission === 'granted';
+      persistSettings({ notificationsEnabled: granted });
+      return granted;
     } catch {
-      setState((prev) => ({ ...prev, error: 'Failed to request notifications' }));
+      setState((prev) => ({ ...prev, notificationStatus: 'denied', notificationsEnabled: false, error: 'Failed to request notifications.' }));
+      persistSettings({ notificationsEnabled: false });
       return false;
     }
-  }, []);
+  }, [persistSettings]);
 
   const toggleGps = useCallback(async (enabled: boolean) => {
     if (!enabled) {
       persistSettings({ gpsEnabled: false });
       return;
     }
-
-    if (state.gpsStatus !== 'granted') {
-      const approved = await requestGps();
-      if (!approved && state.gpsStatus === 'denied') {
-        alert('Location access is blocked. Please re-enable location in your browser or device settings.');
-      }
-      return;
-    }
-
-    persistSettings({ gpsEnabled: true });
     await requestGps();
-  }, [state.gpsStatus, requestGps, persistSettings]);
+  }, [requestGps, persistSettings]);
 
   const completeSetup = useCallback(() => {
     persistSettings({ setupCompleted: true });
   }, [persistSettings]);
 
-  return {
-    ...state,
-    requestGps,
-    requestNotifications,
-    toggleGps,
-    completeSetup,
-  };
+  return { ...state, requestGps, requestNotifications, toggleGps, completeSetup };
 }
