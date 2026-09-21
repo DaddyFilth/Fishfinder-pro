@@ -48,42 +48,14 @@ function resolveSpotDataMode(
   return source;
 }
 
-function badgeState(mode: DataMode) {
-  switch (mode) {
-    case 'live':
-      return { label: '● LIVE', color: '#22c55e' };
-    case 'cached':
-      return { label: '● CACHED', color: '#fbbf24' };
-    case 'fallback':
-      return { label: '● FALLBACK', color: '#f59e0b' };
-    case 'offline-live':
-      return { label: '● OFFLINE · LIVE DATA', color: '#f59e0b' };
-    case 'offline-fallback':
-      return { label: '● OFFLINE DATA', color: '#f59e0b' };
-    case 'offline-cached':
-      return { label: '● OFFLINE CACHE', color: '#fbbf24' };
-    default:
-      return { label: '● LOADING', color: '#94a3b8' };
-  }
+function badgeState(isOnline: boolean) {
+  return isOnline
+    ? { label: '● ONLINE', color: '#22c55e' }
+    : { label: '● OFFLINE', color: '#94a3b8' };
 }
 
-function mapStatusLabel(mode: DataMode) {
-  switch (mode) {
-    case 'live':
-      return 'Live';
-    case 'cached':
-      return 'Cached';
-    case 'fallback':
-      return 'Fallback';
-    case 'offline-live':
-      return 'Offline · live data';
-    case 'offline-cached':
-      return 'Offline cache';
-    case 'offline-fallback':
-      return 'Offline data';
-    default:
-      return 'Loading';
-  }
+function mapStatusLabel(isOnline: boolean) {
+  return isOnline ? 'Online' : 'Offline';
 }
 
 function isOklahomaSpot(spot: Pick<Spot, 'lat' | 'lng'>) {
@@ -317,7 +289,7 @@ export default function MobilePage() {
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
-  const appBadge = badgeState(spotDataMode);
+  const appBadge = badgeState(isOnline);
 
 
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
@@ -587,11 +559,11 @@ export default function MobilePage() {
 
   const tabs = [
     { id: 'map', icon: '🗺️', label: 'Explore' },
-    { id: 'log', icon: '📓', label: 'Logbook' },
-    { id: 'top', icon: '⭐', label: 'Top spots' },
-    { id: 'weather', icon: '🌤️', label: 'Weather' },
-    { id: 'bitetime', icon: '🌙', label: 'Bite times' },
-    { id: 'species', icon: '🐟', label: 'Species' },
+  { id: 'species', icon: '🐟', label: 'Species' },
+  { id: 'log', icon: '📓', label: 'Logbook' },
+  { id: 'top', icon: '⭐', label: 'Top spots' },
+  { id: 'weather', icon: '🌤️', label: 'Weather' },
+  { id: 'bitetime', icon: '🌙', label: 'Bite times' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
@@ -649,7 +621,7 @@ export default function MobilePage() {
               layers={mapLayers}
               isOnline={isOnline}
               spotDataMode={spotDataMode}
-              spotDataStatusLabel={mapStatusLabel(spotDataMode)}
+              spotDataStatusLabel={mapStatusLabel(isOnline)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
               sheetOpen={sheetOpen}
@@ -803,9 +775,9 @@ export default function MobilePage() {
 
         {/* SOCIAL TAB */}
         {tab === 'species' && (
-          <div style={PAGE_STYLES.scrollPane}>
-            <SpeciesTab coordinates={coordinates} />
-          </div>
+  <div style={{ ...PAGE_STYLES.scrollPane, padding: 0 }}>
+  <SpeciesTab coordinates={coordinates} />
+  </div>
         )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (

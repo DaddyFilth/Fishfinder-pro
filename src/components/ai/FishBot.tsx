@@ -44,6 +44,11 @@ export default function FishBot({ spot, conditions }: Props) {
 
   const spotData = spot as Record<string, unknown>;
   const spotName = typeof spotData.name === 'string' ? spotData.name : 'this spot';
+  const spotLat = typeof spotData.lat === 'number' ? spotData.lat : spotData.latitude;
+  const spotLon = typeof (spotData.lng ?? spotData.lon ?? spotData.longitude) === 'number'
+    ? (spotData.lng ?? spotData.lon ?? spotData.longitude)
+    : undefined;
+  const targetSpecies = typeof spotData.species === 'string' ? spotData.species : undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +60,12 @@ export default function FishBot({ spot, conditions }: Props) {
         const res = await fetch('/api/ai/advisor', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ spot, conditions }),
+          body: JSON.stringify({
+            lat: spotLat,
+            lon: spotLon,
+            targetSpecies,
+            conditions,
+          }),
         });
 
         const data: unknown = await res.json().catch(() => ({}));
@@ -89,7 +99,7 @@ export default function FishBot({ spot, conditions }: Props) {
 
     void loadAdvice();
     return () => { cancelled = true; };
-  }, [spot, conditions, spotName]);
+  }, [conditions, spot, spotLat, spotLon, spotName, targetSpecies]);
 
   async function sendMessage() {
     const userMsg = input.trim();
@@ -110,6 +120,8 @@ export default function FishBot({ spot, conditions }: Props) {
           message: userMsg,
           spot,
           conditions,
+          lat: typeof spotData.lat === 'number' ? spotData.lat : undefined,
+          lon: typeof (spotData.lng ?? spotData.lon) === 'number' ? (spotData.lng ?? spotData.lon) as number : undefined,
           history: messages.map((message) => ({
             role: message.role === 'bot' ? 'assistant' : 'user',
             content: message.text,
@@ -121,6 +133,7 @@ export default function FishBot({ spot, conditions }: Props) {
       const payload = data && typeof data === 'object' ? data as Record<string, unknown> : {};
       const reply =
         typeof payload.reply === 'string' ? payload.reply :
+        typeof payload.response === 'string' ? payload.response :
         typeof payload.advice === 'string' ? payload.advice :
         null;
       const error = typeof payload.error === 'string' ? payload.error : null;

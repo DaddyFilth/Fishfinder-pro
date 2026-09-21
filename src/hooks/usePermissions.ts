@@ -40,7 +40,11 @@ export function usePermissions() {
 
     if (typeof window !== 'undefined' && 'permissions' in navigator) {
       navigator.permissions
+<<<<<<< HEAD
         .query({ name: 'geolocation' })
+=======
+        .query({ name: 'geolocation' })\
+>>>>>>> 95447c2e3ce731d9ed308b942a6f816ff1bdb6b2
         .then((status) => {
           setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
           status.onchange = () => {

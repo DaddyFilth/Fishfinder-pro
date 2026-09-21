@@ -2,6 +2,8 @@
 /* eslint-disable @next/next/no-img-element -- spot cards use local catalog image assets */
 
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
+import { SPECIES } from '@/lib/speciesCatalog';
+import { distanceMiles } from '@/lib/nearbySpots';
 import { useCallback, useState } from 'react';
 
 interface Spot {
@@ -60,6 +62,7 @@ export default function SpotSuggester({ spots }: Props) {
   const [totalNearby, setTotalNearby] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [selectedSpecies, setSelectedSpecies] = useState(SPECIES[0]?.name ?? '');
 
   const runSuggestion = useCallback(
     async (lat?: number, lng?: number) => {
@@ -74,7 +77,13 @@ export default function SpotSuggester({ spots }: Props) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            spots,
+            spots: typeof lat === 'number' && typeof lng === 'number'
+              ? spots
+                  .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
+                  .sort((a, b) => b.lat - a.lat)
+                  .slice(0, 10)
+              : [],
+            species: selectedSpecies,
             userLat: lat,
             userLng: lng,
           }),
@@ -115,7 +124,7 @@ export default function SpotSuggester({ spots }: Props) {
         setLoading(false);
       }
     },
-    [spots],
+    [selectedSpecies, spots],
   );
 
   const saveLocation = (lat: number, lng: number): UserLocation => {
@@ -188,6 +197,19 @@ export default function SpotSuggester({ spots }: Props) {
           recommendations.
         </p>
       </div>
+
+      <label htmlFor="trip-target-species" style={{ display: 'block', marginBottom: '12px', color: '#cbd5e1', fontSize: '12px', fontWeight: 700 }}>
+        Target species
+        <select
+          id="trip-target-species"
+          value={selectedSpecies}
+          onChange={(event) => setSelectedSpecies(event.target.value)}
+          style={{ display: 'block', width: '100%', marginTop: '6px', border: '1px solid #294452', borderRadius: '8px', padding: '10px 12px', color: '#e2e8f0', background: '#0d1c29', fontSize: '14px' }}
+        >
+          {SPECIES.map((species) => <option key={species.id} value={species.name}>{species.name}</option>)}
+        </select>
+        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>Only the top 10 rated spots within 25 miles of your device will be shown.</span>
+      </label>
 
       <button
         type="button"

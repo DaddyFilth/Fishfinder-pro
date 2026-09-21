@@ -12,15 +12,26 @@ type RequestBody = {
   message: string
   lat?: number
   lon?: number
+  spot?: Record<string, unknown>
+  conditions?: Record<string, unknown>
   history?: ChatMessage[]
 }
 
+function coordinate(value: unknown): number | undefined {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
 async function fetchSpotsContext(lat?: number, lon?: number) {
-  if (!lat || !lon) return null
+  if (lat === undefined || lon === undefined) return null
   try {
-    const res = await fetch(`https://seamcast-spots.vercel.app/api/spots?lat=${lat}&lon=${lon}`, {
+    const configuredApi = process.env.SPOTS_API || 'https://seamcast-spots.vercel.app/api/spots'
+    const apiUrl = new URL(configuredApi)
+    apiUrl.searchParams.set('lat', String(lat))
+    apiUrl.searchParams.set('lon', String(lon))
+    const res = await fetch(apiUrl, {
       headers: { 'Accept': 'application/json' },
-      next: { revalidate: 300 }
+      cache: 'no-store'
     })
     if (!res.ok) return null
     return await res.json()
@@ -43,7 +54,7 @@ async function callGroq(messages: ChatMessage[]): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       messages: messages,
       temperature: 0.7,
       max_tokens: 1024,
@@ -65,15 +76,17 @@ async function callGroq(messages: ChatMessage[]): Promise<string> {
 export async function POST(req: NextRequest) {
   try {
     const body: RequestBody = await req.json()
-    const { message, lat, lon, history = [] } = body
+    const { message, lat, lon, spot, conditions, history = [] } = body
 
-    if (!message) {
+    if (typeof message !== 'string' || !message.trim()) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    // Fetch live conditions
-    const spotsData = await fetchSpotsContext(lat, lon)
-    const context = buildContextMessage(spotsData)
+    const spotLat = lat ?? coordinate(spot?.lat ?? spot?.latitude)
+    const spotLon = lon ?? coordinate(spot?.lon ?? spot?.lng ?? spot?.longitude)
+    const spotsData = await fetchSpotsContext(spotLat, spotLon)
+    const liveContext = spotsData ?? (conditions ? { conditions } : null)
+    const context = buildContextMessage(liveContext)
 
     // Build conversation with system prompt and context
     const messages: ChatMessage[] = [
@@ -107,6 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
+      reply: aiResponse,
       response: aiResponse,
       spotsData: spotsData || undefined,
       timestamp: new Date().toISOString()
