@@ -8,6 +8,7 @@ import {
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { DEFAULT_SPOTS, getDefaultCondition } from '@/lib/defaultSpots';
+import { enforceRateLimit } from '@/lib/security';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
@@ -38,6 +39,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const limited = enforceRateLimit(_req, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
+
   const parsed = z
     .object({ id: z.string().min(1).max(128) })
     .safeParse(await params);

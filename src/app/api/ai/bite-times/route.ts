@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req, 16_384)) return tooLarge();
+
   const openai = getOllama();
 
   let body: {
@@ -18,6 +23,10 @@ export async function POST(req: NextRequest) {
     water_temp_c, pressure_hpa, wind_speed_ms,
     dissolved_oxygen_mgl, solunar_score, moon_phase,
   } = body;
+
+  if (typeof species !== 'string' || !species.trim() || species.length > 80) {
+    return NextResponse.json({ error: 'A valid species is required.' }, { status: 400 });
+  }
 
   const now = new Date();
   const localHour = now.getHours();

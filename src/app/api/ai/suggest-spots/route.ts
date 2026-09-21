@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 interface Spot {
   id: string;
@@ -325,6 +326,10 @@ function normalizeAiResults(
 }
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-suggest-spots', limit: 12, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req, 64_000)) return tooLarge();
+
   let spots: Spot[] = [];
   let species: string | undefined;
   let userLat: number | undefined;
@@ -347,19 +352,27 @@ export async function POST(req: NextRequest) {
         )
       : [];
 
+    spots = spots.slice(0, 50).map((spot) => ({
+      ...spot,
+      id: spot.id.slice(0, 128),
+      name: spot.name.trim().slice(0, 200),
+      water_type: spot.water_type?.slice(0, 80),
+      spot_type: spot.spot_type?.slice(0, 80),
+    }));
+
     species =
       typeof body?.species === 'string' && body.species.trim()
-        ? body.species.trim()
+        ? body.species.trim().slice(0, 80)
         : undefined;
 
     userLat =
       typeof body?.userLat === 'number' && Number.isFinite(body.userLat)
-        ? body.userLat
+        ? body.userLat >= -90 && body.userLat <= 90 ? body.userLat : undefined
         : undefined;
 
     userLng =
       typeof body?.userLng === 'number' && Number.isFinite(body.userLng)
-        ? body.userLng
+        ? body.userLng >= -180 && body.userLng <= 180 ? body.userLng : undefined
         : undefined;
   } catch {
     return NextResponse.json(

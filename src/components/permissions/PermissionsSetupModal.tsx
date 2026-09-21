@@ -15,11 +15,17 @@ function PermissionsSetupModal() {
   } = usePermissions();
 
   const [busy, setBusy] = useState(false);
+<<<<<<< HEAD
 
   const isInsecure =
     typeof window !== 'undefined' &&
     !window.isSecureContext &&
     window.location.hostname !== 'localhost';
+=======
+  const [insecureWarn] = useState(() =>
+    typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost',
+  );
+>>>>>>> dad13f4127ea6b75ad63a6ff33d00873b77f257e
 
   if (setupCompleted) return null;
 
