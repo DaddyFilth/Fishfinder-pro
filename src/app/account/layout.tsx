@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 }
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
-  return children
+  return <>{children}</>
 }
