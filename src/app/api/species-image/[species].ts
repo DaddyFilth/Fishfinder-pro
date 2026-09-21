@@ -5,30 +5,6 @@ export const runtime = 'nodejs';
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Species with pre-generated/stock images
-const STOCK_IMAGES: Record<string, string> = {
-  'Largemouth Bass': '/species/largemouth-bass.jpg',
-  'Smallmouth Bass': '/species/smallmouth-bass.jpg',
-  'Spotted Bass': '/species/spotted-bass.jpg',
-  'Channel Catfish': '/species/channel-catfish.jpg',
-  'Blue Catfish': '/species/blue-catfish.jpg',
-  'Flathead Catfish': '/species/flathead-catfish.jpg',
-  'Walleye': '/species/walleye.jpg',
-  'Rainbow Trout': '/species/rainbow-trout.jpg',
-  'Brown Trout': '/species/brown-trout.jpg',
-  'Crappie': '/species/crappie.jpg',
-  'Black Crappie': '/species/black-crappie.jpg',
-  'White Crappie': '/species/white-crappie.jpg',
-  'Bluegill': '/species/bluegill.jpg',
-  'Redear Sunfish': '/species/redear-sunfish.jpg',
-  'Striped Bass': '/species/striped-bass.jpg',
-  'White Bass': '/species/white-bass.jpg',
-  'Hybrid Striper': '/species/hybrid-striper.jpg',
-  'Redfish/Red Drum': '/species/redfish-red-drum.jpg',
-  'Flounder': '/species/flounder.jpg',
-  'Sauger': '/species/sauger.jpg',
-  'Common Carp': '/species/common-carp.jpg',
-  'Northern Pike': '/species/northern-pike.jpg',
-};
 
 export async function GET(
   request: NextRequest,
