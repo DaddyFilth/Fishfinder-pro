@@ -17,6 +17,7 @@ import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
 import { type Spot } from '@/lib/mapFilters';
+import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition, type Species } from '@/lib/speciesCatalog';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -162,6 +163,38 @@ function depthLabel(level: number | null, flow: number | null) {
     return 'Flood Stage';
   }
   return 'No depth data';
+}
+
+function conditionForSpot(condition: Cond | undefined): FishingCondition {
+  if (!condition) return 'stable';
+  if ((condition.wind_speed_ms ?? 0) >= 6) return 'windy';
+  if (condition.pressure_hpa !== null && condition.pressure_hpa < 1008) return 'low-light';
+  if ((condition.water_temp_c ?? 19) <= 16) return 'cool';
+  if ((condition.water_temp_c ?? 19) >= 23) return 'warming';
+  return 'stable';
+}
+
+function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
+  const fishingCondition = conditionForSpot(condition);
+  const type = `${spot.spot_type} ${spot.notes ?? ''}`.toLowerCase();
+  const preferredGroups = type.includes('trout')
+    ? ['Trout']
+    : type.includes('river') || type.includes('stream')
+      ? ['Catfish', 'Bass', 'Panfish']
+      : type.includes('reservoir')
+        ? ['Bass', 'Walleye', 'Catfish']
+        : ['Bass', 'Panfish', 'Catfish'];
+
+  return preferredGroups
+    .flatMap((group) => SPECIES.filter((species) => species.group === group))
+    .filter((species, index, list) => list.findIndex((item) => item.id === species.id) === index)
+    .map((species) => ({
+      species,
+      rate: biteRateFor(species, fishingCondition),
+      structure: spotTargetsFor(species, fishingCondition).slice(0, 2).join(' and '),
+    }))
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 3);
 }
 
 function metricRow({ icon, label, value, unit }: { icon: string; label: string; value: string | number | null; unit?: string }) {
@@ -520,6 +553,17 @@ export default function FishingMap({
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
                       <button type="button" onClick={() => openDirections(spot)} style={{ marginTop: 10, background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                    </div>
+
+                    <div style={{ background: '#082f49', border: '1px solid #155e75', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: '#67e8f9', fontWeight: 800, marginBottom: 7 }}>BEST TARGETS AT THIS SPOT</div>
+                      {spotSpeciesTargets(spot, c).map(({ species, rate, structure }) => (
+                        <div key={species.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(103,232,249,0.12)' }}>
+                          <div><div style={{ color: '#f8fafc', fontSize: 11, fontWeight: 700 }}>{species.name}</div><div style={{ color: '#94a3b8', fontSize: 9 }}>{structure}</div></div>
+                          <div style={{ color: '#86efac', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>{rate}/100</div>
+                        </div>
+                      ))}
+                      <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 7 }}>Rankings adjust with water temperature, pressure, wind, and the spot type.</div>
                     </div>
 
                     {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading conditions...</div>}
