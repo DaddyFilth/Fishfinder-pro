@@ -13,6 +13,8 @@ export interface SpeciesAdviceConfig {
   depthCold: string;
 }
 
+export type FishingCondition = 'cool' | 'warming' | 'stable' | 'low-light' | 'windy';
+
 export interface Species {
   id: string;
   name: string;
@@ -984,4 +986,30 @@ export function findSpecies(name: string): Species | undefined {
     species.name.toLocaleLowerCase() === normalizedName ||
     species.aliases.some((alias) => alias.toLocaleLowerCase() === normalizedName),
   );
+}
+
+export function biteRateFor(species: Species, condition: FishingCondition): number {
+  const base = Math.max(...species.activity);
+  const conditionBoost = condition === 'low-light' && /night|dusk|dawn|low light/i.test(species.bestTime)
+    ? 1.5
+    : condition === 'cool' && species.advice.optTempMax < 20
+      ? 1.2
+      : condition === 'warming' && species.advice.optTempMin >= 18
+        ? 1.2
+        : condition === 'windy' && /current|river|moving|wind/i.test(`${species.habitatNotes} ${species.tips}`)
+          ? 1.1
+          : 1;
+  return Math.min(99, Math.round(base * 10 * conditionBoost));
+}
+
+export function spotTargetsFor(species: Species, condition: FishingCondition): readonly string[] {
+  const cool = condition === 'cool';
+  const lowLight = condition === 'low-light';
+  if (species.group === 'Catfish') return cool ? ['Deep holes', 'Channel edges', 'Warm inflows'] : ['River bends', 'Mud flats', 'Deep holes'];
+  if (species.group === 'Trout') return ['Cold tributaries', 'Riffles', 'Dam releases'];
+  if (species.group === 'Walleye') return lowLight ? ['Rocky points', 'Wind-blown banks', 'Reef edges'] : ['Deep breaks', 'Main-lake structure', 'Dam faces'];
+  if (species.group === 'Pike') return cool ? ['Green weed edges', 'Shallow bays', 'Creek mouths'] : ['Outside weed lines', 'Points', 'Drop-offs'];
+  if (species.group === 'Panfish') return cool ? ['Brush piles', 'Deep docks', 'Creek channels'] : ['Shallow cover', 'Docks', 'Vegetation'];
+  if (species.group === 'Inshore' || species.group === 'Anadromous') return condition === 'windy' ? ['Current seams', 'Tidal rips', 'Wind-blown shorelines'] : ['Cuts and passes', 'Bridge shadows', 'Bait schools'];
+  return cool ? ['Deep rock', 'Channel swings', 'Vertical cover'] : lowLight ? ['Shaded docks', 'Wind-blown banks', 'Topwater flats'] : ['Vegetation', 'Docks', 'Points'];
 }
