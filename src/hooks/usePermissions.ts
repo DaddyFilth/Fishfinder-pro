@@ -15,51 +15,55 @@ interface PermissionsState {
 
 const STORAGE_KEY = 'seamcast_permissions_v1';
 
-export function usePermissions() {
-  const [state, setState] = useState<PermissionsState>({
-    gpsStatus: 'prompt',
-    notificationStatus: 'prompt',
-    gpsEnabled: false,
-    setupCompleted: false,
-    coords: null,
-    error: null,
-  });
+function getInitialPermissionsState(): PermissionsState {
+  let gpsEnabled = false;
+  let setupCompleted = false;
+  let notificationStatus: PermissionStatusType = 'prompt';
 
-  useEffect(() => {
+  if (typeof window !== 'undefined') {
     try {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        setState((prev) => ({
-          ...prev,
-          gpsEnabled: !!parsed.gpsEnabled,
-          setupCompleted: !!parsed.setupCompleted,
-        }));
+        gpsEnabled = !!parsed.gpsEnabled;
+        setupCompleted = !!parsed.setupCompleted;
       }
     } catch {}
 
-    if (typeof window !== 'undefined' && 'permissions' in navigator) {
-      navigator.permissions
-        .query({ name: 'geolocation' })
-        .then((status) => {
-          setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
-          status.onchange = () => {
-            setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
-          };
-        })
-        .catch(() => {
-          setState((prev) => ({ ...prev, gpsStatus: 'prompt' }));
-        });
-
-      if ('Notification' in window) {
-        setState((prev) => ({
-          ...prev,
-          notificationStatus: Notification.permission as PermissionStatusType,
-        }));
-      } else {
-        setState((prev) => ({ ...prev, notificationStatus: 'unsupported' }));
-      }
+    if ('Notification' in window) {
+      notificationStatus = Notification.permission as PermissionStatusType;
+    } else {
+      notificationStatus = 'unsupported';
     }
+  }
+
+  return {
+    gpsStatus: 'prompt',
+    notificationStatus,
+    gpsEnabled,
+    setupCompleted,
+    coords: null,
+    error: null,
+  };
+}
+
+export function usePermissions() {
+  const [state, setState] = useState<PermissionsState>(getInitialPermissionsState);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('permissions' in navigator)) return;
+
+    navigator.permissions
+      .query({ name: 'geolocation' })
+      .then((status) => {
+        setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
+        status.onchange = () => {
+          setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
+        };
+      })
+      .catch(() => {
+        setState((prev) => ({ ...prev, gpsStatus: 'prompt' }));
+      });
   }, []);
 
   const persistSettings = useCallback((updates: Partial<PermissionsState>) => {
@@ -165,3 +169,5 @@ export function usePermissions() {
     completeSetup,
   };
 }
+
+export default usePermissions;
