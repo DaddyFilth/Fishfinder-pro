@@ -30,9 +30,10 @@ const STOCK_IMAGES: Record<string, string> = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { species: string } }
+  { params }: { params: Promise<{ species: string }> }
 ) {
-  const speciesName = decodeURIComponent(params.species);
+  const { species } = await params;
+  const speciesName = decodeURIComponent(species);
 
   // Check if we have a stock image for this species
   if (STOCK_IMAGES[speciesName]) {
