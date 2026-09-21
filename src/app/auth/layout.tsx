@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   },
 }
 
+/** Renders authentication-route content without adding a DOM wrapper. */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return <>{children}</>
 }

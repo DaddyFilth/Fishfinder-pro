@@ -254,6 +254,10 @@ async function getSpots(): Promise<SpotLoadResult> {
   return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
 }
 
+/**
+ * Renders the mobile SeamCast dashboard and synchronizes its authenticated spot
+ * data, connectivity, location, notifications, and saved preferences with browser APIs.
+ */
 export default function MobilePage() {  const [mounted, setMounted] = useState(false);  useEffect(() => { setMounted(true); }, []);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);

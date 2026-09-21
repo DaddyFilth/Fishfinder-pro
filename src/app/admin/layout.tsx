@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   },
 }
 
+/** Renders admin-route content without adding a DOM wrapper. */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
