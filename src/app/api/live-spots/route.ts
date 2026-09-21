@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enforceRateLimit } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'live-spots', limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
-  const lat = searchParams.get('lat') || '34.999';
-  const lon = searchParams.get('lon') || '-97.366';
+  const lat = Number(searchParams.get('lat') || '34.999');
+  const lon = Number(searchParams.get('lon') || '-97.366');
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
+  }
 
   const remoteUrl = `https://seamcast-spots.vercel.app/api/spots?lat=${lat}&lon=${lon}`;
 
@@ -16,20 +23,18 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok) {
-      const detail = await res.text();
       return NextResponse.json(
-        { error: 'Remote spots API failed', detail, live: false },
+        { error: 'Remote spots API failed.', live: false },
         { status: 502 }
       );
     }
 
     const data = await res.json();
     return NextResponse.json({ ...data, live: true, source: 'seamcast-spots' });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+  } catch {
     return NextResponse.json(
-      { error: 'Error connecting to remote spots API', detail: message, live: false },
-      { status: 500 }
+      { error: 'Unable to load live fishing spots.', live: false },
+      { status: 502 }
     );
   }
 }

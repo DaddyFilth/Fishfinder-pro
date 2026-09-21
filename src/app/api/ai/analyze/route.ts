@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'ai-analyze', limit: 12, windowMs: 60_000 });
+  if (limited) return limited;
+  if (requestBodyTooLarge(req, 16_384)) return tooLarge();
+
   const openai = getOllama();
 
   let body: { conditions?: unknown; spot?: unknown };

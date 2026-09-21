@@ -11,6 +11,7 @@ on:
         options:
           - environmental_snapshots
           - reservoir_seed
+          - profile_roles
           - both
 
 permissions:
@@ -54,3 +55,13 @@ jobs:
           psql "$SUPABASE_DB_URL" \
             --set ON_ERROR_STOP=1 \
             --file db/migrations/20260910_seed_reservoir_batches_4_5.sql
+
+      - name: Apply profile roles and admin RLS migration
+        if: ${{ inputs.migration == 'profile_roles' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+        run: |
+          psql "$SUPABASE_DB_URL" \
+            --set ON_ERROR_STOP=1 \
+            --file supabase/migrations/20260921123000_fix_profile_roles_and_admin_rls.sql
