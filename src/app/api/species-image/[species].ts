@@ -35,7 +35,11 @@ export async function GET(
   { params }: { params: Promise<{ species: string }> }
 ) {
   const { species } = await params;
-  const speciesName = decodeURIComponent(species);
+  const speciesName = decodeURIComponent(species).trim();
+
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9 /-]{0,79}$/.test(speciesName)) {
+    return NextResponse.json({ error: 'Invalid species name' }, { status: 400 });
+  }
 
   if (!process.env.GROQ_API_KEY) {
     return NextResponse.json({ error: 'Groq image generation is not configured' }, { status: 503 });
