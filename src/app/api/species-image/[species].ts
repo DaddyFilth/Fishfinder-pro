@@ -1,6 +1,9 @@
+import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Species with pre-generated/stock images
 const STOCK_IMAGES: Record<string, string> = {
@@ -40,74 +43,31 @@ export async function GET(
     return NextResponse.redirect(new URL(STOCK_IMAGES[speciesName], request.url));
   }
 
-  // Generate SVG placeholder with species name
-  // This will be replaced with actual DALL-E images later
-  const svg = generateSpeciesSVG(speciesName);
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'AI image generation is not configured' }, { status: 503 });
+  }
 
-  return new NextResponse(svg, {
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=31536000',
-    },
-  });
-}
+  try {
+    const result = await openai.images.generate({
+      model: 'gpt-image-1',
+      prompt: `A realistic field-guide photograph of a ${speciesName} fish underwater in a clear Oklahoma lake, side profile, natural lighting, no text, no labels, no frame.`,
+      size: '1024x1024',
+      quality: 'low',
+    });
 
-function generateSpeciesSVG(speciesName: string): string {
-  // Generate a color based on species name
-  const hash = Array.from(speciesName).reduce(
-    (acc, char) => acc + char.charCodeAt(0),
-    0
-  );
-  const hue = (hash % 360).toString();
-  const color1 = `hsl(${hue}, 70%, 50%)`;
-  const color2 = `hsl(${(hash + 60) % 360}, 70%, 60%)`;
+    const base64 = result.data?.[0]?.b64_json;
+    if (!base64) {
+      return NextResponse.json({ error: 'AI image generation returned no image' }, { status: 502 });
+    }
 
-  // Create a simple fish-like SVG shape with gradient
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-      <defs>
-        <linearGradient id="fishGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:${color1};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:${color2};stop-opacity:1" />
-        </linearGradient>
-        <filter id="shadow">
-          <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
-        </filter>
-      </defs>
-      
-      <!-- Background -->
-      <rect width="400" height="300" fill="#e8f4f8"/>
-      
-      <!-- Water waves -->
-      <circle cx="80" cy="60" r="40" fill="none" stroke="#b3d9e8" stroke-width="2" opacity="0.5"/>
-      <circle cx="320" cy="250" r="50" fill="none" stroke="#b3d9e8" stroke-width="2" opacity="0.5"/>
-      
-      <!-- Fish body -->
-      <ellipse cx="200" cy="150" rx="90" ry="50" fill="url(#fishGradient)" filter="url(#shadow)"/>
-      
-      <!-- Fish head -->
-      <circle cx="140" cy="145" r="35" fill="url(#fishGradient)" filter="url(#shadow)"/>
-      
-      <!-- Fish tail -->
-      <polygon points="290,150 360,120 360,180" fill="url(#fishGradient)" filter="url(#shadow)"/>
-      
-      <!-- Fish fin -->
-      <polygon points="200,100 200,50 220,85" fill="${color2}" opacity="0.7"/>
-      
-      <!-- Eye -->
-      <circle cx="125" cy="140" r="6" fill="white"/>
-      <circle cx="126" cy="140" r="3" fill="black"/>
-      
-      <!-- Mouth -->
-      <path d="M 105 150 Q 100 155 105 160" stroke="rgba(0,0,0,0.3)" stroke-width="2" fill="none" stroke-linecap="round"/>
-      
-      <!-- Species name -->
-      <text x="200" y="280" font-family="Arial, sans-serif" font-size="16" font-weight="bold" 
-            text-anchor="middle" fill="#333" word-wrap="break-word">${speciesName}</text>
-      
-      <!-- AI Generated badge -->
-      <text x="200" y="300" font-family="Arial, sans-serif" font-size="11" 
-            text-anchor="middle" fill="#666" opacity="0.7">AI Generated</text>
-    </svg>
-  `;
+    return new NextResponse(Buffer.from(base64, 'base64'), {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  } catch (error) {
+    console.error('[v0] Species image generation failed:', error);
+    return NextResponse.json({ error: 'Unable to generate species image' }, { status: 502 });
+  }
 }
