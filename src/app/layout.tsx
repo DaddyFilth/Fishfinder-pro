@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { ReactNode } from "react";
 import ConnectionStatus from '@/components/offline/ConnectionStatus';
+import { PermissionsSetupModal } from '@/components/permissions/PermissionsSetupModal';
 import ServiceWorkerRegistration from '@/components/offline/ServiceWorkerRegistration';
 import "./globals.css";
 
@@ -98,6 +99,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body style={{ height: "100%", margin: 0 }} className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
+        <PermissionsSetupModal />
         <ConnectionStatus />
         {children}
         <SpeedInsights />
