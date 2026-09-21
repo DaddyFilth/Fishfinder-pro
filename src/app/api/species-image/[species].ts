@@ -1,9 +1,8 @@
-import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Species with pre-generated/stock images
 const STOCK_IMAGES: Record<string, string> = {
@@ -38,36 +37,57 @@ export async function GET(
   const { species } = await params;
   const speciesName = decodeURIComponent(species);
 
-  // Check if we have a stock image for this species
-  if (STOCK_IMAGES[speciesName]) {
-    return NextResponse.redirect(new URL(STOCK_IMAGES[speciesName], request.url));
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: 'AI image generation is not configured' }, { status: 503 });
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json({ error: 'Groq image generation is not configured' }, { status: 503 });
   }
 
   try {
-    const result = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt: `A realistic field-guide photograph of a ${speciesName} fish underwater in a clear Oklahoma lake, side profile, natural lighting, no text, no labels, no frame.`,
-      size: '1024x1024',
-      quality: 'low',
+    const response = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        max_tokens: 5000,
+        messages: [
+          {
+            role: 'system',
+            content: 'Return only valid standalone SVG markup. Create a polished, naturalistic field-guide fish illustration with a blue underwater background. Do not use external images, scripts, text labels, or markdown fences. Use a 1024 square viewBox.',
+          },
+          {
+            role: 'user',
+            content: `Create an accurate side-profile illustration of a ${speciesName} fish. Make the fish large and centered, with recognizable species-specific body shape, fins, markings, and coloring.`,
+          },
+        ],
+      }),
     });
 
-    const base64 = result.data?.[0]?.b64_json;
-    if (!base64) {
-      return NextResponse.json({ error: 'AI image generation returned no image' }, { status: 502 });
+    if (!response.ok) {
+      throw new Error(`Groq request failed with ${response.status}`);
     }
 
-    return new NextResponse(Buffer.from(base64, 'base64'), {
+    const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const rawSvg = payload.choices?.[0]?.message?.content?.replace(/^```(?:svg)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const svg = rawSvg
+      ?.replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+      .replace(/\s(?:on\w+|href|xlink:href)\s*=\s*(['"]).*?\1/gi, '');
+
+    if (!svg?.startsWith('<svg') || !svg.includes('</svg>')) {
+      throw new Error('Groq returned invalid SVG artwork');
+    }
+
+    return new NextResponse(svg, {
       headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400, s-maxage=31536000',
       },
     });
   } catch (error) {
-    console.error('[v0] Species image generation failed:', error);
-    return NextResponse.json({ error: 'Unable to generate species image' }, { status: 502 });
+    console.error('[v0] Groq species image generation failed:', error);
+    return NextResponse.json({ error: 'Unable to generate species image with Groq' }, { status: 502 });
   }
 }
