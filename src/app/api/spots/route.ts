@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enforceRateLimit } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -56,29 +57,35 @@ function normalize(payload: unknown, lat: number, lon: number): AnyRec {
 }
 
 export async function GET(req: NextRequest) {
+  const limited = enforceRateLimit(req, { name: 'public-spots', limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
+
   const url = new URL(req.url);
   const lat = num(url.searchParams.get('lat'), 34.999);
   const lon = num(url.searchParams.get('lon'), -97.366);
+
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
+  }
 
   try {
     const res = await fetch(`${REMOTE}?lat=${lat}&lon=${lon}`, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
-    const text = await res.text();
     if (!res.ok) {
       return NextResponse.json(
-        { error: 'Remote spots API failed', status: res.status, detail: text, live: false },
+        { error: 'Remote spots API failed.', live: false },
         { status: 502 },
       );
     }
+    const text = await res.text();
     const json = JSON.parse(text) as unknown;
     return NextResponse.json(normalize(json, lat, lon));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+  } catch {
     return NextResponse.json(
-      { error: 'Error calling remote spots API', detail: message, live: false },
-      { status: 500 },
+      { error: 'Unable to load fishing spots.', live: false },
+      { status: 502 },
     );
   }
 }
