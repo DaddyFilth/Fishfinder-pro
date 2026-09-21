@@ -559,11 +559,11 @@ export default function MobilePage() {
 
   const tabs = [
     { id: 'map', icon: '🗺️', label: 'Explore' },
-    { id: 'log', icon: '📓', label: 'Logbook' },
-    { id: 'top', icon: '⭐', label: 'Top spots' },
-    { id: 'weather', icon: '🌤️', label: 'Weather' },
-    { id: 'bitetime', icon: '🌙', label: 'Bite times' },
-    { id: 'species', icon: '🐟', label: 'Species' },
+  { id: 'species', icon: '🐟', label: 'Species' },
+  { id: 'log', icon: '📓', label: 'Logbook' },
+  { id: 'top', icon: '⭐', label: 'Top spots' },
+  { id: 'weather', icon: '🌤️', label: 'Weather' },
+  { id: 'bitetime', icon: '🌙', label: 'Bite times' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
@@ -775,9 +775,9 @@ export default function MobilePage() {
 
         {/* SOCIAL TAB */}
         {tab === 'species' && (
-          <div style={PAGE_STYLES.scrollPane}>
-            <SpeciesTab coordinates={coordinates} />
-          </div>
+  <div style={{ ...PAGE_STYLES.scrollPane, padding: 0 }}>
+  <SpeciesTab coordinates={coordinates} />
+  </div>
         )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (

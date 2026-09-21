@@ -1,7 +1,11 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- catalog images are local static field-guide assets. */
 import { useMemo, useState } from 'react';
-import FishIdentifier from '@/components/ai/FishIdentifier';
+
+function getFallbackImage(speciesName: string) {
+  return `/api/species-image/${encodeURIComponent(speciesName)}`;
+}
+
 import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import {
   SPECIES,
@@ -56,6 +60,11 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           </button>
           <img
             src={selected.image}
+            onError={(event) => {
+              const image = event.currentTarget;
+              if (image.src.endsWith(getFallbackImage(selected.name))) return;
+              image.src = getFallbackImage(selected.name);
+            }}
             alt={selected.imageAlt}
             style={{ width: '100%', height: '152px', display: 'block', objectFit: 'cover', objectPosition: 'center', borderRadius: '12px', marginBottom: '12px', border: '1px solid #1e4080' }}
           />
@@ -129,15 +138,9 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '4px' }}>Oklahoma Species Guide</div>
-        <div style={{ fontSize: '10px', color: '#94a3b8', lineHeight: 1.45, marginBottom: '10px' }}>
-          Browse {regionalSpecies.length} species documented for Oklahoma, or upload any fish photo for an AI identification—even if it is not in this guide.
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, rgba(3,105,161,0.2), rgba(124,58,237,0.18))', border: '1px solid #1e4080', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
-          <FishIdentifier />
-        </div>
+    <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: '#060d1a', borderRadius: '16px', overflow: 'hidden' }}>
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #1e293b', background: 'linear-gradient(180deg, #0b1b2d 0%, #081321 100%)', flexShrink: 0 }}>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px' }}>Oklahoma Species Guide</div>
         <input
           aria-label="Search fish species"
           value={search}
@@ -197,7 +200,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           </div>
         </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {filtered.map((species) => (
           <button
             key={species.id}
@@ -206,6 +209,12 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           >
             <img
               src={species.image}
+              onError={(event) => {
+                const image = event.currentTarget;
+                const fallback = getFallbackImage(species.name);
+                if (image.src.endsWith(fallback)) return;
+                image.src = fallback;
+              }}
               alt={species.imageAlt}
               width={72}
               height={56}
