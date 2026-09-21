@@ -31,7 +31,7 @@ async function callGroq(messages: Array<{role: string, content: string}>): Promi
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       messages,
       temperature: 0.7,
       max_tokens: 500,
