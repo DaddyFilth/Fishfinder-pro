@@ -16,6 +16,7 @@ import CommunityPinsPanel from '@/components/CommunityPinsPanel';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
+import MapDataSourceBadge, { type MapDataSourceMode } from '@/components/MapDataSourceBadge';
 import { type Spot } from '@/lib/mapFilters';
 import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition } from '@/lib/speciesCatalog';
 
@@ -113,14 +114,8 @@ interface Cond {
   captured_at: string;
 }
 
-type SpotDataMode =
-  | 'live'
-  | 'cached'
-  | 'fallback'
-  | 'offline-live'
-  | 'offline-cached'
-  | 'offline-fallback'
-  | 'loading';
+/** The HUD and the overlay badge share one data-mode vocabulary. */
+type SpotDataMode = MapDataSourceMode;
 
 type Tab =
   | 'score'
@@ -465,6 +460,8 @@ export default function FishingMap({
             </span>
           </div>
         </div>
+
+        <MapDataSourceBadge mode={spotDataMode} />
 
         <MapContainer center={[35.5, -97.5]} zoom={7} minZoom={6} style={{ height: '100%', width: '100%' }} zoomControl>
           <TileLayer
