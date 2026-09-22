@@ -16,6 +16,10 @@ fi
 
 # 2. Strict TypeScript Compilation Check
 echo "🔍 [2/5] Running TypeScript compiler checks..."
+# Drop incremental build state first. A stale tsconfig.tsbuildinfo keeps route
+# type files that no longer exist in .next/types in the program, which makes
+# this check fail with TS6053 "File not found" after routes move or are removed.
+rm -f tsconfig.tsbuildinfo
 if npx tsc --noEmit; then
   echo "✅ TypeScript check passed (0 syntax/type errors)"
 else

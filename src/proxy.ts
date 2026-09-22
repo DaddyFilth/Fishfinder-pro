@@ -54,9 +54,6 @@ function applySecurityHeaders(response: NextResponse, protocol: string) {
 }
 
 export async function proxy(request: NextRequest) {
-if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
-  return NextResponse.next();
-}
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 
