@@ -17,7 +17,7 @@ import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
 import { type Spot } from '@/lib/mapFilters';
-import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition, type Species } from '@/lib/speciesCatalog';
+import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition } from '@/lib/speciesCatalog';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
