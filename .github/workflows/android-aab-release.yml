@@ -2,6 +2,14 @@ name: Build Android Play Store Release
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Where to build the signed release'
+        type: choice
+        default: self-hosted
+        options:
+          - self-hosted
+          - github-hosted
 
 permissions:
   contents: read
@@ -13,7 +21,12 @@ concurrency:
 jobs:
   build-release:
     name: Build signed Android release
-    runs-on: ubuntu-latest
+    # Self-hosted by default so a billing limit or spent Actions quota can never
+    # block a Play Store build. Override for a one-off hosted run with the
+    # `runner` input, or globally with:
+    #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
+    # Prefer no CI at all? bash scripts/build-android-apk.sh --release
+    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || (inputs.runner == 'github-hosted' && '["ubuntu-latest"]' || '["self-hosted","linux","x64"]')) }}
     timeout-minutes: 35
 
     steps:

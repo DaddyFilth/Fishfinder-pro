@@ -2,6 +2,14 @@ name: Build Android Debug APK
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Where to build the APK'
+        type: choice
+        default: self-hosted
+        options:
+          - self-hosted
+          - github-hosted
   pull_request:
     branches:
       - main
@@ -16,7 +24,18 @@ concurrency:
 jobs:
   build-debug-apk:
     name: Build debug APK
-    runs-on: ubuntu-latest
+    # Self-hosted by default: self-hosted runners are never metered, so billing
+    # or a spent Actions quota cannot block an APK build. Manual runs honour the
+    # `runner` input; pull requests use a GitHub-hosted runner because those
+    # minutes are free for public repositories.
+    #
+    # Force every run (including pull requests) onto your own hardware with:
+    #   gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
+    # Move everything back to GitHub-hosted runners with:
+    #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
+    #
+    # Prefer no CI at all? bash scripts/build-android-apk.sh
+    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || (inputs.runner == 'github-hosted' && '["ubuntu-latest"]' || (github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["self-hosted","linux","x64"]'))) }}
     timeout-minutes: 30
 
     steps:
