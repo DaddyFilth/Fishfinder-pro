@@ -1,0 +1,76 @@
+# Dependabot configuration.
+#
+# Dependabot alerts were enabled on this repository, but no update config was ever added.
+# With alerts on their own, Dependabot can only report an advisory; it never opens the PR
+# that bumps the affected manifest, so every alert had to be resolved by hand. This wires
+# up both security updates and routine version updates for each ecosystem the repo declares.
+#
+# Reviewer notes:
+# - Weekly on Monday, grouped minor/patch bumps: one reviewable PR per ecosystem instead of
+#   one per dependency, which is what actually keeps the alert list at zero.
+# - semver-major bumps deliberately stay ungrouped so they arrive on their own and can be
+#   tested in isolation.
+# - GitHub Actions are grouped separately from npm so a toolchain bump never blocks a
+#   dependency bump.
+# - Gradle runs monthly: android/ is a tracked Capacitor project, so its versions come from
+#   the template and only need periodic catch-up.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      production-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      # Matches the existing history, e.g. "chore(deps): sync package-lock.json ...".
+      prefix: fix(deps)
+      prefix-development: chore(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      github-actions-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: ci(actions)
+
+  # Covers ./Dockerfile (node:22-bookworm). Base-image advisories are one of the few alert
+  # classes that npm audit cannot see from the working tree.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(docker)
+
+  # android/variables.gradle pins androidx, junit and espresso versions by hand.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build(android)
