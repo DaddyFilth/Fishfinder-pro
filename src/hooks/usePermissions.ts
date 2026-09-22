@@ -30,64 +30,19 @@ function getInitialPreferences() {
   }
 }
 
-<<<<<<< HEAD
-function getInitialPermissionsState(): PermissionsState {
-  let gpsEnabled = false;
-  let setupCompleted = false;
-  let notificationStatus: PermissionStatusType = 'prompt';
-
-  if (typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        gpsEnabled = !!parsed.gpsEnabled;
-        setupCompleted = !!parsed.setupCompleted;
-      }
-    } catch {}
-
-    if ('Notification' in window) {
-      notificationStatus = Notification.permission as PermissionStatusType;
-    } else {
-      notificationStatus = 'unsupported';
-    }
-  }
-
-  return {
-    gpsStatus: 'prompt',
-    notificationStatus,
-    gpsEnabled,
-    setupCompleted,
-    coords: null,
-    error: null,
-  };
+// The Notification API reports 'default' before the user has answered, which is
+// not part of PermissionStatusType; 'prompt' is the equivalent state.
+export function toPermissionStatusType(permission: NotificationPermission): PermissionStatusType {
+  return permission === 'default' ? 'prompt' : permission;
 }
 
-export function usePermissions() {
-  const [state, setState] = useState<PermissionsState>(getInitialPermissionsState);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('permissions' in navigator)) return;
-
-    navigator.permissions
-      .query({ name: 'geolocation' })
-      .then((status) => {
-        setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
-        status.onchange = () => {
-          setState((prev) => ({ ...prev, gpsStatus: status.state as PermissionStatusType }));
-        };
-      })
-      .catch(() => {
-        setState((prev) => ({ ...prev, gpsStatus: 'prompt' }));
-      });
-=======
 export function usePermissions() {
   const [state, setState] = useState<PermissionsState>(() => {
     const preferences = getInitialPreferences();
     return {
       gpsStatus: 'prompt',
       notificationStatus: typeof window !== 'undefined' && 'Notification' in window
-        ? window.Notification.permission as PermissionStatusType
+        ? toPermissionStatusType(window.Notification.permission)
         : 'unsupported',
       gpsEnabled: !!preferences.gpsEnabled,
       notificationsEnabled: !!preferences.notificationsEnabled,
@@ -114,7 +69,6 @@ export function usePermissions() {
         });
     }
 
->>>>>>> dad13f4127ea6b75ad63a6ff33d00873b77f257e
   }, []);
 
   const persistSettings = useCallback((updates: Partial<PermissionsState>) => {
@@ -201,7 +155,7 @@ export function usePermissions() {
       const granted = permission === 'granted';
       setState((prev) => ({
         ...prev,
-        notificationStatus: permission as PermissionStatusType,
+        notificationStatus: toPermissionStatusType(permission),
         notificationsEnabled: granted,
         error: granted ? null : 'Notifications were not enabled.',
       }));
