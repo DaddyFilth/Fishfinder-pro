@@ -254,6 +254,10 @@ async function getSpots(): Promise<SpotLoadResult> {
   return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
 }
 
+/**
+ * Renders the client-side fishing dashboard and coordinates its authenticated
+ * spot data, map navigation, location tracking, and locally stored settings.
+ */
 export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [authReady, setAuthReady] = useState(() => false);

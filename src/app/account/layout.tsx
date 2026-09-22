@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   },
 }
 
+/** Renders account route content without introducing an additional DOM element. */
 export default function AccountLayout({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
