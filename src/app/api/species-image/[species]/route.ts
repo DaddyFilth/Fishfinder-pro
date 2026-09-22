@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAuthContext } from '@/lib/auth/server';
 import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 
 export const runtime = 'nodejs';
@@ -36,8 +37,14 @@ export async function GET(
   }
 
   // The species guide renders this feed as an <img> fallback, so a placeholder
-  // keeps the card intact when generated artwork is unavailable.
+  // keeps the card intact when generated artwork is unavailable. The route is
+  // reachable anonymously, so only signed-in visitors trigger the metered model.
   if (!process.env.GROQ_API_KEY) {
+    return svgResponse(speciesImagePlaceholder(speciesName));
+  }
+
+  const auth = await getAuthContext();
+  if (!auth) {
     return svgResponse(speciesImagePlaceholder(speciesName));
   }
 
