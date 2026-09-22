@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import ServiceWorkerRegistration from "@/components/offline/ServiceWorkerRegistration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -45,7 +46,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" style={{ height: "100%" }}>
-      <body style={{ height: "100%", margin: 0 }}>{children}</body>
+      <body style={{ height: "100%", margin: 0 }}>
+        {/* Registers /sw.js so the offline app shell and web notifications work. */}
+        <ServiceWorkerRegistration />
+        {children}
+      </body>
     </html>
   );
 }

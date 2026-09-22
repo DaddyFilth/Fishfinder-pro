@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import robots from './robots'
 
@@ -10,5 +12,13 @@ describe('robots metadata route', () => {
     expect(rules.allow).toBe('/')
     expect(rules.disallow).toEqual(['/account', '/admin', '/api/', '/auth/'])
     expect(result.sitemap).toBe('https://www.fishfinder-pro.online/sitemap.xml')
+  })
+
+  it('is not shadowed by a static public/robots.txt file', () => {
+    // A file at public/robots.txt is served instead of this route, which quietly
+    // dropped the /account and /admin disallows from the live crawl rules.
+    const staticCopy = resolve(process.cwd(), 'public/robots.txt')
+
+    expect(() => readFileSync(staticCopy, 'utf8')).toThrow()
   })
 })
