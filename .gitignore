@@ -99,3 +99,5 @@ fishfinder-upload.jks.base64
 /fix_species.py
 /fix_use_client.py
 /fixer.py
+# Kimi project memory
+.kimi-memory/
