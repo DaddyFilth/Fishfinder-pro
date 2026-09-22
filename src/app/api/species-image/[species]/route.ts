@@ -1,24 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
+
 export const runtime = 'nodejs';
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Species with pre-generated/stock images
+const SVG_HEADERS = {
+  'Content-Type': 'image/svg+xml; charset=utf-8',
+  'Cache-Control': 'public, max-age=86400, s-maxage=31536000',
+};
+
+function svgResponse(svg: string, status = 200) {
+  return new NextResponse(svg, { status, headers: SVG_HEADERS });
+}
+
+/** Next decodes route params, but guard against malformed percent-encoding. */
+function decodeSpeciesParam(species: string) {
+  try {
+    return decodeURIComponent(species).trim();
+  } catch {
+    return species.trim();
+  }
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ species: string }> }
 ) {
   const { species } = await params;
-  const speciesName = decodeURIComponent(species).trim();
+  const speciesName = decodeSpeciesParam(species);
 
   if (!/^[a-zA-Z0-9][a-zA-Z0-9 /-]{0,79}$/.test(speciesName)) {
     return NextResponse.json({ error: 'Invalid species name' }, { status: 400 });
   }
 
+  // The species guide renders this feed as an <img> fallback, so a placeholder
+  // keeps the card intact when generated artwork is unavailable.
   if (!process.env.GROQ_API_KEY) {
-    return NextResponse.json({ error: 'Groq image generation is not configured' }, { status: 503 });
+    return svgResponse(speciesImagePlaceholder(speciesName));
   }
 
   try {
@@ -60,14 +80,9 @@ export async function GET(
       throw new Error('Groq returned invalid SVG artwork');
     }
 
-    return new NextResponse(svg, {
-      headers: {
-        'Content-Type': 'image/svg+xml; charset=utf-8',
-        'Cache-Control': 'public, max-age=86400, s-maxage=31536000',
-      },
-    });
+    return svgResponse(svg);
   } catch (error) {
-    console.error('[v0] Groq species image generation failed:', error);
-    return NextResponse.json({ error: 'Unable to generate species image with Groq' }, { status: 502 });
+    console.error('[species-image] Groq species image generation failed:', error);
+    return svgResponse(speciesImagePlaceholder(speciesName), 502);
   }
 }
