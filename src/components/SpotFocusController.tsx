@@ -22,6 +22,8 @@ interface FocusTarget {
 const FLIGHT_SECONDS = 0.55;
 /** Safety net for browsers that skip `moveend` when the view is already on target. */
 const FLIGHT_SETTLE_MS = 700;
+/** How close the settled view must be to the planned one before the popup opens, in pixels. */
+const SETTLE_TOLERANCE_PX = 2;
 
 /**
  * Recentres the map whenever a spot is picked so the whole spot panel is visible.
@@ -49,18 +51,22 @@ export default function SpotFocusController({
   const spotId = spot?.id ?? null;
   const spotLat = spot?.lat;
   const spotLng = spot?.lng;
+  // Depend on the numbers, not the objects, so a parent that rebuilds `insets`/`size` on
+  // every render cannot re-fly the map.
+  const { top, bottom, left, right } = insets;
+  const { width, height } = size;
 
   useEffect(() => {
     if (spotId === null || spotLat === undefined || spotLng === undefined) return;
 
     const viewport =
-      size.width > 0 && size.height > 0
-        ? { width: size.width, height: size.height }
+      width > 0 && height > 0
+        ? { width, height }
         : { width: map.getSize().x, height: map.getSize().y };
     const layout = resolveSpotFocusLayout({
       width: viewport.width,
       height: viewport.height,
-      insets,
+      insets: { top, bottom, left, right },
       currentZoom: map.getZoom(),
       minZoom,
       maxZoom,
@@ -73,26 +79,33 @@ export default function SpotFocusController({
 
     map.flyTo(center, layout.zoom, { duration: FLIGHT_SECONDS });
 
-    const marker = markerRefs.current?.[spotId];
-    const popup = marker && map.hasLayer(marker) ? marker.getPopup() : undefined;
-    if (!marker || !popup || popup.isOpen()) return;
+    const marker = markerRefs.current[spotId];
+    if (!marker || !map.hasLayer(marker)) return;
+    const popup = marker.getPopup();
+    if (!popup || popup.isOpen()) return;
 
+    /** The user can pan away mid-flight; a popup must not steal focus back onto the old spot. */
+    const landedOnTarget = () =>
+      map.project(map.getCenter(), layout.zoom).distanceTo(target) <= SETTLE_TOLERANCE_PX;
+
+    let timer = 0;
     let settled = false;
-    const openPopup = () => {
-      if (settled) return;
+    const openPopupOnce = () => {
+      if (settled || !landedOnTarget()) return;
       settled = true;
       window.clearTimeout(timer);
-      map.off('moveend', openPopup);
+      map.off('moveend', openPopupOnce);
       if (!popup.isOpen()) marker.openPopup();
     };
-    const timer = window.setTimeout(openPopup, FLIGHT_SETTLE_MS);
-    map.on('moveend', openPopup);
+
+    timer = window.setTimeout(openPopupOnce, FLIGHT_SETTLE_MS);
+    map.on('moveend', openPopupOnce);
 
     return () => {
       window.clearTimeout(timer);
-      map.off('moveend', openPopup);
+      map.off('moveend', openPopupOnce);
     };
-  }, [insets, map, markerRefs, maxZoom, minZoom, size.height, size.width, spotId, spotLat, spotLng]);
+  }, [bottom, height, left, map, markerRefs, maxZoom, minZoom, right, spotId, spotLat, spotLng, top, width]);
 
   return null;
 }

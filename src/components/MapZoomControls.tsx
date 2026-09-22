@@ -1,18 +1,25 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
 import { useMap, useMapEvents } from 'react-leaflet';
 import {
   MAP_MAX_ZOOM,
   MAP_MIN_ZOOM,
+  MAP_Z_INDEX,
   OKLAHOMA_MAP_VIEW,
+  resolveZoomControlButtons,
   resolveZoomControlState,
+  type ZoomControlButton,
 } from '@/lib/mapViewport';
+
+/** Touch target size. Kept above the 44px minimum recommended for map controls. */
+const BUTTON_SIZE = 44;
 
 function buttonStyle(enabled: boolean): React.CSSProperties {
   return {
-    width: 44,
-    height: 44,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -31,6 +38,13 @@ function buttonStyle(enabled: boolean): React.CSSProperties {
   };
 }
 
+/** What each button in the stack does, keyed by the id `resolveZoomControlButtons` emits. */
+const ZOOM_ACTIONS: Record<ZoomControlButton['id'], (map: L.Map) => void> = {
+  in: (map) => map.zoomIn(),
+  out: (map) => map.zoomOut(),
+  reset: (map) => map.flyTo(OKLAHOMA_MAP_VIEW.center, OKLAHOMA_MAP_VIEW.zoom, { duration: 0.7 }),
+};
+
 /**
  * Touch sized zoom in / zoom out / reset controls for the fishing map.
  *
@@ -47,6 +61,7 @@ export default function MapZoomControls({
   visible?: boolean;
 }) {
   const map = useMap();
+  const stackRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState(() => {
     const center = map.getCenter();
     return { zoom: map.getZoom(), lat: center.lat, lng: center.lng };
@@ -64,28 +79,41 @@ export default function MapZoomControls({
 
   useMapEvents({ zoomend: sync, moveend: sync });
 
-  const { canZoomIn, canZoomOut, canResetView } = resolveZoomControlState({
-    zoom: view.zoom,
-    center: { lat: view.lat, lng: view.lng },
-    minZoom,
-    maxZoom,
-  });
+  /**
+   * The stack renders inside `.leaflet-container`, so without this Leaflet's own handlers
+   * would read a press as the start of a map drag and the wheel over the buttons as a zoom.
+   * This is the same guard Leaflet wraps around its built-in controls.
+   */
+  useEffect(() => {
+    const node = stackRef.current;
+    if (!node) return;
+    L.DomEvent.disableClickPropagation(node);
+    L.DomEvent.disableScrollPropagation(node);
+  }, []);
 
-  const resetView = () => {
-    map.flyTo(OKLAHOMA_MAP_VIEW.center, OKLAHOMA_MAP_VIEW.zoom, { duration: 0.7 });
-  };
+  const buttons = resolveZoomControlButtons(
+    resolveZoomControlState({
+      zoom: view.zoom,
+      center: { lat: view.lat, lng: view.lng },
+      minZoom,
+      maxZoom,
+    }),
+  );
 
   return (
     <div
+      ref={stackRef}
       role="group"
       aria-label="Map zoom controls"
       aria-hidden={!visible}
+      /* `inert` keeps the hidden stack out of the tab order; `pointer-events` alone does not. */
+      inert={!visible}
       style={{
         position: 'absolute',
         left: 14,
         top: '50%',
         transform: 'translateY(-50%)',
-        zIndex: 1650,
+        zIndex: MAP_Z_INDEX.controls,
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
@@ -94,36 +122,19 @@ export default function MapZoomControls({
         transition: 'opacity 0.18s ease',
       }}
     >
-      <button
-        type="button"
-        onClick={() => map.zoomIn()}
-        disabled={!canZoomIn}
-        aria-label="Zoom in"
-        title="Zoom in"
-        style={buttonStyle(canZoomIn)}
-      >
-        +
-      </button>
-      <button
-        type="button"
-        onClick={() => map.zoomOut()}
-        disabled={!canZoomOut}
-        aria-label="Zoom out"
-        title="Zoom out"
-        style={buttonStyle(canZoomOut)}
-      >
-        −
-      </button>
-      <button
-        type="button"
-        onClick={resetView}
-        disabled={!canResetView}
-        aria-label="Reset map view"
-        title="Reset map view"
-        style={buttonStyle(canResetView)}
-      >
-        ⟲
-      </button>
+      {buttons.map((button) => (
+        <button
+          key={button.id}
+          type="button"
+          onClick={() => ZOOM_ACTIONS[button.id](map)}
+          disabled={!button.enabled}
+          aria-label={button.label}
+          title={button.label}
+          style={buttonStyle(button.enabled)}
+        >
+          {button.glyph}
+        </button>
+      ))}
     </div>
   );
 }
