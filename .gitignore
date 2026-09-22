@@ -84,3 +84,18 @@ fishfinder-upload.jks.base64
 
 # Generated Android artifacts — never commit
 /apk-output/
+
+# Repository-root scratch artifacts (debug dumps and one-off codemods).
+# These are listed in .copilotignore too; keep them out of the tree entirely.
+/build_out.txt
+/eslint_out.txt
+/tsc_out.txt
+/purge.txt
+/page.b64
+/fishfinder-headers.txt
+/audit_map.py
+/fix_emojis.py
+/fix_env.py
+/fix_species.py
+/fix_use_client.py
+/fixer.py
