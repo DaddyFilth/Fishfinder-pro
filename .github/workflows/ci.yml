@@ -28,18 +28,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # CodeQL default setup is enabled for this repository. A committed
+      # advanced CodeQL workflow would be rejected by GitHub, so the shared
+      # guard script keeps the placeholder rule in one tested place.
       - name: Ensure advanced CodeQL workflow path is not used
-        run: |
-          if [ -f .github/workflows/codeql.yml ] && {
-            grep -Eq '^[[:space:]]*---[[:space:]]*$' .github/workflows/codeql.yml ||
-            grep -Eq '^[[:space:]]*jobs:[[:space:]]*($|#)' .github/workflows/codeql.yml ||
-            grep -Eq '^[[:space:]]*(push|pull_request|pull_request_target|schedule|workflow_run|workflow_call|repository_dispatch|merge_group):' .github/workflows/codeql.yml ||
-            ! grep -Eq '^[[:space:]]*workflow_dispatch:[[:space:]]*($|#)' .github/workflows/codeql.yml;
-          }; then
-            echo "::error::Forbidden CodeQL workflow configuration detected in .github/workflows/codeql.yml."
-            echo "::error::Only a manual workflow_dispatch placeholder without jobs is allowed."
-            exit 1
-          fi
+        run: node scripts/checkCodeqlWorkflowPlaceholder.mjs
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

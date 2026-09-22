@@ -1,5 +1,10 @@
 -- Align deployed profile roles with the application RBAC model.
--- This migration is safe to run against databases created from either schema file.
+-- This migration is safe to run against databases created from either schema
+-- file, including databases whose profiles table predates the RBAC column
+-- (for example Supabase preview branches seeded from an older snapshot).
+
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS role text;
 
 ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_role_check;
