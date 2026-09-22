@@ -9,7 +9,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
 import MapZoomControls from '@/components/MapZoomControls';
-import SpotFocusController from '@/components/SpotFocusController';
+import SpotFocusController, { type SpotMarkerRegistry } from '@/components/SpotFocusController';
 import WaypointMarkers from '@/components/WaypointMarkers';
 import DepthOverlay from '@/components/DepthOverlay';
 import FishBot from '@/components/ai/FishBot';
@@ -23,6 +23,7 @@ import { type Spot } from '@/lib/mapFilters';
 import {
   MAP_MAX_ZOOM,
   MAP_MIN_ZOOM,
+  MAP_Z_INDEX,
   OKLAHOMA_MAP_VIEW,
   resolveMapInsets,
   resolveSpotPopupFrame,
@@ -39,8 +40,8 @@ L.Icon.Default.mergeOptions({
 // ─── Shared style constants ───────────────────────────────────────────────────
 const S = {
   popupWrap: {
-    minWidth: '300px',
-    maxHeight: '430px',
+    // Visual shell only: the width/height caps are applied per render from `popupFrame` so the
+    // CSS can never exceed the maxWidth/minWidth/maxHeight handed to Leaflet's Popup.
     overflowY: 'auto',
     fontFamily: 'system-ui, sans-serif',
     background: 'rgba(3,7,18,0.96)',
@@ -90,6 +91,37 @@ const S = {
     fontSize: 12,
     cursor: 'pointer',
   } as React.CSSProperties,
+
+  /** "Get directions" call to action, shared by the spot popup and the two overlay popups. */
+  directionsBtn: {
+    background: '#0f766e',
+    color: 'white',
+    border: 0,
+    borderRadius: 7,
+    padding: '7px 10px',
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  /**
+   * Floating status card. It steps aside for spot details and the sheet, and sits bottom-left
+   * so it can never cover the zoom stack that occupies the middle-left of the map.
+   */
+  hud: (visible: boolean, sheetOpen: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    bottom: sheetOpen ? 'calc(45dvh + 14px)' : 74,
+    left: 14,
+    zIndex: MAP_Z_INDEX.chrome,
+    borderRadius: 18,
+    padding: '14px 16px',
+    minWidth: 265,
+    maxWidth: 'min(320px, calc(100% - 28px))',
+    pointerEvents: 'none',
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(10px)',
+    transition: 'opacity 0.18s ease, transform 0.18s ease, bottom 0.3s ease',
+  }),
 } as const;
 
 interface Cond {
@@ -204,17 +236,9 @@ function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
 function metricRow({ icon, label, value, unit }: { icon: string; label: string; value: string | number | null; unit?: string }) {
   if (value === null || value === undefined) return null;
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '6px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
-      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{icon} {label}</span>
-      <span style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc' }}>
+    <div style={S.metricRow}>
+      <span style={S.metricLabel}>{icon} {label}</span>
+      <span style={S.metricValue}>
         {value}{unit ? ` ${unit}` : ''}
       </span>
     </div>
@@ -276,7 +300,7 @@ export default function FishingMap({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
   const mapShellRef = useRef<HTMLDivElement | null>(null);
-  const markerRefs = useRef<Record<string, L.Marker | null>>({});
+  const markerRefs = useRef<SpotMarkerRegistry['current']>({});
   const [mapSize, setMapSize] = useState(() => ({
     width: typeof window === 'undefined' ? 0 : window.innerWidth,
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
@@ -436,7 +460,7 @@ export default function FishingMap({
           box-shadow: none;
         }
         .premium-map .leaflet-control-container {
-          z-index: 600;
+          z-index: ${MAP_Z_INDEX.leafletControls};
         }
         .hud {
           background: rgba(7, 12, 24, 0.72);
@@ -448,7 +472,7 @@ export default function FishingMap({
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 300;
+          z-index: ${MAP_Z_INDEX.effect};
           background:
             radial-gradient(circle at 20% 18%, rgba(34,197,94,0.12), transparent 24%),
             radial-gradient(circle at 78% 14%, rgba(14,165,233,0.12), transparent 22%),
@@ -460,7 +484,7 @@ export default function FishingMap({
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 301;
+          z-index: ${MAP_Z_INDEX.vignette};
           box-shadow: inset 0 0 140px rgba(2,6,23,0.6);
         }
         .pulse {
@@ -487,7 +511,7 @@ export default function FishingMap({
         <div className="map-vignette" />
 
         {/* Sits above the sheet handle so the top of the map stays free for the zoom controls. */}
-        <div className="hud" aria-hidden={!showMapOverlays} style={{ position: 'absolute', bottom: sheetOpen ? 'calc(45dvh + 14px)' : 74, left: 14, zIndex: 1600, borderRadius: 18, padding: '14px 16px', minWidth: 265, maxWidth: 'min(320px, calc(100% - 28px))', pointerEvents: 'none', opacity: showMapOverlays ? 1 : 0, transform: showMapOverlays ? 'translateY(0)' : 'translateY(10px)', transition: 'opacity 0.18s ease, transform 0.18s ease, bottom 0.3s ease' }}>
+        <div className="hud" aria-hidden={!showMapOverlays} style={S.hud(showMapOverlays, sheetOpen)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div className="pulse" />
             <div>
@@ -574,7 +598,7 @@ export default function FishingMap({
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
                       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Hotspot confidence: {score}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
             </CircleMarker>
@@ -596,7 +620,7 @@ export default function FishingMap({
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
                       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Recent catch activity signal • score {score}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
             </CircleMarker>
@@ -638,12 +662,12 @@ export default function FishingMap({
                   autoPanPaddingBottomRight={[mapInsets.right, mapInsets.bottom]}
                   eventHandlers={{ add: () => onPopupOpen?.(spot), remove: () => onPopupClose?.() }}
                 >
-                  <div style={S.popupWrap}>
+                  <div style={{ ...S.popupWrap, minWidth: popupFrame.minWidth, maxHeight: popupFrame.maxHeight }}>
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ marginTop: 10, background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={{ ...S.directionsBtn, marginTop: 10 }}>Get directions</button>
                     </div>
 
                     <div style={{ background: '#082f49', border: '1px solid #155e75', borderRadius: 10, padding: 10, marginBottom: 10 }}>

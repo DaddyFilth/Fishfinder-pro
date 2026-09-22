@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { MAP_Z_INDEX } from '@/lib/mapViewport';
 
 /**
  * How the spot data currently rendered on the map was resolved.
@@ -56,7 +57,7 @@ export const MapDataSourceBadge: React.FC<Props> = ({ mode, style }) => {
         position: 'absolute',
         top: 18,
         right: 18,
-        zIndex: 1600,
+        zIndex: MAP_Z_INDEX.chrome,
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
