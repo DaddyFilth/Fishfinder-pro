@@ -347,21 +347,37 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
+  const supabase = createClient();
+  let mounted = true;
+  if (!supabase) {
+  queueMicrotask(() => {
+  if (!mounted) return;
+  setIsAuthenticated(false);
+  setAuthReady(true);
+  });
+  return () => {
+  mounted = false;
+  };
+  }
 
-    let mounted = true;
-    const syncSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      const signedIn = Boolean(data.session?.user);
-      setIsAuthenticated(signedIn);
-      setAuthReady(true);
-      if (signedIn) void loadSpotData(false);
-      else setSpots([]);
-    };
+  const syncSession = async () => {
+  try {
+  const { data } = await supabase.auth.getSession();
+  if (!mounted) return;
+  const signedIn = Boolean(data.session?.user);
+  setIsAuthenticated(signedIn);
+  setAuthReady(true);
+  if (signedIn) void loadSpotData(false);
+  else setSpots([]);
+  } catch {
+  if (!mounted) return;
+  setIsAuthenticated(false);
+  setAuthReady(true);
+  setSpots([]);
+  }
+  };
 
-    void syncSession();
+  void syncSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
@@ -685,7 +701,7 @@ export default function MobilePage() {
               </button>
             </div>
             <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'live' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
-              {cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+              {!authReady ? 'Checking account…' : !isAuthenticated ? 'Sign in required to load spot data' : cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
               {locationStatus === 'denied' && ' · Location permission denied'}
               {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
