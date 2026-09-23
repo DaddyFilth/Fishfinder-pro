@@ -210,6 +210,15 @@ function conditionForSpot(condition: Cond | undefined): FishingCondition {
   return 'stable';
 }
 
+function stableSpotVariant(id: Spot['id'], variantCount: number) {
+  const key = String(id);
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash) % variantCount;
+}
+
 function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
   const fishingCondition = conditionForSpot(condition);
   const type = `${spot.spot_type} ${spot.notes ?? ''}`.toLowerCase();
@@ -220,7 +229,7 @@ function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
       : type.includes('reservoir')
         ? [['Bass', 'Walleye', 'Catfish'], ['Walleye', 'Bass', 'Catfish'], ['Catfish', 'Bass', 'Walleye']]
         : [['Bass', 'Panfish', 'Catfish'], ['Panfish', 'Bass', 'Catfish'], ['Catfish', 'Panfish', 'Bass']];
-  const variant = Math.abs(spot.id) % groupSets.length;
+  const variant = stableSpotVariant(spot.id, groupSets.length);
   const preferredGroups = groupSets[variant];
 
   return preferredGroups
