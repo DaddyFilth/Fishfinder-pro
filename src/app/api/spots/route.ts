@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
@@ -13,44 +14,49 @@ function num(v: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function normalize(payload: unknown, lat: number, lon: number): AnyRec {
+function isOklahomaCoordinate(lat: number, lng: number) {
+  return (
+    lat >= OKLAHOMA_BOUNDS.minLat &&
+    lat <= OKLAHOMA_BOUNDS.maxLat &&
+    lng >= OKLAHOMA_BOUNDS.minLng &&
+    lng <= OKLAHOMA_BOUNDS.maxLng
+  );
+}
+
+function normalize(payload: unknown): AnyRec {
   const root = (payload && typeof payload === 'object' ? payload : {}) as AnyRec;
   const rawList =
-    (Array.isArray(root.microSpots) && root.microSpots) ||
     (Array.isArray(root.spots) && root.spots) ||
     (Array.isArray(payload) ? payload : []);
 
-  const spots = (rawList as AnyRec[]).map((s, i) => {
-    const item = s && typeof s === 'object' ? s : {};
-    return {
-      id: String(item.id ?? `live-${i}`),
-      name: String(item.name ?? item.label ?? item.title ?? `Live spot ${i + 1}`),
-      lat: num(item.lat ?? item.latitude, lat),
-      lng: num(item.lng ?? item.lon ?? item.longitude, lon),
-      source: 'seamcast-spots',
-      live: true,
-      ...item,
-    };
-  });
+  const spots = (rawList as AnyRec[])
+    .map((s, i) => {
+      const item = s && typeof s === 'object' ? s : {};
+      const itemLat = num(item.lat ?? item.latitude, Number.NaN);
+      const itemLng = num(item.lng ?? item.lon ?? item.longitude, Number.NaN);
+      const name = String(item.name ?? item.label ?? item.title ?? '').trim();
+      if (!name || !isOklahomaCoordinate(itemLat, itemLng)) return null;
+      return {
+        id: String(item.id ?? `live-${i}`),
+        name,
+        lat: itemLat,
+        lng: itemLng,
+        source: 'seamcast-spots',
+        live: true,
+        ...item,
+      };
+    })
+    .filter(Boolean) as AnyRec[];
 
-  const outSpots =
-    spots.length > 0
-      ? spots
-      : [
-          {
-            id: 'live-center',
-            name: 'Live AI pin',
-            lat,
-            lng: lon,
-            source: 'seamcast-spots',
-            live: true,
-          },
-        ];
+  // Never turn a missing coordinate into a pin at the user's search center.
+  // Use the verified public-water catalog instead so every fallback marker is a real spot.
+  const outSpots = spots.length > 0 ? spots : [...DEFAULT_SPOTS];
+  const source = spots.length > 0 ? 'seamcast-spots' : 'verified-public-water-catalog';
 
   return {
     ...root,
-    live: true,
-    source: 'seamcast-spots',
+    live: spots.length > 0,
+    source,
     spots: outSpots,
     microSpots: Array.isArray(root.microSpots) ? root.microSpots : outSpots,
   };
@@ -81,7 +87,7 @@ export async function GET(req: NextRequest) {
     }
     const text = await res.text();
     const json = JSON.parse(text) as unknown;
-    return NextResponse.json(normalize(json, lat, lon));
+    return NextResponse.json(normalize(json));
   } catch {
     return NextResponse.json(
       { error: 'Unable to load fishing spots.', live: false },
