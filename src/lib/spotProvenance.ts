@@ -60,8 +60,8 @@ export function normalizeProviderSpots(value: unknown, fallback: readonly { id: 
       water_type: typeof spot.water_type === 'string' ? spot.water_type : 'freshwater',
       spot_type: typeof spot.spot_type === 'string' ? spot.spot_type : 'fishing spot',
       source: 'seamcast-spots',
-      live: false,
-      data_mode: 'provider',
+      live: false as const,
+      data_mode: 'provider' as const,
     }))
     .filter((spot) => spot.name && Number.isFinite(spot.lat) && Number.isFinite(spot.lng));
 
@@ -69,8 +69,8 @@ export function normalizeProviderSpots(value: unknown, fallback: readonly { id: 
     spots: spots.length > 0 ? spots : fallback.map((spot) => ({
       ...spot,
       source: 'verified-public-water-catalog',
-      live: false,
-      data_mode: 'fallback',
+      live: false as const,
+      data_mode: 'fallback' as const,
     })),
     data_mode: spots.length > 0 ? 'provider' : 'fallback',
     source: spots.length > 0 ? 'seamcast-spots' : 'verified-public-water-catalog',

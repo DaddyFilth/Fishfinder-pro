@@ -290,7 +290,7 @@ export default function MobilePage() {
     hotspots: true,
     depth: false,
     waterTemp: false,
-    catchPins: true,
+    conditionMarkers: true,
     waypoints: true,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
