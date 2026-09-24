@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { getAuthContext } from '@/lib/auth/server';
 import {
   enforceRateLimit,
+  isHttpUrl,
   isSameOrigin,
-  requestBodyTooLarge,
-  tooLarge,
+  readJsonBody,
 } from '@/lib/security';
 
 const OklahomaSpotSchema = z.object({
@@ -35,7 +35,7 @@ const OklahomaSpotSchema = z.object({
   accessType: z.string().trim().min(3).max(80),
   region: z.string().trim().min(2).max(80),
   notes: z.string().trim().max(1000).default(''),
-  sourceUrl: z.string().url().max(2000).nullable().optional(),
+  sourceUrl: z.string().url().max(2000).refine(isHttpUrl, 'Use an HTTP or HTTPS source URL.').nullable().optional(),
   accessConfirmation: z.literal(true),
 });
 
@@ -78,8 +78,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (requestBodyTooLarge(request)) return tooLarge();
-
   const context = await getAuthContext();
 
   if (!context) {
@@ -89,16 +87,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: 'Invalid JSON body.' },
-      { status: 400 },
-    );
-  }
+  const bodyResult = await readJsonBody(request, 32_768)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value
 
   const parsed = OklahomaSpotSchema.safeParse(body);
 

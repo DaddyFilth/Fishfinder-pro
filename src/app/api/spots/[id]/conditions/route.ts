@@ -41,7 +41,7 @@ export async function GET(
   }
 
   const { data: spot, error: spotErr } = await supabase
-    .from('fishing_spots')
+    .from('spots')
     .select('*')
     .eq('id', id)
     .single();

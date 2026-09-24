@@ -422,7 +422,7 @@ export default function CommunityPinsPanel({
               <a
                 href={pin.source_url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 style={{ color: '#67e8f9', display: 'inline-block', fontSize: 10, marginTop: 7 }}
               >
                 View source ↗

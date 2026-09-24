@@ -1,19 +1,15 @@
 import { getAiModel, getAiProviderName, getOllama } from '@/lib/ollama';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-analyze', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
-  if (requestBodyTooLarge(req, 16_384)) return tooLarge();
-
-  let body: { conditions?: unknown; spot?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
+  const bodyResult = await readJsonBody(req, 16_384)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value as { conditions?: unknown; spot?: unknown }
   if (!body.conditions || typeof body.conditions !== 'object' || !body.spot || typeof body.spot !== 'object') {
     return NextResponse.json({ error: 'A spot and a condition context are required' }, { status: 400 });
   }

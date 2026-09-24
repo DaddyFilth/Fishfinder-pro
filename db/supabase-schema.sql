@@ -29,11 +29,20 @@ $$;
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_select_admin" on public.profiles;
 drop policy if exists "Users can view all profiles" on public.profiles;
-create policy "Users can view all profiles"
+drop policy if exists "profiles_select_public" on public.profiles;
+
+create policy "profiles_select_own"
 on public.profiles
 for select
-using (true);
+using (auth.uid() = id);
+
+create policy "profiles_select_admin"
+on public.profiles
+for select
+using (public.is_admin());
 
 drop policy if exists "Users can insert own profile" on public.profiles;
 create policy "Users can insert own profile"

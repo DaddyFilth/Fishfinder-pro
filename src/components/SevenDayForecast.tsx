@@ -70,18 +70,19 @@ export default function SevenDayForecast({ lat, lng }: Props) {
         const data = await fRes.json();
         setForecast((data.properties.periods as NWSPeriod[]).slice(0, 14).filter((p) => p.isDaytime).map((p) => ({ ...p, temp: p.temperature ?? 0, tempUnit: p.temperatureUnit ?? 'F', wind: p.windSpeed ?? '' }) as DayForecast));
       } catch {
-        setError('Unable to load 7-day forecast');
+        setError('Unable to load 7-day weather outlook');
       } finally { setLoading(false); }
     };
     load();
   }, [lat, lng]);
 
-  if (loading) return <p style={{ color:'#3b82f6', fontSize:'11px', textAlign:'center', padding:'12px 0' }}>⏳ Loading 7-day forecast...</p>;
+  if (loading) return <p style={{ color:'#3b82f6', fontSize:'11px', textAlign:'center', padding:'12px 0' }}>⏳ Loading 7-day weather outlook...</p>;
   if (error)   return <p style={{ color:'#ef4444', fontSize:'11px', textAlign:'center' }}>{error}</p>;
 
   return (
     <div>
-      <div style={{ fontSize:'10px', color:'#64748b', fontWeight:'bold', marginBottom:'8px' }}>☀️ 7-DAY FISHING FORECAST</div>
+      <div style={{ fontSize:'10px', color:'#64748b', fontWeight:'bold', marginBottom:'8px' }}>☀️ 7-DAY WEATHER OUTLOOK</div>
+      <div style={{ fontSize:'9px', color:'#475569', marginBottom:'8px' }}>Fishing score is a simple wind/weather heuristic, not a guaranteed fishing forecast.</div>
       <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
         {forecast.map((day, i) => {
           const rating = fishingRatingFromWeather(day.shortForecast ?? '', day.wind ?? '');

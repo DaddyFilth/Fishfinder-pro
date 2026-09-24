@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getOllama } from '@/lib/ollama'
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,10 +65,14 @@ function unavailableResponse() {
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-advisor', limit: 12, windowMs: 60_000 })
   if (limited) return limited
-  if (requestBodyTooLarge(req, 16_384)) return tooLarge()
-
-  try {
-    const { lat, lon, targetSpecies } = await req.json()
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
+  const bodyResult = await readJsonBody(req, 16_384)
+  if (!bodyResult.ok) return bodyResult.response
+  const { lat, lon, targetSpecies } = bodyResult.value as {
+    lat?: unknown
+    lon?: unknown
+    targetSpecies?: unknown
+  }
 
     if (
       typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
@@ -109,8 +113,4 @@ export async function POST(req: NextRequest) {
       console.error('AI advisor provider error:', error)
       return unavailableResponse()
     }
-  } catch (error) {
-    console.error('Advisor request error:', error)
-    return NextResponse.json({ error: 'Invalid advisor request.' }, { status: 400 })
-  }
 }

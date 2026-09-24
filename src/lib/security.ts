@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+export { isHttpUrl, isImageDataUrl } from './urls'
+
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
 function clientKey(request: Request) {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  return forwarded || request.headers.get('x-real-ip') || 'unknown'
+  // Prefer platform-set identity headers. Never use the first arbitrary
+  // X-Forwarded-For value as the primary rate-limit identity.
+  const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
+  const realIp = request.headers.get('x-real-ip')?.trim()
+  if (vercelForwarded) return vercelForwarded
+  if (realIp) return realIp
+  if (process.env.NODE_ENV === 'production') return 'unknown'
+
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
+  return forwarded || 'unknown'
 }
 
 export function enforceRateLimit(
@@ -25,6 +35,10 @@ export function enforceRateLimit(
   if (buckets.size > 5000) {
     for (const [bucketKey, value] of buckets) {
       if (value.resetAt <= now) buckets.delete(bucketKey)
+    }
+    for (const bucketKey of buckets.keys()) {
+      if (buckets.size <= 5000) break
+      buckets.delete(bucketKey)
     }
   }
 
@@ -46,7 +60,50 @@ export function enforceRateLimit(
 
 export function requestBodyTooLarge(request: Request, maxBytes = 32_768) {
   const contentLength = request.headers.get('content-length')
-  return contentLength !== null && Number(contentLength) > maxBytes
+  const length = contentLength === null ? 0 : Number(contentLength)
+  return contentLength !== null && (!Number.isFinite(length) || length > maxBytes)
+}
+
+export type JsonBodyResult =
+  | { ok: true; value: unknown }
+  | { ok: false; response: NextResponse }
+
+export async function readJsonBody(request: Request, maxBytes = 32_768): Promise<JsonBodyResult> {
+  if (requestBodyTooLarge(request, maxBytes)) {
+    return { ok: false, response: tooLarge() }
+  }
+
+  if (!request.body) {
+    return { ok: false, response: NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 }) }
+  }
+
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder()
+  let totalBytes = 0
+  let text = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (!value) continue
+
+    totalBytes += value.byteLength
+    if (totalBytes > maxBytes) {
+      await reader.cancel()
+      return { ok: false, response: tooLarge() }
+    }
+    text += decoder.decode(value, { stream: true })
+  }
+  text += decoder.decode()
+
+  try {
+    return { ok: true, value: JSON.parse(text) as unknown }
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 }),
+    }
+  }
 }
 
 export function addSecurityHeaders(response: NextResponse) {
@@ -65,8 +122,16 @@ export function noStore(response: NextResponse) {
 
 export function isSameOrigin(request: NextRequest) {
   const origin = request.headers.get('origin')
-  if (!origin) return true
-  return origin === request.nextUrl.origin
+  if (origin) {
+    if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+    try {
+      return new URL(origin).origin === request.nextUrl.origin
+    } catch {
+      return false
+    }
+  }
+
+  return request.headers.get('sec-fetch-site') === 'same-origin'
 }
 
 export function badRequest(message = 'Invalid request.') {

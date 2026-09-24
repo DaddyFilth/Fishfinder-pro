@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getOllama } from '@/lib/ollama'
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,10 +84,12 @@ function unavailableResponse() {
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-chat', limit: 12, windowMs: 60_000 })
   if (limited) return limited
-  if (requestBodyTooLarge(req, 64_000)) return tooLarge()
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
+  const bodyResult = await readJsonBody(req, 64_000)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value as RequestBody
 
   try {
-    const body: RequestBody = await req.json()
     const { message, lat, lon, spot, history = [] } = body
 
     if (typeof message !== 'string' || !message.trim() || message.length > 4_000) {

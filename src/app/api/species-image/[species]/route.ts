@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthContext } from '@/lib/auth/server';
 import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
+import { isSafeGeneratedSvg } from '@/lib/svg';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +27,7 @@ function decodeSpeciesParam(species: string) {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ species: string }> }
 ) {
   const { species } = await params;
@@ -78,13 +79,10 @@ export async function GET(
 
     const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const rawSvg = payload.choices?.[0]?.message?.content?.replace(/^```(?:svg)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const svg = rawSvg
-      ?.replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
-      .replace(/\s(?:on\w+|href|xlink:href)\s*=\s*(['"]).*?\1/gi, '');
+    const svg = rawSvg;
 
-    if (!svg?.startsWith('<svg') || !svg.includes('</svg>')) {
-      throw new Error('Groq returned invalid SVG artwork');
+    if (!isSafeGeneratedSvg(svg)) {
+      throw new Error('Groq returned unsafe or invalid SVG artwork');
     }
 
     return svgResponse(svg);

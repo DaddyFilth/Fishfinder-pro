@@ -4,13 +4,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAuthContext } from '@/lib/auth/server';
 import {
   enforceRateLimit,
+  isHttpUrl,
   isSameOrigin,
-  requestBodyTooLarge,
-  tooLarge,
+  readJsonBody,
 } from '@/lib/security';
 
 const PinSchema = z.object({
-  knownSpotId: z.string().uuid(),
+  knownSpotId: z.string().trim().min(1).max(128),
   pinType: z.enum([
     'structure',
     'hazard',
@@ -22,7 +22,7 @@ const PinSchema = z.object({
   description: z.string().trim().max(1000).default(''),
   lat: z.number().min(33.615).max(37.002),
   lng: z.number().min(-103.003).max(-94.430),
-  sourceUrl: z.string().url().max(2000).nullable().optional(),
+  sourceUrl: z.string().url().max(2000).refine(isHttpUrl, 'Use an HTTP or HTTPS source URL.').nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 });
 
@@ -52,7 +52,7 @@ async function fetchKnownSpot(
   knownSpotId: string,
 ) {
   const { data, error } = await supabase
-    .from('fishing_spots')
+    .from('spots')
     .select('id, lat, lng')
     .eq('id', knownSpotId)
     .maybeSingle();
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
   const knownSpotId = new URL(request.url).searchParams.get('knownSpotId');
 
-  if (!knownSpotId || !z.string().uuid().safeParse(knownSpotId).success) {
+  if (!knownSpotId || knownSpotId.length > 128) {
     return NextResponse.json(
       { error: 'A valid knownSpotId is required.' },
       { status: 400 },
@@ -128,8 +128,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (requestBodyTooLarge(request)) return tooLarge();
-
   const context = await getAuthContext();
 
   if (!context) {
@@ -139,16 +137,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: 'Invalid JSON body.' },
-      { status: 400 },
-    );
-  }
+  const bodyResult = await readJsonBody(request, 32_768)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value
 
   const parsed = PinSchema.safeParse(body);
 

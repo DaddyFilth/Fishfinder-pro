@@ -513,7 +513,7 @@ export default function MobilePage() {
         const registration = await navigator.serviceWorker.getRegistration('/');
         if (registration) {
           await registration.showNotification('SeamCast notifications enabled', {
-            body: 'You will receive fishing updates from this browser when alerts are available.',
+            body: 'Browser permission is enabled. This app does not currently schedule live fishing alerts.',
             icon: '/icons/icon-192.png',
             tag: 'seamcast-notifications-enabled',
           });
@@ -702,7 +702,7 @@ export default function MobilePage() {
               <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.42)', backdropFilter:'blur(3px)' }}>
                 <div style={{ maxWidth:'300px', margin:'16px', textAlign:'center', background:'rgba(7,17,27,0.97)', border:'1px solid #1d3442', borderRadius:'16px', padding:'22px', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
                   <div style={{ fontSize:'15px', fontWeight:800, color:'#e2f7ff' }}>Sign in to explore spots</div>
-                  <p style={{ margin:'8px 0 16px', color:'#94a3b8', fontSize:'12px', lineHeight:1.5 }}>Fishing locations are private to account holders. Sign in to view exact map points and conditions.</p>
+                  <p style={{ margin:'8px 0 16px', color:'#94a3b8', fontSize:'12px', lineHeight:1.5 }}>Public spot results are available without an account. Sign in for saved community reports, catch logging, and account features.</p>
                   <a href="/auth/login?next=/" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', minHeight:'38px', padding:'0 16px', borderRadius:'9px', background:'#0369a1', color:'white', fontSize:'12px', fontWeight:800, textDecoration:'none' }}>Log in or create account</a>
                 </div>
               </div>
@@ -725,7 +725,7 @@ export default function MobilePage() {
 
             {mapLayers.depth && (
               <div style={{ position:'absolute', right:'12px', bottom: sheetOpen ? 'calc(45dvh + 12px)' : '64px', width:'132px', background:'rgba(10,15,30,0.9)', border:'1px solid #1e293b', borderRadius:'8px', padding:'9px', zIndex:10, backdropFilter:'blur(8px)', transition:'bottom 0.3s ease' }}>
-                <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'700', marginBottom:'6px' }}>DEPTH REFERENCE</div>
+                <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'700', marginBottom:'6px' }}>HYDROGRAPHY / SEAMARK</div>
                 <div style={{ display:'flex', gap:'3px', alignItems:'center' }}>
                   {['#0c4a6e','#0369a1','#0891b2','#22c55e','#eab308','#f97316'].map((color) => <span key={color} style={{ flex:1, height:'8px', background:color }} />)}
                 </div>
@@ -876,7 +876,7 @@ export default function MobilePage() {
                 ['hotspots', '🔥 Calculated condition hotspots'],
                 ['depth', '🗺 Water reference layers'],
                 ['waterTemp', '🌡 Sampled water temperature'],
-                ['catchPins', '🎯 Condition-score markers'],
+                ['conditionMarkers', '🎯 Condition-score markers'],
                 ['waypoints', '📍 Waypoints'],
               ] as [keyof MapLayers, string][]).map(([key, label]) => (
                 <button key={key} onClick={() => toggleMapLayer(key)} style={{ width:'100%', background:'none', border:'none', borderTop:'1px solid #1e293b', color:'#cbd5e1', padding:'10px 0', display:'flex', justifyContent:'space-between', cursor:'pointer', fontSize:'12px', textAlign:'left' }}>
@@ -898,7 +898,7 @@ export default function MobilePage() {
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <PreferenceButton
-                  label={notificationsPreferred ? 'Notifications enabled' : 'Enable notifications'}
+                  label={notificationsPreferred ? 'Browser permission on' : 'Enable browser permission'}
                   selected={notificationsPreferred && notificationState === 'granted'}
                   onSelect={() => void requestNotificationPermission()}
                 />

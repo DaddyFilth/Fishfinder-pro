@@ -4,11 +4,7 @@ import {
   getPasswordResetRedirectTo,
   isAllowedAuthRequestOrigin,
 } from '@/lib/supabase/redirect'
-import {
-  enforceRateLimit,
-  requestBodyTooLarge,
-  tooLarge,
-} from '@/lib/security'
+import { enforceRateLimit, readJsonBody } from '@/lib/security'
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
@@ -19,18 +15,17 @@ export async function POST(request: Request) {
   })
   if (limited) return limited
 
-  if (requestBodyTooLarge(request, 4_096)) {
-    return tooLarge()
-  }
-
   const origin = request.headers.get('origin')
   if (!isAllowedAuthRequestOrigin(origin, requestUrl, request.headers.get('sec-fetch-site'))) {
     return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   }
 
+  const bodyResult = await readJsonBody(request, 4_096)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value as { email?: unknown }
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+
   try {
-    const body = await request.json()
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
 
     if (!email || !email.includes('@') || email.length > 254) {
       return NextResponse.json(

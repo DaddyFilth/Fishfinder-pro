@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getOllama } from '@/lib/ollama';
 import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
-  if (requestBodyTooLarge(req, 16_384)) return tooLarge();
-
-  let body: {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
+  }
+  const bodyResult = await readJsonBody(req, 16_384)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value as {
     species?: unknown; lat?: unknown; lng?: unknown;
     water_temp_c?: unknown; pressure_hpa?: unknown;
     wind_speed_ms?: unknown; dissolved_oxygen_mgl?: unknown;
     solunar_score?: unknown; moon_phase?: unknown;
-  };
-  try { body = await req.json(); }
-  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
+  }
 
   const {
     species, lat, lng,
@@ -52,7 +53,7 @@ Given the supplied conditions for ${species} at coordinates (${latNumber}, ${lng
 - Solunar score: ${solunar_score ?? 'unknown'}/100
 - Moon phase: ${moon_phase ?? 'unknown'}
 
-Predict the 3 best bite time windows for ${species} TODAY.
+Estimate 3 candidate bite time windows for ${species} TODAY. These are optional planning estimates, not guarantees.
 
 Respond with ONLY valid JSON in this exact format:
 {

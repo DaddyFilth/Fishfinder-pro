@@ -42,10 +42,14 @@ AS $$
   );
 $$;
 
+DROP POLICY IF EXISTS "profiles_select_admin" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_public" ON public.profiles;
-CREATE POLICY "profiles_select_public"
   ON public.profiles FOR SELECT
-  USING (true);
+  USING (auth.uid() = id);
+CREATE POLICY "profiles_select_admin"
+  ON public.profiles FOR SELECT
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
 CREATE POLICY "profiles_insert_own"
@@ -96,6 +100,12 @@ CREATE TABLE IF NOT EXISTS public.spots (
   water_type text DEFAULT 'freshwater',
   spot_type text DEFAULT 'lake',
   description text,
+  usgs_site_id text,
+  noaa_station_id text,
+  access_type text,
+  region text,
+  source text,
+  notes text,
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
@@ -113,15 +123,17 @@ CREATE POLICY "spots_read_public"
 CREATE TABLE IF NOT EXISTS public.catches (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  spot_id text REFERENCES public.spots(id) ON DELETE SET NULL,
+  spot_id text,
   species text NOT NULL,
   weight_lbs numeric CHECK (weight_lbs >= 0),
   length_in numeric CHECK (length_in >= 0),
   photo_url text,
   notes text,
+  bait text,
+  spot_name text,
   latitude double precision,
   longitude double precision,
-  is_public boolean DEFAULT true NOT NULL,
+  is_public boolean DEFAULT false NOT NULL,
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
@@ -132,7 +144,7 @@ ALTER TABLE public.catches ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
 CREATE POLICY "catches_select_policy"
   ON public.catches FOR SELECT
-  USING (is_public = true OR (auth.uid() IS NOT NULL AND auth.uid() = user_id));
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
 CREATE POLICY "catches_insert_policy"
@@ -263,9 +275,8 @@ CREATE INDEX IF NOT EXISTS idx_snapshots_spot_time ON public.environmental_snaps
 ALTER TABLE public.environmental_snapshots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "environmental_snapshots_read_public" ON public.environmental_snapshots;
-CREATE POLICY "environmental_snapshots_read_public"
-  ON public.environmental_snapshots FOR SELECT
-  USING (true);
+REVOKE ALL ON public.environmental_snapshots FROM anon, authenticated;
+GRANT SELECT, INSERT, DELETE ON public.environmental_snapshots TO service_role;
 
 -- ============================================================================
 -- 7. SEED / STAGING TABLE (Private Schema)

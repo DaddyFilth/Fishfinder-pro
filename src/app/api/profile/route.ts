@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getAuthContext } from '@/lib/auth/server'
-import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { enforceRateLimit, isHttpUrl, isSameOrigin, readJsonBody } from '@/lib/security'
 
 const ProfileUpdateSchema = z.object({
   username: z.string().trim().min(2).max(32).regex(/^[a-zA-Z0-9_]+$/, 'Use only letters, numbers, and underscores.').nullable().optional(),
   full_name: z.string().trim().max(80).nullable().optional(),
-  avatar_url: z.string().trim().url().max(500).nullable().optional(),
+  avatar_url: z.string().trim().url().max(500).refine(isHttpUrl, 'Use an HTTP or HTTPS avatar URL.').nullable().optional(),
 }).strict()
 
 export async function GET() {
@@ -39,17 +39,12 @@ export async function PATCH(request: NextRequest) {
   const limited = enforceRateLimit(request, { name: 'profile-write', limit: 10, windowMs: 60_000 })
   if (limited) return limited
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
-  if (requestBodyTooLarge(request)) return tooLarge()
-
   const context = await getAuthContext()
   if (!context) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
 
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
-  }
+  const bodyResult = await readJsonBody(request, 32_768)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value
 
   const parsed = ProfileUpdateSchema.safeParse(body)
   if (!parsed.success) {

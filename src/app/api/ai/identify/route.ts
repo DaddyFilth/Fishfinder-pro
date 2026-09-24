@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiVisionModel, getOllama } from '@/lib/ollama';
 import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) =>
   `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
@@ -12,14 +12,10 @@ const SUPPORTED_IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-identify', limit: 8, windowMs: 60_000 });
   if (limited) return limited;
-  if (requestBodyTooLarge(req, 3_000_000)) return tooLarge();
-
-  let image_base64: unknown;
-  try {
-    ({ image_base64 } = await req.json());
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
+  const bodyResult = await readJsonBody(req, 3_000_000)
+  if (!bodyResult.ok) return bodyResult.response
+  const { image_base64 } = bodyResult.value as { image_base64?: unknown }
   if (typeof image_base64 !== 'string' || !SUPPORTED_IMAGE_DATA_URL.test(image_base64)) {
     return NextResponse.json({ error: 'Use a JPEG, PNG, or WebP image' }, { status: 400 });
   }

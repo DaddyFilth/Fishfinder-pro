@@ -1,7 +1,7 @@
 {
   "name": "Oklahoma SeamCast",
   "short_name": "Fishfinder",
-  "description": "Find Oklahoma public fishing spots, track trips, log catches, and plan your best bite window.",
+  "description": "Find Oklahoma public fishing spots, compare provider conditions, and keep a device-local catch log.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

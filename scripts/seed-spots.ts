@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 async function main() {
@@ -37,11 +38,19 @@ async function main() {
       return [];
     }
 
+    const id = `odwc-${createHash('sha256')
+      .update(`${row.AREA_NAME}|${row.LAKE}|${latitude}|${longitude}`)
+      .digest('hex')
+      .slice(0, 32)}`;
+
     return [{
+      id,
       name: row.AREA_NAME,
-      water_body: row.LAKE,
+      lat: latitude,
+      lng: longitude,
+      water_type: 'freshwater',
       spot_type: 'fish_attractor',
-      location: `POINT(${longitude} ${latitude})`,
+      description: `ODWC fish attractor data for ${row.LAKE}.`,
       source: 'ODWC fish attractor data',
     }];
   });
@@ -53,7 +62,7 @@ async function main() {
 
   const { error } = await supabase
     .from('spots')
-    .upsert(spots, { onConflict: 'name,water_body' });
+    .upsert(spots, { onConflict: 'id' });
   if (error) throw error;
 
   console.log(`Upserted ${spots.length} spots.`);

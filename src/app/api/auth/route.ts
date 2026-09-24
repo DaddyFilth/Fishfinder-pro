@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { enforceRateLimit, methodNotAllowed, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { enforceRateLimit, methodNotAllowed, readJsonBody } from '@/lib/security'
 import {
   getSafeNextPath,
   isAllowedAuthRequestOrigin,
@@ -55,7 +55,6 @@ function hasSession(data: unknown): data is { session: unknown } {
 
 export async function POST(request: Request) {
   if (request.method !== 'POST') return methodNotAllowed('POST')
-  if (requestBodyTooLarge(request, 8_192)) return tooLarge()
   const requestUrl = new URL(request.url)
   const origin = request.headers.get('origin')
   if (!isAllowedAuthRequestOrigin(origin, requestUrl, request.headers.get('sec-fetch-site'))) {
@@ -64,9 +63,11 @@ export async function POST(request: Request) {
   const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
   if (rateLimited) return rateLimited
 
+  const bodyResult = await readJsonBody(request, 8_192)
+  if (!bodyResult.ok) return bodyResult.response
+  const raw = bodyResult.value
+
   try {
-    const raw = await request.json().catch(() => null)
-    if (raw === null) return NextResponse.json({ error: 'Malformed request body.' }, { status: 400 })
     const parsed = authSchema.safeParse(raw)
     if (!parsed.success) return NextResponse.json({ error: 'Invalid authentication details.' }, { status: 400 })
     const { email, mode } = parsed.data

@@ -39,12 +39,29 @@ export function isPublicPath(pathname: string) {
   );
 }
 
-function applySecurityHeaders(response: NextResponse, protocol: string) {
+function createNonce() {
+  return crypto.randomUUID().replace(/-/g, '');
+}
+
+function applySecurityHeaders(response: NextResponse, protocol: string, nonce: string) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   response.headers.set('X-DNS-Prefetch-Control', 'off');
+  response.headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https://tile.openstreetmap.org https://server.arcgisonline.com https://basemap.nationalmap.gov https://tiles.openseamap.org https://cdnjs.cloudflare.com",
+    "connect-src 'self' https://*.supabase.co https://api.weather.gov https://api.waterdata.usgs.gov https://marine-api.open-meteo.com https://api.tidesandcurrents.noaa.gov",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-src 'none'",
+    ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
+  ].join('; '));
 
   if (protocol === 'https:') {
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
@@ -54,6 +71,10 @@ function applySecurityHeaders(response: NextResponse, protocol: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  const nonce = createNonce();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  const requestWithNonce = new NextRequest(request, { headers: requestHeaders });
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 
@@ -65,12 +86,12 @@ export async function proxy(request: NextRequest) {
       url.protocol = 'https:';
       url.hostname = CANONICAL_HOST;
       url.port = '';
-      return NextResponse.redirect(url, 308);
+      return applySecurityHeaders(NextResponse.redirect(url, 308), request.nextUrl.protocol, nonce);
     }
   }
 
   if (isPublicPath(request.nextUrl.pathname)) {
-    return applySecurityHeaders(NextResponse.next({ request }), request.nextUrl.protocol);
+    return applySecurityHeaders(NextResponse.next({ request: requestWithNonce }), request.nextUrl.protocol, nonce);
   }
 
   const url = getSupabaseProjectUrl();
@@ -80,15 +101,15 @@ export async function proxy(request: NextRequest) {
     return applySecurityHeaders(NextResponse.json(
       { error: 'Authentication is unavailable because Supabase is not configured.' },
       { status: 503 },
-    ), request.nextUrl.protocol);
+    ), request.nextUrl.protocol, nonce);
   }
 
-  const response = applySecurityHeaders(await updateSession(request), request.nextUrl.protocol);
+  const response = applySecurityHeaders(await updateSession(requestWithNonce), request.nextUrl.protocol, nonce);
 
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() {
-        return request.cookies.getAll();
+        return requestWithNonce.cookies.getAll();
       },
       setAll() {},
     },
@@ -103,10 +124,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    return NextResponse.json(
+    return applySecurityHeaders(NextResponse.json(
       { error: 'Authentication required.' },
       { status: 401 },
-    );
+    ), request.nextUrl.protocol, nonce);
   }
 
   const loginUrl = request.nextUrl.clone();
@@ -117,7 +138,7 @@ export async function proxy(request: NextRequest) {
     `${request.nextUrl.pathname}${request.nextUrl.search}`,
   );
 
-  return NextResponse.redirect(loginUrl);
+  return applySecurityHeaders(NextResponse.redirect(loginUrl), request.nextUrl.protocol, nonce);
 }
 
 export const config = {

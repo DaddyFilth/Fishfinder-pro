@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getOllama } from '@/lib/ollama';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
-import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 interface Spot {
   id: string;
@@ -97,31 +97,35 @@ function normalizeAiResults(
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-suggest-spots', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
-  if (requestBodyTooLarge(req, 64_000)) return tooLarge();
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
+  }
 
-  let spots: Spot[] = [];
-  let species: string | undefined;
-  let userLat: number | undefined;
-  let userLng: number | undefined;
+  const bodyResult = await readJsonBody(req, 64_000);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.value as {
+    spots?: unknown;
+    species?: unknown;
+    userLat?: unknown;
+    userLng?: unknown;
+  };
 
-  try {
-    const body = await req.json();
-
-    spots = Array.isArray(body?.spots)
-      ? body.spots.filter(
-          (spot: unknown): spot is Spot =>
-            Boolean(
-              spot &&
-                typeof spot === 'object' &&
-                typeof (spot as Spot).id === 'string' &&
-                typeof (spot as Spot).name === 'string' &&
-                typeof (spot as Spot).lat === 'number' &&
-                typeof (spot as Spot).lng === 'number',
-            ),
-        )
-      : [];
-
-    spots = spots.slice(0, 50).map((spot) => ({
+  const spots = (Array.isArray(body.spots) ? body.spots : [])
+    .filter(
+      (spot: unknown): spot is Spot =>
+        Boolean(
+          spot &&
+            typeof spot === 'object' &&
+            typeof (spot as Spot).id === 'string' &&
+            typeof (spot as Spot).name === 'string' &&
+            typeof (spot as Spot).lat === 'number' &&
+            Number.isFinite((spot as Spot).lat) &&
+            typeof (spot as Spot).lng === 'number' &&
+            Number.isFinite((spot as Spot).lng),
+        ),
+    )
+    .slice(0, 50)
+    .map((spot) => ({
       ...spot,
       id: spot.id.slice(0, 128),
       name: spot.name.trim().slice(0, 200),
@@ -129,26 +133,18 @@ export async function POST(req: NextRequest) {
       spot_type: spot.spot_type?.slice(0, 80),
     }));
 
-    species =
-      typeof body?.species === 'string' && body.species.trim()
-        ? body.species.trim().slice(0, 80)
-        : undefined;
-
-    userLat =
-      typeof body?.userLat === 'number' && Number.isFinite(body.userLat)
-        ? body.userLat >= -90 && body.userLat <= 90 ? body.userLat : undefined
-        : undefined;
-
-    userLng =
-      typeof body?.userLng === 'number' && Number.isFinite(body.userLng)
-        ? body.userLng >= -180 && body.userLng <= 180 ? body.userLng : undefined
-        : undefined;
-  } catch {
-    return NextResponse.json(
-      { error: 'Invalid request body' },
-      { status: 400 },
-    );
-  }
+  const species =
+    typeof body.species === 'string' && body.species.trim()
+      ? body.species.trim().slice(0, 80)
+      : undefined;
+  const userLat =
+    typeof body.userLat === 'number' && Number.isFinite(body.userLat) && body.userLat >= -90 && body.userLat <= 90
+      ? body.userLat
+      : undefined;
+  const userLng =
+    typeof body.userLng === 'number' && Number.isFinite(body.userLng) && body.userLng >= -180 && body.userLng <= 180
+      ? body.userLng
+      : undefined;
 
   if (!spots.length) {
     return NextResponse.json(

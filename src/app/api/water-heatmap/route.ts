@@ -62,7 +62,7 @@ export async function GET(request: Request) {
   }
 
   const { data: spots, error: spotsError } = await supabase
-    .from('fishing_spots')
+    .from('spots')
     .select('id, name, lat, lng')
     .in('id', spotIds);
 

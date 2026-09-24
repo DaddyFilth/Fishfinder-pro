@@ -4,8 +4,7 @@ import { getAuthContext } from '@/lib/auth/server';
 import {
   enforceRateLimit,
   isSameOrigin,
-  requestBodyTooLarge,
-  tooLarge,
+  readJsonBody,
 } from '@/lib/security';
 
 const TripSchema = z.object({
@@ -60,8 +59,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (requestBodyTooLarge(request)) return tooLarge();
-
   const context = await getAuthContext();
 
   if (!context) {
@@ -71,16 +68,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: 'Invalid JSON body.' },
-      { status: 400 },
-    );
-  }
+  const bodyResult = await readJsonBody(request, 32_768)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value
 
   const parsed = TripSchema.safeParse(body);
 
@@ -104,8 +94,8 @@ export async function POST(request: NextRequest) {
       species: trip.species,
       catches_count: trip.catchesCount,
       notes: trip.notes,
-      lat: trip.lat,
-      lng: trip.lng,
+      latitude: trip.lat,
+      longitude: trip.lng,
     })
     .select('*')
     .single();

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fishfinder-pro-v3';
+const CACHE_VERSION = 'fishfinder-pro-v5';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -12,6 +12,7 @@ const APP_SHELL = [
 ];
 
 const isSameOrigin = (url) => url.origin === self.location.origin;
+const isPublicNavigation = (pathname) => pathname === '/' || pathname === '/offline';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -81,6 +82,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
+    if (!isPublicNavigation(url.pathname)) return;
+
     event.respondWith(
       fetch(request)
         .then((response) => {

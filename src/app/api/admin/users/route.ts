@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/server'
-import { enforceRateLimit, isSameOrigin, requestBodyTooLarge, tooLarge } from '@/lib/security'
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { APP_ROLES } from '@/lib/auth/roles'
 
 const RoleUpdateSchema = z.object({
@@ -26,17 +26,12 @@ export async function PATCH(request: NextRequest) {
   const limited = enforceRateLimit(request, { name: 'admin-role-write', limit: 20, windowMs: 60_000 })
   if (limited) return limited
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
-  if (requestBodyTooLarge(request)) return tooLarge()
-
   const context = await requireRole('admin')
   if (!context) return NextResponse.json({ error: 'Administrator access required.' }, { status: 403 })
 
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
-  }
+  const bodyResult = await readJsonBody(request, 32_768)
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.value
 
   const parsed = RoleUpdateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'A valid user ID and role are required.' }, { status: 400 })

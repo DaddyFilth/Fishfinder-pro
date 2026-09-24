@@ -10,8 +10,7 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/security', () => ({
   enforceRateLimit: vi.fn(() => null),
   methodNotAllowed: vi.fn(),
-  requestBodyTooLarge: vi.fn(() => false),
-  tooLarge: vi.fn(),
+  readJsonBody: vi.fn(async (request: Request) => ({ ok: true, value: await request.json() })),
 }))
 
 const createClientMock = vi.mocked(createClient)
