@@ -26,6 +26,10 @@ describe('profile roles migration', () => {
     expect(migration).toContain("CHECK (role IN ('angler', 'moderator', 'admin'))")
   })
 
+  it('does not allow self-inserted profiles to claim a privileged role', () => {
+    expect(migration).toContain("WITH CHECK (auth.uid() = id AND role = 'angler')")
+  })
+
   it('uses guarded statements so a re-run cannot fail the check', () => {
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS')
     expect(migration).toContain('DROP CONSTRAINT IF EXISTS profiles_role_check')
