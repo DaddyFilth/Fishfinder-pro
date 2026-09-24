@@ -2,12 +2,14 @@
 
 
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
+import MapZoomControls from '@/components/MapZoomControls';
+import SpotFocusController, { type SpotMarkerRegistry } from '@/components/SpotFocusController';
 import WaypointMarkers from '@/components/WaypointMarkers';
 import DepthOverlay from '@/components/DepthOverlay';
 import FishBot from '@/components/ai/FishBot';
@@ -16,8 +18,17 @@ import CommunityPinsPanel from '@/components/CommunityPinsPanel';
 import CatchLogger from '@/components/logbook/CatchLogger';
 import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
+import MapDataSourceBadge, { type MapDataSourceMode } from '@/components/MapDataSourceBadge';
 import { type Spot } from '@/lib/mapFilters';
-import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition, type Species } from '@/lib/speciesCatalog';
+import {
+  MAP_MAX_ZOOM,
+  MAP_MIN_ZOOM,
+  MAP_Z_INDEX,
+  OKLAHOMA_MAP_VIEW,
+  resolveMapInsets,
+  resolveSpotPopupFrame,
+} from '@/lib/mapViewport';
+import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition } from '@/lib/speciesCatalog';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -29,8 +40,8 @@ L.Icon.Default.mergeOptions({
 // ─── Shared style constants ───────────────────────────────────────────────────
 const S = {
   popupWrap: {
-    minWidth: '300px',
-    maxHeight: '430px',
+    // Visual shell only: the width/height caps are applied per render from `popupFrame` so the
+    // CSS can never exceed the maxWidth/minWidth/maxHeight handed to Leaflet's Popup.
     overflowY: 'auto',
     fontFamily: 'system-ui, sans-serif',
     background: 'rgba(3,7,18,0.96)',
@@ -80,6 +91,37 @@ const S = {
     fontSize: 12,
     cursor: 'pointer',
   } as React.CSSProperties,
+
+  /** "Get directions" call to action, shared by the spot popup and the two overlay popups. */
+  directionsBtn: {
+    background: '#0f766e',
+    color: 'white',
+    border: 0,
+    borderRadius: 7,
+    padding: '7px 10px',
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  /**
+   * Floating status card. It steps aside for spot details and the sheet, and sits bottom-left
+   * so it can never cover the zoom stack that occupies the middle-left of the map.
+   */
+  hud: (visible: boolean, sheetOpen: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    bottom: sheetOpen ? 'calc(45dvh + 14px)' : 74,
+    left: 14,
+    zIndex: MAP_Z_INDEX.chrome,
+    borderRadius: 18,
+    padding: '14px 16px',
+    minWidth: 265,
+    maxWidth: 'min(320px, calc(100% - 28px))',
+    pointerEvents: 'none',
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(10px)',
+    transition: 'opacity 0.18s ease, transform 0.18s ease, bottom 0.3s ease',
+  }),
 } as const;
 
 interface Cond {
@@ -113,14 +155,8 @@ interface Cond {
   captured_at: string;
 }
 
-type SpotDataMode =
-  | 'live'
-  | 'cached'
-  | 'fallback'
-  | 'offline-live'
-  | 'offline-cached'
-  | 'offline-fallback'
-  | 'loading';
+/** The HUD and the overlay badge share one data-mode vocabulary. */
+type SpotDataMode = MapDataSourceMode;
 
 type Tab =
   | 'score'
@@ -174,16 +210,27 @@ function conditionForSpot(condition: Cond | undefined): FishingCondition {
   return 'stable';
 }
 
+function stableSpotVariant(id: Spot['id'], variantCount: number) {
+  const key = String(id);
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash) % variantCount;
+}
+
 function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
   const fishingCondition = conditionForSpot(condition);
   const type = `${spot.spot_type} ${spot.notes ?? ''}`.toLowerCase();
-  const preferredGroups = type.includes('trout')
-    ? ['Trout']
+  const groupSets = type.includes('trout')
+    ? [['Trout'], ['Trout', 'Bass'], ['Trout', 'Panfish']]
     : type.includes('river') || type.includes('stream')
-      ? ['Catfish', 'Bass', 'Panfish']
+      ? [['Catfish', 'Bass', 'Panfish'], ['Bass', 'Catfish', 'Panfish'], ['Panfish', 'Catfish', 'Bass']]
       : type.includes('reservoir')
-        ? ['Bass', 'Walleye', 'Catfish']
-        : ['Bass', 'Panfish', 'Catfish'];
+        ? [['Bass', 'Walleye', 'Catfish'], ['Walleye', 'Bass', 'Catfish'], ['Catfish', 'Bass', 'Walleye']]
+        : [['Bass', 'Panfish', 'Catfish'], ['Panfish', 'Bass', 'Catfish'], ['Catfish', 'Panfish', 'Bass']];
+  const variant = stableSpotVariant(spot.id, groupSets.length);
+  const preferredGroups = groupSets[variant];
 
   return preferredGroups
     .flatMap((group) => SPECIES.filter((species) => species.group === group))
@@ -200,17 +247,9 @@ function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
 function metricRow({ icon, label, value, unit }: { icon: string; label: string; value: string | number | null; unit?: string }) {
   if (value === null || value === undefined) return null;
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '6px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
-      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{icon} {label}</span>
-      <span style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc' }}>
+    <div style={S.metricRow}>
+      <span style={S.metricLabel}>{icon} {label}</span>
+      <span style={S.metricValue}>
         {value}{unit ? ` ${unit}` : ''}
       </span>
     </div>
@@ -259,7 +298,8 @@ export default function FishingMap({
   onPopupOpen?: (spot: Spot) => void;
   onPopupClose?: () => void;
 }) {
-  const showMapHud = !sheetOpen && !selectedSpot;
+  /** The map HUD and the zoom control stack both step aside for spot details and the sheet. */
+  const showMapOverlays = !sheetOpen && !selectedSpot;
   const openDirections = (spot: Spot) => {
     const origin = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : 'Current Location';
     const destination = `${spot.lat},${spot.lng}`;
@@ -270,6 +310,12 @@ export default function FishingMap({
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
+  const mapShellRef = useRef<HTMLDivElement | null>(null);
+  const markerRefs = useRef<SpotMarkerRegistry['current']>({});
+  const [mapSize, setMapSize] = useState(() => ({
+    width: typeof window === 'undefined' ? 0 : window.innerWidth,
+    height: typeof window === 'undefined' ? 0 : window.innerHeight,
+  }));
   const baseLayers: Record<BaseLayer, { url: string; attribution: string; label: string; maxZoom?: number }> = {
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -284,6 +330,42 @@ export default function FishingMap({
       maxZoom: 19,
     },
   };
+
+  /** Map pixels left over after the floating chrome, used for focusing and popup sizing. */
+  const mapInsets = useMemo(
+    () => resolveMapInsets({ height: mapSize.height, sheetOpen }),
+    [mapSize.height, sheetOpen],
+  );
+
+  const popupFrame = useMemo(
+    () => resolveSpotPopupFrame({ width: mapSize.width, height: mapSize.height, insets: mapInsets }),
+    [mapInsets, mapSize.height, mapSize.width],
+  );
+
+  useEffect(() => {
+    const node = mapShellRef.current;
+    if (!node) return;
+
+    const measure = () => {
+      const rect = node.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
+      setMapSize((previous) =>
+        previous.width === width && previous.height === height ? previous : { width, height },
+      );
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const temperaturePoints = useMemo(
     () =>
@@ -389,7 +471,7 @@ export default function FishingMap({
           box-shadow: none;
         }
         .premium-map .leaflet-control-container {
-          z-index: 600;
+          z-index: ${MAP_Z_INDEX.leafletControls};
         }
         .hud {
           background: rgba(7, 12, 24, 0.72);
@@ -401,7 +483,7 @@ export default function FishingMap({
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 300;
+          z-index: ${MAP_Z_INDEX.effect};
           background:
             radial-gradient(circle at 20% 18%, rgba(34,197,94,0.12), transparent 24%),
             radial-gradient(circle at 78% 14%, rgba(14,165,233,0.12), transparent 22%),
@@ -413,7 +495,7 @@ export default function FishingMap({
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 301;
+          z-index: ${MAP_Z_INDEX.vignette};
           box-shadow: inset 0 0 140px rgba(2,6,23,0.6);
         }
         .pulse {
@@ -435,11 +517,12 @@ export default function FishingMap({
         }
       `}</style>
 
-      <div className="premium-map" style={{ position: 'absolute', inset: 0 }}>
+      <div className="premium-map" ref={mapShellRef} style={{ position: 'absolute', inset: 0 }}>
         <div className="map-glow" />
         <div className="map-vignette" />
 
-        <div className="hud" aria-hidden={!showMapHud} style={{ position: 'absolute', top: 18, left: 18, zIndex: 1600, borderRadius: 18, padding: '14px 16px', minWidth: 265, pointerEvents: 'none', opacity: showMapHud ? 1 : 0, transform: showMapHud ? 'translateY(0)' : 'translateY(-10px)', transition: 'opacity 0.18s ease, transform 0.18s ease' }}>
+        {/* Sits above the sheet handle so the top of the map stays free for the zoom controls. */}
+        <div className="hud" aria-hidden={!showMapOverlays} style={S.hud(showMapOverlays, sheetOpen)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div className="pulse" />
             <div>
@@ -466,7 +549,22 @@ export default function FishingMap({
           </div>
         </div>
 
-        <MapContainer center={[35.5, -97.5]} zoom={7} minZoom={6} style={{ height: '100%', width: '100%' }} zoomControl>
+        <MapDataSourceBadge mode={spotDataMode} />
+
+        <MapContainer
+          center={[OKLAHOMA_MAP_VIEW.center.lat, OKLAHOMA_MAP_VIEW.center.lng]}
+          zoom={OKLAHOMA_MAP_VIEW.zoom}
+          minZoom={MAP_MIN_ZOOM}
+          maxZoom={MAP_MAX_ZOOM}
+          zoomControl={false}
+          doubleClickZoom
+          scrollWheelZoom
+          touchZoom
+          boxZoom
+          keyboard
+          worldCopyJump
+          style={{ height: '100%', width: '100%' }}
+        >
           <TileLayer
             key={baseLayer}
             attribution={baseLayers[baseLayer].attribution}
@@ -511,7 +609,7 @@ export default function FishingMap({
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
                       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Hotspot confidence: {score}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
             </CircleMarker>
@@ -533,11 +631,25 @@ export default function FishingMap({
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
                       <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Recent catch activity signal • score {score}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
             </CircleMarker>
           ))}
+
+          {selectedSpot && (
+            <CircleMarker
+              center={[selectedSpot.lat, selectedSpot.lng]}
+              radius={22}
+              pathOptions={{
+                color: '#67e8f9',
+                fillColor: '#22d3ee',
+                fillOpacity: 0.12,
+                weight: 2,
+                dashArray: '4 4',
+              }}
+            />
+          )}
 
           {spots.map((spot) => {
             const c = conditions[spot.id];
@@ -545,14 +657,28 @@ export default function FishingMap({
             const conditionState = c ? describeConditionState(c) : null;
 
             return (
-              <Marker key={spot.id} position={[spot.lat, spot.lng]} eventHandlers={{ click: () => { load(spot.id); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}>
-                <Popup maxWidth={360} minWidth={310} eventHandlers={{ add: () => onPopupOpen?.(spot), remove: () => onPopupClose?.() }}>
-                  <div style={S.popupWrap}>
+              <Marker
+                key={spot.id}
+                position={[spot.lat, spot.lng]}
+                ref={(instance) => {
+                  markerRefs.current[spot.id] = instance;
+                }}
+                eventHandlers={{ click: () => { load(spot.id); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}
+              >
+                <Popup
+                  maxWidth={popupFrame.maxWidth}
+                  minWidth={popupFrame.minWidth}
+                  maxHeight={popupFrame.maxHeight}
+                  autoPanPaddingTopLeft={[mapInsets.left, mapInsets.top]}
+                  autoPanPaddingBottomRight={[mapInsets.right, mapInsets.bottom]}
+                  eventHandlers={{ add: () => onPopupOpen?.(spot), remove: () => onPopupClose?.() }}
+                >
+                  <div style={{ ...S.popupWrap, minWidth: popupFrame.minWidth, maxHeight: popupFrame.maxHeight }}>
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
-                      <button type="button" onClick={() => openDirections(spot)} style={{ marginTop: 10, background: '#0f766e', color: 'white', border: 0, borderRadius: 7, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Get directions</button>
+                      <button type="button" onClick={() => openDirections(spot)} style={{ ...S.directionsBtn, marginTop: 10 }}>Get directions</button>
                     </div>
 
                     <div style={{ background: '#082f49', border: '1px solid #155e75', borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -703,6 +829,16 @@ export default function FishingMap({
               </Marker>
             );
           })}
+
+          <SpotFocusController
+            spot={selectedSpot ?? null}
+            insets={mapInsets}
+            size={mapSize}
+            markerRefs={markerRefs}
+            minZoom={MAP_MIN_ZOOM}
+            maxZoom={MAP_MAX_ZOOM}
+          />
+          <MapZoomControls minZoom={MAP_MIN_ZOOM} maxZoom={MAP_MAX_ZOOM} visible={showMapOverlays} />
         </MapContainer>
       </div>
     </div>

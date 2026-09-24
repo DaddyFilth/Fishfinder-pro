@@ -254,10 +254,11 @@ async function getSpots(): Promise<SpotLoadResult> {
   return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
 }
 
-export default function MobilePage() {  const [mounted, setMounted] = useState(false);  useEffect(() => { setMounted(true); }, []);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
+/**
+ * Renders the client-side fishing dashboard and coordinates its authenticated
+ * spot data, map navigation, location tracking, and locally stored settings.
+ */
+export default function MobilePage() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -346,21 +347,37 @@ export default function MobilePage() {  const [mounted, setMounted] = useState(f
   };
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
+  const supabase = createClient();
+  let mounted = true;
+  if (!supabase) {
+  queueMicrotask(() => {
+  if (!mounted) return;
+  setIsAuthenticated(false);
+  setAuthReady(true);
+  });
+  return () => {
+  mounted = false;
+  };
+  }
 
-    let mounted = true;
-    const syncSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      const signedIn = Boolean(data.session?.user);
-      setIsAuthenticated(signedIn);
-      setAuthReady(true);
-      if (signedIn) void loadSpotData(false);
-      else setSpots([]);
-    };
+  const syncSession = async () => {
+  try {
+  const { data } = await supabase.auth.getSession();
+  if (!mounted) return;
+  const signedIn = Boolean(data.session?.user);
+  setIsAuthenticated(signedIn);
+  setAuthReady(true);
+  if (signedIn) void loadSpotData(false);
+  else setSpots([]);
+  } catch {
+  if (!mounted) return;
+  setIsAuthenticated(false);
+  setAuthReady(true);
+  setSpots([]);
+  }
+  };
 
-    void syncSession();
+  void syncSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
@@ -675,7 +692,7 @@ export default function MobilePage() {  const [mounted, setMounted] = useState(f
             )}
 
             {/* Floating spot count badge */}
-            <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:10 }}>
+            <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
               <div style={PAGE_STYLES.mapBadge}>
                 {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}public waters
               </div>
@@ -683,8 +700,8 @@ export default function MobilePage() {  const [mounted, setMounted] = useState(f
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
               </button>
             </div>
-            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'live' ? '#86efac' : '#fbbf24', zIndex:10, backdropFilter:'blur(8px)' }}>
-              {cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'live' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
+              {!authReady ? 'Checking account…' : !isAuthenticated ? 'Sign in required to load spot data' : cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
               {locationStatus === 'denied' && ' · Location permission denied'}
               {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
@@ -722,7 +739,7 @@ export default function MobilePage() {  const [mounted, setMounted] = useState(f
                   {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
                     const scoreValue = loadingScores[spot.id] ? '…' : score;
                     return (
-                      <div key={spot.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); }}
+                      <div key={spot.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); setSelectedSpot(spot); setMapPopupOpen(true); }}
                         style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:'1px solid #0f172a', cursor:'pointer' }}>
                         <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
                         <div style={{ flex:1 }}>

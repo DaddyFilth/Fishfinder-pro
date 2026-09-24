@@ -50,7 +50,7 @@ jobs:
           # or `main.tf` for a Terraform configuration file
           file: docker-compose.yml
       - name: Upload result to GitHub Code Scanning
-        if: env.SNYK_TOKEN != ''
+        if: env.SNYK_TOKEN != '' && hashFiles('snyk.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif

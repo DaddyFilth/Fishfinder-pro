@@ -20,14 +20,19 @@ const PUBLIC_PATHS = [
   '/sw.js',
 ];
 
-function isPublicPath(pathname: string) {
+export function isPublicPath(pathname: string) {
   const isPublicSpotRead =
     pathname === '/api/spots' ||
     /^\/api\/spots\/[^/]+\/conditions$/.test(pathname);
 
+  // The species guide lives on the public landing route and falls back to this
+  // endpoint when a catalog image fails, so anonymous visitors need it too.
+  const isPublicSpeciesImage = pathname.startsWith('/api/species-image/');
+
   return (
     PUBLIC_PATHS.includes(pathname) ||
     isPublicSpotRead ||
+    isPublicSpeciesImage ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'
@@ -49,9 +54,6 @@ function applySecurityHeaders(response: NextResponse, protocol: string) {
 }
 
 export async function proxy(request: NextRequest) {
-if (request.nextUrl.pathname === "/.well-known/assetlinks.json") {
-  return NextResponse.next();
-}
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 

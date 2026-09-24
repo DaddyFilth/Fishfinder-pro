@@ -16,6 +16,10 @@ fi
 
 # 2. Strict TypeScript Compilation Check
 echo "🔍 [2/5] Running TypeScript compiler checks..."
+# Drop incremental build state first. A stale tsconfig.tsbuildinfo keeps route
+# type files that no longer exist in .next/types in the program, which makes
+# this check fail with TS6053 "File not found" after routes move or are removed.
+rm -f tsconfig.tsbuildinfo
 if npx tsc --noEmit; then
   echo "✅ TypeScript check passed (0 syntax/type errors)"
 else
@@ -23,22 +27,22 @@ else
   exit 1
 fi
 
-# 3. Next.js / ESLint Code Quality Audit
-echo "🧹 [3/5] Running Next.js linter..."
-if npx next lint; then
+# 3. ESLint Code Quality Audit (Next.js 16 removed the `next lint` CLI)
+echo "🧹 [3/5] Running ESLint..."
+if npx eslint .; then
   echo "✅ Lint check passed (0 lint/syntax warnings)"
 else
   echo "❌ Lint check failed."
   exit 1
 fi
 
-# 4. Jest / Vitest Unit & Integration Tests
+# 4. Vitest Unit & Integration Tests
 echo "🧪 [4/5] Executing test files (*.test.ts / *.test.tsx)..."
-if npm test -- --passWithNoTests --watchAll=false 2>/dev/null || npm test -- --run 2>/dev/null; then
+if npx vitest run; then
   echo "✅ Unit test suite executed successfully"
 else
-  echo "⚠️ Fallback: Running direct Jest/Vitest runner..."
-  npx vitest run 2>/dev/null || npx jest --passWithNoTests 2>/dev/null || true
+  echo "❌ Unit tests failed."
+  exit 1
 fi
 
 # 5. Live Spots & Supabase Unit Sanity Check
