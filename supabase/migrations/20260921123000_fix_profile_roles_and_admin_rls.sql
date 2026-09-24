@@ -61,7 +61,7 @@ CREATE POLICY "profiles_select_public"
 CREATE POLICY "profiles_insert_own"
   ON public.profiles
   FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (auth.uid() = id AND role = 'angler');
 
 CREATE POLICY "profiles_update_own"
   ON public.profiles
