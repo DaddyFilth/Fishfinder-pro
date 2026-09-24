@@ -68,5 +68,9 @@
     "esbuild": true,
     "unrs-resolver": true
   },
-  "overrides": {}
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
+  }
 }
