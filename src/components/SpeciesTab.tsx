@@ -19,7 +19,6 @@ import {
   type SpeciesStateFilter,
   type FishingCondition,
   biteRateFor,
-  spotTargetsFor,
 } from '@/lib/speciesCatalog';
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -81,7 +80,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ background: 'linear-gradient(135deg,#082f49,#0a0f1e)', border: '1px solid #155e75', borderRadius: '12px', padding: '14px' }}>
-            <div style={{ fontSize: '11px', color: '#67e8f9', fontWeight: 'bold', marginBottom: '8px' }}>LIVE BITE TARGETING</div>
+            <div style={{ fontSize: '11px', color: '#67e8f9', fontWeight: 'bold', marginBottom: '8px' }}>CONDITION-BASED ESTIMATE</div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
               {(['cool', 'warming', 'stable', 'low-light', 'windy'] as FishingCondition[]).map((option) => (
                 <button key={option} type="button" aria-pressed={condition === option} onClick={() => setCondition(option)} style={{ background: condition === option ? '#0891b2' : '#0f172a', border: `1px solid ${condition === option ? '#67e8f9' : '#334155'}`, color: condition === option ? '#ecfeff' : '#94a3b8', borderRadius: '999px', padding: '5px 8px', fontSize: '10px', cursor: 'pointer' }}>
@@ -90,10 +89,10 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <div><div style={{ fontSize: '9px', color: '#67e8f9' }}>BITE RATE</div><div style={{ color: '#f8fafc', fontSize: '20px', fontWeight: 800 }}>{biteRateFor(selected, condition)}<span style={{ fontSize: '10px', color: '#94a3b8' }}>/100</span></div></div>
+              <div><div style={{ fontSize: '9px', color: '#67e8f9' }}>ACTIVITY ESTIMATE</div><div style={{ color: '#f8fafc', fontSize: '20px', fontWeight: 800 }}>{biteRateFor(selected, condition)}<span style={{ fontSize: '10px', color: '#94a3b8' }}>/100</span></div></div>
               <div><div style={{ fontSize: '9px', color: '#67e8f9' }}>BEST WINDOWS</div><div style={{ color: '#cbd5e1', fontSize: '11px', lineHeight: 1.35 }}>{selected.bestTime}</div></div>
             </div>
-            <div style={{ marginTop: '10px', fontSize: '10px', color: '#cbd5e1' }}>Target now: {spotTargetsFor(selected, condition).join(' · ')}</div>
+            <div style={{ marginTop: '10px', fontSize: '10px', color: '#cbd5e1' }}>Catalog-based target suggestions; verify live conditions before traveling.</div>
           </div>
           <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '12px', padding: '14px' }}>
             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginBottom: '10px' }}>MONTHLY ACTIVITY</div>

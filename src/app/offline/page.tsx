@@ -60,10 +60,10 @@ export default function OfflinePage() {
           }}
         >
           <div style={{ color: '#fbbf24', fontWeight: 700, marginBottom: '5px' }}>
-            Live features need a connection
+            Provider-backed features need a connection
           </div>
-          <div>• Current weather and conditions</div>
-          <div>• Fresh bite-time calculations</div>
+          <div>• Current provider weather and conditions</div>
+          <div>• Calculated bite-time windows</div>
           <div>• New AI spot recommendations</div>
           <div>• New fish identification requests</div>
         </div>

@@ -3,15 +3,12 @@
 import React from 'react';
 import { MAP_Z_INDEX } from '@/lib/mapViewport';
 
-/**
- * How the spot data currently rendered on the map was resolved.
- * Mirrors the data modes produced by `resolveSpotDataMode` in `src/app/page.tsx`.
- */
+/** How the spot list currently rendered on the map was resolved. */
 export type MapDataSourceMode =
-  | 'live'
+  | 'provider'
   | 'cached'
   | 'fallback'
-  | 'offline-live'
+  | 'offline-provider'
   | 'offline-cached'
   | 'offline-fallback'
   | 'loading';
@@ -23,12 +20,12 @@ export interface MapDataSourceBadgeState {
 }
 
 const MODE_STATES: Record<MapDataSourceMode, { label: string; color: string }> = {
-  live: { label: 'Live data', color: '#22c55e' },
-  cached: { label: 'Cached data', color: '#fbbf24' },
-  fallback: { label: 'Fallback data', color: '#f59e0b' },
-  'offline-live': { label: 'Offline · live snapshot', color: '#38bdf8' },
+  provider: { label: 'Provider data', color: '#22c55e' },
+  cached: { label: 'Cached provider data', color: '#fbbf24' },
+  fallback: { label: 'Bundled catalog', color: '#f59e0b' },
+  'offline-provider': { label: 'Offline · provider snapshot', color: '#38bdf8' },
   'offline-cached': { label: 'Offline · cached', color: '#fbbf24' },
-  'offline-fallback': { label: 'Offline · fallback', color: '#f59e0b' },
+  'offline-fallback': { label: 'Offline · bundled catalog', color: '#f59e0b' },
   loading: { label: 'Loading data', color: '#94a3b8' },
 };
 
@@ -43,10 +40,7 @@ type Props = {
   style?: React.CSSProperties;
 };
 
-/**
- * Overlay badge that reports whether the map's spots came from the live API,
- * the browser cache, or the bundled fallback fixtures.
- */
+/** Reports whether map spots came from a provider, cache, or bundled catalog. */
 export const MapDataSourceBadge: React.FC<Props> = ({ mode, style }) => {
   const { label, color, ariaLabel } = mapDataSourceBadgeState(mode);
 

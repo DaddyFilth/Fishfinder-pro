@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         new Response(
           JSON.stringify({
             offline: true,
-            error: 'Offline — live fishing data is unavailable.',
+            error: 'Offline — provider fishing data is unavailable.',
           }),
           {
             status: 503,

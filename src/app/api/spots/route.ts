@@ -37,28 +37,52 @@ function normalize(payload: unknown): AnyRec {
       const name = String(item.name ?? item.label ?? item.title ?? '').trim();
       if (!name || !isOklahomaCoordinate(itemLat, itemLng)) return null;
       return {
-        id: String(item.id ?? `live-${i}`),
+        ...item,
+        id: String(item.id ?? `provider-${i}`),
         name,
         lat: itemLat,
         lng: itemLng,
         source: 'seamcast-spots',
-        live: true,
-        ...item,
+        live: false,
+        data_mode: 'provider',
       };
     })
     .filter(Boolean) as AnyRec[];
 
-  // Never turn a missing coordinate into a pin at the user's search center.
-  // Use the verified public-water catalog instead so every fallback marker is a real spot.
-  const outSpots = spots.length > 0 ? spots : [...DEFAULT_SPOTS];
-  const source = spots.length > 0 ? 'seamcast-spots' : 'verified-public-water-catalog';
+  const rawConditions = root.conditions && typeof root.conditions === 'object'
+    ? root.conditions as AnyRec
+    : undefined;
+  const observedAt =
+    typeof root.observed_at === 'string'
+      ? root.observed_at
+      : typeof rawConditions?.issuedAt === 'string'
+        ? rawConditions.issuedAt
+        : undefined;
+  const source = typeof root.source === 'string' ? root.source : 'seamcast-spots';
+  const dataMode = spots.length > 0 ? 'provider' : 'fallback';
+  const normalizedSpots = spots.length > 0
+    ? spots.map((spot) => ({
+        ...spot,
+        source,
+        live: false,
+        data_mode: dataMode,
+        observed_at: observedAt,
+      }))
+    : DEFAULT_SPOTS.map((spot) => ({
+        ...spot,
+        source: 'verified-public-water-catalog',
+        live: false,
+        data_mode: 'fallback',
+      }));
 
   return {
     ...root,
-    live: spots.length > 0,
-    source,
-    spots: outSpots,
-    microSpots: Array.isArray(root.microSpots) ? root.microSpots : outSpots,
+    live: false,
+    data_mode: dataMode,
+    source: spots.length > 0 ? source : 'verified-public-water-catalog',
+    observed_at: observedAt,
+    spots: normalizedSpots,
+    microSpots: normalizedSpots,
   };
 }
 
@@ -87,7 +111,13 @@ export async function GET(req: NextRequest) {
     }
     const text = await res.text();
     const json = JSON.parse(text) as unknown;
-    return NextResponse.json(normalize(json));
+    const normalized = normalize(json);
+    return NextResponse.json(normalized, {
+      headers: {
+        'Cache-Control': 'no-store',
+        'x-fishfinder-data-mode': String(normalized.data_mode),
+      },
+    });
   } catch {
     return NextResponse.json(
       { error: 'Unable to load fishing spots.', live: false },

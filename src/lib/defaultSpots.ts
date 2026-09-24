@@ -1,12 +1,11 @@
 import type { Spot } from '@/lib/mapFilters';
 
 /**
- * Oklahoma public-access fixtures keep the map useful when the optional
- * Supabase spots table is unavailable. Coordinates are map pins for named
- * public or managed waters; anglers should verify current access, permits,
- * closures, and regulations with the named managing agency before traveling.
+ * Bundled Oklahoma public-water pins keep the map useful when the optional
+ * provider is unavailable. They are not live observations; verify current access,
+ * permits, closures, and regulations with the managing agency before traveling.
  */
-const source = 'ODWC / municipal public access';
+const source = 'Bundled Oklahoma public-water catalog';
 
 export const OKLAHOMA_BOUNDS = {
   minLat: 33.615,
@@ -126,36 +125,3 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(49, 'Neosho River — Miami', 36.890, -94.880, 'river', 'Public shore', 'Northeast', 'Public river corridor; verify access at the selected launch or park.'),
   spot(50, 'Red River — Lake Texoma', 33.817, -96.610, 'river', 'Boat ramp', 'Southwest', 'Public river/reservoir access near the Oklahoma-Texas border.'),
 ];
-
-export function getDefaultCondition(spot: Spot) {
-  const score = spot.spot_type === 'river' || spot.spot_type === 'trout' ? 74 : spot.spot_type === 'reservoir' ? 68 : 71;
-  return {
-    spot_id: spot.id,
-    air_temp_c: 22,
-    water_temp_c: 19,
-    water_level_m: spot.spot_type === 'river' ? 1.2 : 2.8,
-    flow_rate_cfs: spot.spot_type === 'river' ? 620 : null,
-    wind_speed_ms: 3.4,
-    wind_dir_deg: 180,
-    dissolved_oxygen_mgl: 7.6,
-    wave_height_m: null,
-    wave_period_s: null,
-    swell_direction_deg: null,
-    tide_height_m: null,
-    tide_type: null,
-    pressure_hpa: 1015,
-    humidity_pct: 54,
-    turbidity_ntu: 3.8,
-    ph: 7.4,
-    fishing_score: score,
-    score_breakdown: {
-      total: score,
-      components: { weather: 78, water: 72, conditions: 69 },
-      recommendations: ['Local Oklahoma public-access conditions are available while live data is offline.'],
-      warnings: ['Verify current access, permits, closures, and water levels before traveling.'],
-    },
-    data_sources: ['Local Oklahoma public-access fallback'],
-    cached: false,
-    captured_at: new Date().toISOString(),
-  };
-}

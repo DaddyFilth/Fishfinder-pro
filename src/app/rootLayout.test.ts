@@ -15,6 +15,13 @@ describe('root layout', () => {
     expect(layoutSource).toMatch(/<ServiceWorkerRegistration\s*\/>/)
   })
 
+  it('keeps the public metadata description qualified when AI is optional', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/layout.tsx'), 'utf8')
+
+    expect(source).toContain('optional AI trip planning')
+    expect(source).not.toContain('AI-powered trip planning')
+  })
+
   it('renders the registration inside the document body alongside children', () => {
     const body = layoutSource.slice(layoutSource.indexOf('<body'))
 

@@ -193,8 +193,7 @@ export default function SpotSuggester({ spots }: Props) {
             lineHeight: 1.5,
           }}
         >
-          Find nearby fishing spots ranked by current conditions and species
-          recommendations.
+          Find nearby Oklahoma waters with AI-generated trip ideas based on the selected spot metadata. Verify live conditions before traveling.
         </p>
       </div>
 
@@ -208,7 +207,7 @@ export default function SpotSuggester({ spots }: Props) {
         >
           {SPECIES.map((species) => <option key={species.id} value={species.name}>{species.name}</option>)}
         </select>
-        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>Only the top 10 rated spots within 25 miles of your device will be shown.</span>
+        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI results are estimates, not provider conditions or catch reports. Only the top 10 spots within 25 miles of your device will be shown.</span>
       </label>
 
       <button
@@ -294,19 +293,26 @@ export default function SpotSuggester({ spots }: Props) {
               background: '#0f172a',
             }}
           >
-            {spot.primary_species[0] ? (
-              <img
-                src={getSpeciesImage(spot.primary_species[0])}
-                alt={spot.primary_species[0]}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  height: '150px',
-                  objectFit: 'cover',
-                  background: '#1e293b',
-                }}
-              />
-            ) : null}
+            {spot.primary_species[0] ? (() => {
+              const speciesImage = getSpeciesImage(spot.primary_species[0]);
+              return speciesImage ? (
+                <img
+                  src={speciesImage}
+                  alt={`${spot.primary_species[0]} reference image`}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    height: '150px',
+                    objectFit: 'cover',
+                    background: '#1e293b',
+                  }}
+                />
+              ) : (
+                <div style={{ padding: '12px 14px', color: '#94a3b8', fontSize: 11, background: '#1e293b' }}>
+                  No verified image is available for {spot.primary_species[0]}.
+                </div>
+              );
+            })() : null}
 
             <div style={{ padding: '14px' }}>
               <div

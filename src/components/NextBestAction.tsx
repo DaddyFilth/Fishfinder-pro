@@ -23,7 +23,7 @@ export default function NextBestAction({
     ? {
         eyebrow: 'Offline mode',
         title: 'Review your saved trip plan',
-        body: 'Live conditions are unavailable, but cached spots and logbook data remain available.',
+        body: 'Fresh provider conditions are unavailable; cached spots and logbook data remain available.',
         label: 'Open logbook',
         run: onOpenLogbook,
       }
@@ -46,7 +46,7 @@ export default function NextBestAction({
         : {
             eyebrow: 'Plan smarter',
             title: 'Build today’s fishing plan',
-            body: 'Use your current spots and conditions to choose the next move.',
+            body: 'Use available spot metadata and provider-labeled conditions to choose the next move.',
             label: 'Open FishBot',
             run: onOpenAi,
           }

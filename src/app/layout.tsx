@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 import ServiceWorkerRegistration from "@/components/offline/ServiceWorkerRegistration";
 import "./globals.css";
 
+const description =
+  "Oklahoma public fishing access, provider-reported environmental conditions, species information, and optional AI trip planning.";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.fishfinder-pro.online"),
   verification: { google: "a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38" },
@@ -10,8 +13,7 @@ export const metadata: Metadata = {
     default: "Oklahoma SeamCast",
     template: "%s | Oklahoma SeamCast",
   },
-  description:
-    "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
+  description,
   alternates: {
     canonical: "/",
   },
@@ -19,16 +21,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Oklahoma SeamCast",
     title: "Oklahoma SeamCast",
-    description:
-      "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
+    description,
     url: "/",
     images: [{ url: "/icons/icon-512.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Oklahoma SeamCast",
-    description:
-      "Oklahoma public fishing access, species, conditions, and AI-powered trip planning.",
+    description,
     images: ["/icons/icon-512.png"],
   },
   manifest: "/manifest.json",
