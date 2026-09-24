@@ -1,3 +1,6 @@
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import { normalizeProviderSpots } from '@/lib/spotProvenance';
+
 export async function fetchSeamcastAiSpots(lat: number, lon: number) {
   const baseUrl =
     process.env.NEXT_PUBLIC_SPOTS_API_URL || 'https://seamcast-spots.vercel.app';
@@ -8,5 +11,5 @@ export async function fetchSeamcastAiSpots(lat: number, lon: number) {
     throw new Error(`Spots API failed: ${res.status}`);
   }
 
-  return res.json();
+  return normalizeProviderSpots(await res.json(), DEFAULT_SPOTS);
 }

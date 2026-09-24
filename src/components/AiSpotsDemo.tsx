@@ -58,11 +58,11 @@ export default function AiSpotsDemo() {
           marginBottom: '0.5rem',
         }}
       >
-        Seamcast AI Spots (Purcell)
+        SeamCast Provider Spots Feed (Purcell)
       </h2>
 
       {state.status === 'idle' && <p>Idle…</p>}
-      {state.status === 'loading' && <p>Loading AI spots…</p>}
+      {state.status === 'loading' && <p>Loading provider spots feed…</p>}
       {state.status === 'error' && (
         <p style={{ color: '#f97316' }}>
           Error: {state.message}

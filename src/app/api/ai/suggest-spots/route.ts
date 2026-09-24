@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { getAiModel, getOllama } from '@/lib/ollama';
+import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
 import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 interface Spot {
@@ -52,61 +53,27 @@ function distanceMiles(
   return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getRating(value: unknown): 'Hot' | 'Good' | 'Fair' | null {
-  return value === 'Hot' || value === 'Good' || value === 'Fair' ? value : null;
-}
-
 function normalizeAiResults(
-  candidates: unknown,
+  candidates: SpotPrediction[],
   sourceSpots: Spot[],
-  targetSpecies?: string,
   userLat?: number,
   userLng?: number,
 ): RankedSpot[] {
-  if (!Array.isArray(candidates)) {
-    return [];
-  }
-
   const sourceByName = new Map(
     sourceSpots.map((spot) => [spot.name.toLowerCase().trim(), spot]),
   );
-
   const usedSpotIds = new Set<string>();
 
   return candidates
     .map((candidate, index): RankedSpot | null => {
-      if (!candidate || typeof candidate !== 'object') {
-        return null;
-      }
-
-      const item = candidate as Record<string, unknown>;
-      const requestedName = String(item.spot_name ?? '').trim().toLowerCase();
+      const requestedName = candidate.spot_name.toLowerCase().trim();
       const sourceSpot = sourceByName.get(requestedName) ?? sourceSpots[index];
-      if (!sourceSpot || usedSpotIds.has(sourceSpot.id)) {
-        return null;
-      }
-
+      if (!sourceSpot || usedSpotIds.has(sourceSpot.id)) return null;
       usedSpotIds.add(sourceSpot.id);
 
-      const rawScore = Number(item.fishing_score);
-      const rating = getRating(item.rating);
-      const rawSpecies = Array.isArray(item.primary_species)
-        ? item.primary_species
-        : typeof item.primary_target === 'string'
-          ? [item.primary_target]
-          : [];
-      const primarySpecies = rawSpecies.map((species) => String(species).trim()).filter(Boolean).slice(0, 3);
-      const bestTime = String(item.best_time_today ?? item.best_time ?? '').trim();
-      const technique = String(item.best_technique ?? '').trim();
-      const lure = String(item.recommended_lure ?? '').trim();
-      const reason = String(item.reason ?? '').trim();
       const milesAway = typeof userLat === 'number' && typeof userLng === 'number'
         ? round(distanceMiles(userLat, userLng, sourceSpot.lat, sourceSpot.lng))
         : null;
-
-      if (!Number.isFinite(rawScore) || !rating || !primarySpecies.length || !bestTime || !technique || !lure || !reason) {
-        return null;
-      }
 
       return {
         spot_id: sourceSpot.id,
@@ -114,13 +81,13 @@ function normalizeAiResults(
         spot_lat: sourceSpot.lat,
         spot_lng: sourceSpot.lng,
         miles_away: milesAway,
-        fishing_score: Math.max(0, Math.min(100, Math.round(rawScore))),
-        rating,
-        primary_species: primarySpecies,
-        best_time_today: bestTime,
-        best_technique: technique,
-        recommended_lure: lure,
-        reason,
+        fishing_score: candidate.fishing_score,
+        rating: candidate.rating,
+        primary_species: candidate.primary_species,
+        best_time_today: candidate.best_time_today,
+        best_technique: candidate.best_technique,
+        recommended_lure: candidate.recommended_lure,
+        reason: candidate.reason,
       };
     })
     .filter((result): result is RankedSpot => result !== null)
@@ -225,33 +192,28 @@ Every field is required and must be generated for every spot. Always use Fahrenh
 `.trim();
 
     const response = await ollama.chat.completions.create({
-      model: OLLAMA_MODEL,
+      model: getAiModel(),
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
       max_tokens: 1800,
     });
 
-    const content = response.choices[0]?.message?.content?.trim() ?? '';
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    const content = response.choices[0]?.message?.content ?? '';
+    const parsed = parseModelJson(content, SpotPredictionsSchema);
 
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
+    const normalizedResults = normalizeAiResults(
+      parsed,
+      spots,
+      userLat,
+      userLng,
+    );
 
-      const normalizedResults = normalizeAiResults(
-        parsed,
-        spots,
-        species,
-        userLat,
-        userLng,
-      );
-
-      if (normalizedResults.length === Math.min(spots.length, 10)) {
-        return NextResponse.json({
-          results: normalizedResults,
-          total_nearby: spots.length,
-          source: 'ai',
-        });
-      }
+    if (normalizedResults.length === Math.min(spots.length, 10)) {
+      return NextResponse.json({
+        results: normalizedResults,
+        total_nearby: spots.length,
+        source: 'ai',
+      });
     }
   } catch {
     // AI is optional. The algorithmic fallback always returns a complete card shape.

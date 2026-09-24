@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOllama, OLLAMA_VISION_MODEL } from '@/lib/ollama';
+import { getAiVisionModel, getOllama } from '@/lib/ollama';
+import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
@@ -7,8 +8,6 @@ const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) 
   `- ${name}${aliases.length ? ` (also: ${aliases.join(', ')})` : ''}: ${scientificName}`,
 ).join('\n');
 const SUPPORTED_IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
-
-const openai = getOllama();
 
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-identify', limit: 8, windowMs: 60_000 });
@@ -30,8 +29,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const openai = getOllama();
     const response = await openai.chat.completions.create({
-      model: OLLAMA_VISION_MODEL,
+      model: getAiVisionModel(),
       max_tokens: 600,
       messages: [{
         role: 'user',
@@ -59,11 +59,10 @@ Use a canonical guide name when the fish matches this catalog; otherwise return 
       }]
     });
 
-    const raw = response.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    return NextResponse.json(JSON.parse(cleaned));
+    const raw = response.choices[0]?.message?.content ?? '{}';
+    return NextResponse.json(parseFishIdentification(raw), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
   } catch (e) {
     console.error('[AI Identify]', e);
-    return NextResponse.json({ error: 'AI identification failed' }, { status: 500 });
+    return NextResponse.json({ error: 'AI identification failed; no identification was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
   }
 }

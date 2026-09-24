@@ -7,33 +7,10 @@ import {
 } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { DEFAULT_SPOTS, getDefaultCondition } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
-
-function fallbackConditionResponse(id: string) {
-  const fallbackSpot = DEFAULT_SPOTS.find((spot) => spot.id === id);
-  if (!fallbackSpot) return null;
-
-  return NextResponse.json(
-    {
-      ...getDefaultCondition(fallbackSpot),
-      cached: false,
-      stale: false,
-      data_mode: 'fallback',
-      warning:
-        'Live environmental data is unavailable. Showing bundled Oklahoma fallback conditions.',
-    },
-    {
-      headers: {
-        'Cache-Control': 'no-store',
-        'x-fishfinder-data-mode': 'fallback',
-      },
-    },
-  );
-}
 
 export async function GET(
   _req: NextRequest,
@@ -57,10 +34,10 @@ export async function GET(
   const supabase = getSupabaseAdmin();
 
   if (!supabase) {
-    const fallback = fallbackConditionResponse(id);
-    if (fallback) return fallback;
-
-    return NextResponse.json({ error: 'Database is not configured' }, { status: 503 });
+    return NextResponse.json(
+      { error: 'Condition storage is not configured; no conditions were generated.', data_mode: 'unavailable' },
+      { status: 503, headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'unavailable' } },
+    );
   }
 
   const { data: spot, error: spotErr } = await supabase
@@ -70,11 +47,8 @@ export async function GET(
     .single();
 
   if (spotErr || !spot) {
-    const fallback = fallbackConditionResponse(id);
-    if (fallback) return fallback;
-
     return NextResponse.json(
-      { error: 'Spot not found' },
+      { error: 'Spot not found', data_mode: 'unavailable' },
       { status: 404 },
     );
   }
@@ -86,6 +60,11 @@ export async function GET(
     .order('captured_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  const cachedIsFallback =
+    cached?.data_mode === 'fallback' ||
+    (Array.isArray(cached?.data_sources) && cached.data_sources.some((source: unknown) =>
+      typeof source === 'string' && source.toLowerCase().includes('fallback'),
+    ));
 
   if (cacheReadError) {
     console.warn('[API] snapshot cache read error', {
@@ -99,7 +78,7 @@ export async function GET(
     ? Date.now() - new Date(cached.captured_at).getTime()
     : Number.POSITIVE_INFINITY;
 
-  if (cached && cacheAgeMs <= CACHE_MAX_AGE_MS) {
+  if (cached && !cachedIsFallback && cacheAgeMs <= CACHE_MAX_AGE_MS) {
     return NextResponse.json(
       {
         ...cached,
@@ -166,13 +145,13 @@ export async function GET(
   const marineData = marine.status === 'fulfilled' ? marine.value : null;
   const tideData = tides.status === 'fulfilled' ? tides.value : null;
 
-  const noLiveProviderData =
+  const noProviderData =
     nwsData === null &&
     usgsData === null &&
     marineData === null &&
     tideData === null;
 
-  if (noLiveProviderData && cached) {
+  if (noProviderData && cached && !cachedIsFallback) {
     return NextResponse.json(
       {
         ...cached,
@@ -191,14 +170,11 @@ export async function GET(
     );
   }
 
-  if (noLiveProviderData) {
-    const fallback = fallbackConditionResponse(id);
-    if (fallback) return fallback;
-
+  if (noProviderData) {
     return NextResponse.json(
       {
         error:
-          'Live environmental data is temporarily unavailable and no cached or bundled fallback conditions exist for this spot.',
+          'Provider environmental data is temporarily unavailable; no conditions were generated.',
         data_mode: 'unavailable',
       },
       {
@@ -279,13 +255,13 @@ export async function GET(
         captured_at: new Date().toISOString(),
         cached: false,
         stale: false,
-        data_mode: 'live',
+        data_mode: 'provider',
       },
       {
         headers: {
           'Cache-Control': 'no-store',
           'x-fishfinder-cache': 'write-failed',
-          'x-fishfinder-data-mode': 'live',
+          'x-fishfinder-data-mode': 'provider',
         },
       },
     );
@@ -296,12 +272,12 @@ export async function GET(
       ...inserted,
       cached: false,
       stale: false,
-      data_mode: 'live',
+      data_mode: 'provider',
     },
     {
       headers: {
         'Cache-Control': 'public, max-age=1800',
-        'x-fishfinder-data-mode': 'live',
+        'x-fishfinder-data-mode': 'provider',
       },
     },
   );

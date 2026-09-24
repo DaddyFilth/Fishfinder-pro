@@ -1,3 +1,5 @@
+import { parseSpotApiPayload } from '@/lib/spotProvenance';
+
 import type { Coordinates } from './region';
 import type { Spot } from './mapFilters';
 
@@ -38,6 +40,8 @@ export function formatDistance(miles: number) {
 export async function getNearbySpots(lat: number, lon: number) {
   const res = await fetch(`/api/spots?lat=${lat}&lon=${lon}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Spots API failed: ${res.status}`);
-  const json = await res.json();
-  return json.spots ?? json.microSpots ?? json;
+  const json: unknown = await res.json();
+  const payload = parseSpotApiPayload(json);
+  if (!payload) throw new Error('Spots API returned an invalid data source');
+  return payload.spots;
 }

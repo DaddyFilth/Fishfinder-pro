@@ -160,7 +160,10 @@ export function rankSpots(
   return spots
     .map((spot) => ({
       spot,
-      score: conditionScores[spot.id] ?? 0,
+      score: conditionScores[spot.id],
     }))
+    .filter((entry): entry is { spot: Spot; score: number } =>
+      typeof entry.score === 'number' && Number.isFinite(entry.score),
+    )
     .sort((a, b) => b.score - a.score);
 }

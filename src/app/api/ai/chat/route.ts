@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage } from '../../../../lib/fishbotPrompt'
+import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
+import { getAiModel, getOllama } from '@/lib/ollama'
 import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
@@ -18,59 +19,66 @@ type RequestBody = {
   history?: ChatMessage[]
 }
 
+type ProviderContext = SpotsContext & {
+  source: string
+  data_mode: string
+  observed_at?: string
+}
+
 function coordinate(value: unknown): number | undefined {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-async function fetchSpotsContext(lat?: number, lon?: number) {
+async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderContext | null> {
   if (lat === undefined || lon === undefined) return null
   try {
-    const configuredApi = process.env.SPOTS_API || 'https://seamcast-spots.vercel.app/api/spots'
-    const apiUrl = new URL(configuredApi)
+    const apiUrl = new URL(process.env.SPOTS_API || 'https://seamcast-spots.vercel.app/api/spots')
     apiUrl.searchParams.set('lat', String(lat))
     apiUrl.searchParams.set('lon', String(lon))
     const res = await fetch(apiUrl, {
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store'
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
     })
     if (!res.ok) return null
-    return await res.json()
+    const parsed = parseSpotsContext(await res.json())
+    if (!parsed) return null
+    return {
+      ...parsed,
+      source: parsed.source ?? parsed.conditions?.source ?? 'seamcast-spots',
+      data_mode: parsed.data_mode ?? 'provider',
+      observed_at: parsed.observed_at ?? parsed.conditions?.issuedAt,
+    }
   } catch (error) {
-    console.error('Failed to fetch spots context:', error)
+    console.error('Failed to fetch provider context:', error)
     return null
   }
 }
 
-async function callGroq(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY not configured')
-  }
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 0.9,
-      stream: false
-    }),
+async function callAi(messages: ChatMessage[]): Promise<string> {
+  const response = await getOllama().chat.completions.create({
+    model: getAiModel(),
+    messages,
+    temperature: 0.7,
+    max_tokens: 1024,
+    top_p: 0.9,
+    stream: false,
   })
+  const content = response.choices[0]?.message?.content?.trim()
+  if (!content) throw new Error('AI provider returned no text')
+  return content
+}
 
-  if (!response.ok) {
-    console.error('Groq API error:', response.status)
-    throw new Error(`Groq API error: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data.choices?.[0]?.message?.content || 'No response from Fishbot'
+function unavailableResponse() {
+  return NextResponse.json(
+    {
+      error: 'Fishbot is unavailable; no AI response was generated.',
+      source: 'none',
+      data_mode: 'unavailable',
+      live_data: false,
+    },
+    { status: 503 },
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -80,7 +88,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: RequestBody = await req.json()
-    const { message, lat, lon, spot, conditions, history = [] } = body
+    const { message, lat, lon, spot, history = [] } = body
 
     if (typeof message !== 'string' || !message.trim() || message.length > 4_000) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -102,56 +110,37 @@ export async function POST(req: NextRequest) {
     const spotLat = lat ?? coordinate(spot?.lat ?? spot?.latitude)
     const spotLon = lon ?? coordinate(spot?.lon ?? spot?.lng ?? spot?.longitude)
     const spotsData = await fetchSpotsContext(spotLat, spotLon)
-    const liveContext = spotsData ?? (conditions ? { conditions } : null)
-    const context = buildContextMessage(liveContext)
-
-    // Build conversation with system prompt and context
+    const context = buildContextMessage(spotsData)
     const messages: ChatMessage[] = [
       { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
       { role: 'system', content: context },
-      ...safeHistory, // Keep only bounded user/assistant messages for context
-      { role: 'user', content: message }
+      ...safeHistory,
+      { role: 'user', content: message },
     ]
 
-    let aiResponse: string
-
     try {
-      aiResponse = await callGroq(messages)
-    } catch (groqError) {
-      console.error('Groq failed:', groqError)
-      
-      // Smart fallback using spots data if Groq fails or is not configured
-      if (spotsData) {
-        const temp = spotsData.conditions?.temperatureF
-        const wind = spotsData.conditions?.windSpeedMph
-        const sky = spotsData.conditions?.shortForecast
-        const score = spotsData.overallBite?.score
-        const level = spotsData.overallBite?.level
-        const topSpecies = spotsData.speciesLikely?.[0]?.species || 'bass'
-        const topBait = spotsData.recommendedBaits?.[0]?.baitType || 'moving baits'
-        
-        aiResponse = `Right now we're looking at ${temp}°F with ${wind || 'light'} wind and ${sky || 'current'} conditions. The bite is ${level} (${score}/100). For ${topSpecies}, start with ${topBait.toLowerCase()}. Focus on the wind-blown structure I marked on the map. (Note: Running in offline mode - add GROQ_API_KEY for full AI)`
-      } else {
-        aiResponse = "I need coordinates to give you live conditions, but generally in Oklahoma right now, look for wind-blown points with moving baits if it's cloudy, or slow down with plastics if it's bright and calm."
-      }
+      const reply = await callAi(messages)
+      return NextResponse.json({
+        reply,
+        response: reply,
+        source: 'ai',
+        data_mode: 'ai-generated',
+        live_data: false,
+        context: spotsData
+          ? {
+              source: spotsData.source,
+              data_mode: spotsData.data_mode,
+              observed_at: spotsData.observed_at,
+            }
+          : { source: 'none', data_mode: 'unavailable', observed_at: undefined },
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('Fishbot provider error:', error)
+      return unavailableResponse()
     }
-
-    return NextResponse.json({
-      reply: aiResponse,
-      response: aiResponse,
-      spotsData: spotsData || undefined,
-      timestamp: new Date().toISOString()
-    })
-
-  } catch (err: unknown) {
-    console.error('Fishbot error:', err instanceof Error ? err.message : 'unknown error')
-    return NextResponse.json(
-      { 
-        error: 'Fishbot is temporarily unavailable.',
-        message: 'Try asking about specific conditions or locations in Oklahoma.',
-        fallback: "Try asking about specific conditions or locations in Oklahoma."
-      },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    console.error('Fishbot request error:', error instanceof Error ? error.message : 'unknown error')
+    return NextResponse.json({ error: 'Invalid Fishbot request.' }, { status: 400 })
   }
 }

@@ -13,30 +13,6 @@ interface Msg {
   ts: string;
 }
 
-function fallbackReply(message: string, spot: object): string {
-  const question = message.toLowerCase();
-  const spotData = spot as Record<string, unknown>;
-  const name = typeof spotData.name === 'string' ? spotData.name : 'this water';
-
-  if (question.includes('lure') || question.includes('bait')) {
-    return `At ${name}, start with a green-pumpkin Texas-rigged worm or 3/8 oz spinnerbait around shoreline cover. If the water is stained, switch to a black-and-blue jig.`;
-  }
-
-  if (question.includes('bass')) {
-    return `For bass at ${name}, work points, brush, riprap, and the first break off shallow flats. Fish shallow early and late, then move to 10–15 foot structure as the sun gets higher.`;
-  }
-
-  if (question.includes('crappie')) {
-    return `Look for crappie around brush piles, dock shade, and standing timber. A 1/16 oz jig or small minnow presentation is a solid starting point.`;
-  }
-
-  if (question.includes('catfish')) {
-    return `For catfish at ${name}, fish cut shad, stink bait, or punch bait near channel edges, current seams, and deeper flats close to structure.`;
-  }
-
-  return `For ${name}, begin on windblown banks and visible cover. Try moving baits first, then slow down with a jig or soft plastic around the first drop-off if bites are slow.`;
-}
-
 export default function FishBot({ spot, conditions }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -80,7 +56,7 @@ export default function FishBot({ spot, conditions }: Props) {
         } else if (!cancelled) {
           setMessages([{
             role: 'bot',
-            text: `FishBot could not load a live briefing. For ${spotName}, start around cover and the first break line, then adjust depth based on water temperature and time of day.`,
+            text: 'AI provider unavailable, so no briefing was generated. Check the map data source and try again when a provider is available.',
             ts: new Date().toLocaleTimeString(),
           }]);
         }
@@ -88,7 +64,7 @@ export default function FishBot({ spot, conditions }: Props) {
         if (!cancelled) {
           setMessages([{
             role: 'bot',
-            text: `For ${spotName}, begin around visible cover and nearby drop-offs. Low-light periods are usually your best window for active fish.`,
+            text: 'AI provider unavailable, so no briefing was generated. Try again when a provider is available.',
             ts: new Date().toLocaleTimeString(),
           }]);
         }
@@ -142,7 +118,7 @@ export default function FishBot({ spot, conditions }: Props) {
         ...current,
         {
           role: 'bot',
-          text: reply || fallbackReply(userMsg, spot) + (error ? ` (${error})` : ''),
+          text: reply ?? (error ? `AI provider unavailable: ${error}` : 'AI provider unavailable; no response was generated.'),
           ts: new Date().toLocaleTimeString(),
         },
       ]);
@@ -151,7 +127,7 @@ export default function FishBot({ spot, conditions }: Props) {
         ...current,
         {
           role: 'bot',
-          text: fallbackReply(userMsg, spot),
+          text: 'AI provider unavailable; no response was generated. Please try again when a provider is available.',
           ts: new Date().toLocaleTimeString(),
         },
       ]);

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOllama, OLLAMA_MODEL } from '@/lib/ollama';
+import { getAiModel, getOllama } from '@/lib/ollama';
+import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, requestBodyTooLarge, tooLarge } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
   if (requestBodyTooLarge(req, 16_384)) return tooLarge();
-
-  const openai = getOllama();
 
   let body: {
     species?: unknown; lat?: unknown; lng?: unknown;
@@ -28,6 +27,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'A valid species is required.' }, { status: 400 });
   }
 
+  const latNumber = Number(lat);
+  const lngNumber = Number(lng);
+  if (!Number.isFinite(latNumber) || latNumber < -90 || latNumber > 90 || !Number.isFinite(lngNumber) || lngNumber < -180 || lngNumber > 180) {
+    return NextResponse.json({ error: 'Valid coordinates are required.' }, { status: 400 });
+  }
+
   const now = new Date();
   const localHour = now.getHours();
   const month = now.toLocaleString('en-US', { month: 'long' });
@@ -37,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const prompt = `You are an expert freshwater fishing guide AI with deep knowledge of fish behavior, solunar theory, barometric pressure effects, and seasonal patterns.
 
-Given these real-time conditions for ${species} at coordinates (${lat}, ${lng}):
+Given the supplied conditions for ${species} at coordinates (${latNumber}, ${lngNumber}):
 - Season: ${season} (${month})
 - Current time: ${localHour}:00
 - Water temp: ${water_temp_c != null ? Math.round(Number(water_temp_c) * 9 / 5 + 32) : 'unknown'}°F
@@ -70,16 +75,16 @@ Respond with ONLY valid JSON in this exact format:
 } Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
   try {
+    const openai = getOllama();
     const res = await openai.chat.completions.create({
-      model: OLLAMA_MODEL,
+      model: getAiModel(),
       max_tokens: 600,
       temperature: 0.4,
       messages: [{ role: 'user', content: prompt }],
     });
     const raw = res.choices[0].message.content ?? '{}';
-    const cleaned = raw.replace(/```jsons*/gi, '').replace(/```s*/g, '').trim();
-    return NextResponse.json(JSON.parse(cleaned));
+    return NextResponse.json(parseModelJson(raw, BiteTimesSchema), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
   } catch {
-    return NextResponse.json({ error: 'AI prediction failed' }, { status: 500 });
+    return NextResponse.json({ error: 'AI bite prediction is unavailable; no prediction was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
   }
 }

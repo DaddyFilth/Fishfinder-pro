@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
+import { normalizeProviderSpots } from '@/lib/spotProvenance';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +31,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json({ ...data, live: true, source: 'seamcast-spots' });
+    const data = normalizeProviderSpots(await res.json(), DEFAULT_SPOTS);
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': data.data_mode ?? 'provider' },
+    });
   } catch {
     return NextResponse.json(
-      { error: 'Unable to load live fishing spots.', live: false },
+      { error: 'Unable to load provider fishing spots.', live: false },
       { status: 502 }
     );
   }

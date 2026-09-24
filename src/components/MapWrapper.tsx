@@ -149,10 +149,10 @@ interface Cond {
   };
   data_sources: string[];
   cached: boolean;
-  data_mode?: 'live' | 'cached' | 'stale-cache' | 'fallback';
+  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
   stale?: boolean;
   warning?: string;
-  captured_at: string;
+  captured_at: string | null;
 }
 
 /** The HUD and the overlay badge share one data-mode vocabulary. */
@@ -176,7 +176,7 @@ export interface MapLayers {
   hotspots: boolean;
   depth: boolean;
   waterTemp: boolean;
-  catchPins: boolean;
+ conditionMarkers: boolean;
   waypoints: boolean;
 }
 
@@ -201,12 +201,13 @@ function depthLabel(level: number | null, flow: number | null) {
   return 'No depth data';
 }
 
-function conditionForSpot(condition: Cond | undefined): FishingCondition {
-  if (!condition) return 'stable';
-  if ((condition.wind_speed_ms ?? 0) >= 6) return 'windy';
+  // This is a score derived from provider values; it is not an observation or catch report.
+  function conditionForSpot(condition: Cond | undefined): FishingCondition | null {
+  if (!condition) return null;
+  if (condition.wind_speed_ms !== null && condition.wind_speed_ms >= 6) return 'windy';
   if (condition.pressure_hpa !== null && condition.pressure_hpa < 1008) return 'low-light';
-  if ((condition.water_temp_c ?? 19) <= 16) return 'cool';
-  if ((condition.water_temp_c ?? 19) >= 23) return 'warming';
+  if (condition.water_temp_c !== null && condition.water_temp_c <= 16) return 'cool';
+  if (condition.water_temp_c !== null && condition.water_temp_c >= 23) return 'warming';
   return 'stable';
 }
 
@@ -221,6 +222,7 @@ function stableSpotVariant(id: Spot['id'], variantCount: number) {
 
 function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
   const fishingCondition = conditionForSpot(condition);
+  if (!fishingCondition) return [];
   const type = `${spot.spot_type} ${spot.notes ?? ''}`.toLowerCase();
   const groupSets = type.includes('trout')
     ? [['Trout'], ['Trout', 'Bass'], ['Trout', 'Panfish']]
@@ -275,7 +277,6 @@ export default function FishingMap({
   spots,
   baseLayer,
   layers,
-  isOnline,
   spotDataMode,
   spotDataStatusLabel,
   userLocation,
@@ -288,7 +289,6 @@ export default function FishingMap({
   spots: Spot[];
   baseLayer: BaseLayer;
   layers: MapLayers;
-  isOnline: boolean;
   spotDataMode: SpotDataMode;
   spotDataStatusLabel: string;
   userLocation?: { latitude: number; longitude: number } | null;
@@ -373,7 +373,7 @@ export default function FishingMap({
         lat: spot.lat,
         lng: spot.lng,
         name: spot.name,
-        temperature: conditions[spot.id]?.water_temp_c ?? null,
+        temperature: conditions[spot.id]?.data_mode === 'provider' ? conditions[spot.id].water_temp_c : null,
       })),
     [spots, conditions]
   );
@@ -381,16 +381,16 @@ export default function FishingMap({
   const rankedSpots = useMemo(
     () =>
       spots
-        .filter((spot) => conditions[spot.id])
+        .filter((spot) => conditions[spot.id]?.data_mode === 'provider')
         .map((spot) => ({ spot, score: conditions[spot.id].fishing_score }))
         .sort((a, b) => b.score - a.score),
     [spots, conditions]
   );
 
   const hotSpots = rankedSpots.slice(0, 6);
-  const recentPins = rankedSpots.slice(0, 18);
+  const conditionMarkers = rankedSpots.slice(0, 18);
   const hudStatusColor =
-    spotDataMode === 'live'
+    spotDataMode === 'provider'
       ? '#22c55e'
       : spotDataMode === 'cached' || spotDataMode === 'offline-cached'
         ? '#fbbf24'
@@ -417,14 +417,21 @@ export default function FishingMap({
 
     if (mode === 'cached' || condition.cached) {
       return {
-        label: 'Cached feed',
+        label: 'Cached provider snapshot',
         tone: '#fbbf24',
       };
     }
 
+    if (mode === 'provider') {
+      return {
+        label: 'Provider readings (timestamp shown below)',
+        tone: '#22c55e',
+      };
+    }
+
     return {
-      label: !isOnline && mode === 'live' ? 'Live snapshot' : 'Live feed',
-      tone: '#22c55e',
+      label: 'Data source unavailable',
+      tone: '#f59e0b',
     };
   }
 
@@ -527,7 +534,7 @@ export default function FishingMap({
             <div className="pulse" />
             <div>
               <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>Oklahoma SeamCast Map</div>
-              <div style={{ color: '#94a3b8', fontSize: 11 }}>Public waters, catches, contours, and Oklahoma fishing intelligence</div>
+              <div style={{ color: '#94a3b8', fontSize: 11 }}>Public-water planning tools; provider data is labeled below</div>
             </div>
           </div>
 
@@ -608,14 +615,14 @@ export default function FishingMap({
               <Popup>
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
-                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Hotspot confidence: {score}</div>
+                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Calculated hotspot score: {score}</div>
                       <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
             </CircleMarker>
           ))}
 
-          {layers.catchPins && recentPins.map(({ spot, score }) => (
+          {layers.conditionMarkers && conditionMarkers.map(({ spot, score }) => (
             <CircleMarker
               key={`pin-${spot.id}`}
               center={[spot.lat, spot.lng]}
@@ -630,7 +637,7 @@ export default function FishingMap({
               <Popup>
                 <div style={{ minWidth: 180 }}>
                   <div style={{ fontWeight: 800 }}>{spot.name}</div>
-                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Recent catch activity signal • score {score}</div>
+                      <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>Calculated condition score: {score}</div>
                       <button type="button" onClick={() => openDirections(spot)} style={S.directionsBtn}>Get directions</button>
                     </div>
               </Popup>
@@ -682,17 +689,17 @@ export default function FishingMap({
                     </div>
 
                     <div style={{ background: '#082f49', border: '1px solid #155e75', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, color: '#67e8f9', fontWeight: 800, marginBottom: 7 }}>BEST TARGETS AT THIS SPOT</div>
-                      {spotSpeciesTargets(spot, c).map(({ species, rate, structure }) => (
+                      <div style={{ fontSize: '9px', color: '#67e8f9', fontWeight: 800, marginBottom: 7 }}>CATALOG TARGET ESTIMATE</div>
+                      {spotSpeciesTargets(spot, c).length > 0 ? spotSpeciesTargets(spot, c).map(({ species, rate, structure }) => (
                         <div key={species.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(103,232,249,0.12)' }}>
                           <div><div style={{ color: '#f8fafc', fontSize: 11, fontWeight: 700 }}>{species.name}</div><div style={{ color: '#94a3b8', fontSize: 9 }}>{structure}</div></div>
                           <div style={{ color: '#86efac', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>{rate}/100</div>
                         </div>
-                      ))}
-                      <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 7 }}>Rankings adjust with water temperature, pressure, wind, and the spot type.</div>
+                      )) : <div style={{ fontSize: 10, color: '#94a3b8' }}>Target estimate unavailable until a provider snapshot loads.</div>}
+                      <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 7 }}>Catalog/algorithm estimate from spot metadata and available provider values; not a catch report or live reading.</div>
                     </div>
 
-                    {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading conditions...</div>}
+                    {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading provider snapshot…</div>}
 
                     {errors[spot.id] && (
                       <div style={S.retryBox}>
@@ -820,7 +827,7 @@ export default function FishingMap({
   />
 )} 
                         <div style={{ marginTop: 10, fontSize: 10, color: '#6b7280' }}>
-                          {conditionState?.label ?? 'Loading'} • {new Date(c.captured_at).toLocaleString()}
+                          {c.captured_at ? new Date(c.captured_at).toLocaleString() : 'No provider timestamp'}
                         </div>
                       </>
                     )}

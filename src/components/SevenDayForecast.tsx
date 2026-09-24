@@ -55,7 +55,7 @@ function fishingRatingFromWeather(forecast: string, wind: string): { rating: num
 
 export default function SevenDayForecast({ lat, lng }: Props) {
   const [forecast, setForecast] = useState<DayForecast[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError]       = useState('');
 
   useEffect(() => {

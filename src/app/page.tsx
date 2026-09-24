@@ -19,22 +19,22 @@ import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
+import { parseSpotApiPayload } from '@/lib/spotProvenance';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
 
 type DataMode =
-  | 'live'
+  | 'provider'
   | 'cached'
   | 'fallback'
-  | 'offline-live'
+  | 'offline-provider'
   | 'offline-cached'
   | 'offline-fallback'
   | 'loading';
 
-interface SpotCondition { fishing_score?: number | null }
-interface SpotApiPayload {
-  spots?: unknown;
-  data_mode?: string;
+interface SpotCondition {
+  fishing_score?: number | null;
+  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
 }
 
 function resolveSpotDataMode(
@@ -42,7 +42,7 @@ function resolveSpotDataMode(
   isOnline: boolean,
 ): DataMode {
   if (source === 'loading') return 'loading';
-  if (!isOnline && source === 'live') return 'offline-live';
+  if (!isOnline && source === 'provider') return 'offline-provider';
   if (!isOnline && source === 'cached') return 'offline-cached';
   if (!isOnline && source === 'fallback') return 'offline-fallback';
   return source;
@@ -54,8 +54,11 @@ function badgeState(isOnline: boolean) {
     : { label: '● OFFLINE', color: '#94a3b8' };
 }
 
-function mapStatusLabel(isOnline: boolean) {
-  return isOnline ? 'Online' : 'Offline';
+function mapStatusLabel(source: SpotLoadResult['source'] | 'loading', isOnline: boolean) {
+  if (source === 'loading') return 'Loading data';
+  if (source === 'fallback') return 'Bundled catalog';
+  if (source === 'cached') return isOnline ? 'Cached spots' : 'Offline cache';
+  return isOnline ? 'Provider connected' : 'Offline provider snapshot';
 }
 
 function isOklahomaSpot(spot: Pick<Spot, 'lat' | 'lng'>) {
@@ -100,7 +103,7 @@ const MAP_FILTERS = [
 
 type SpotLoadResult = {
   spots: Spot[];
-  source: 'live' | 'cached' | 'fallback';
+  source: 'provider' | 'cached' | 'fallback';
   savedAt: string | null;
 };
 
@@ -211,23 +214,23 @@ async function getSpots(): Promise<SpotLoadResult> {
     const res = await fetch('/api/spots', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const payload = (await res.json()) as SpotApiPayload | Spot[];
-    const rawSpots = Array.isArray(payload) ? payload : payload.spots;
-    const dataModeHeader = res.headers.get('x-fishfinder-data-mode');
-    const dataModeBody = Array.isArray(payload) ? null : payload.data_mode;
-    const dataMode = dataModeHeader ?? dataModeBody ?? null;
+    const payload = parseSpotApiPayload(await res.json());
+    if (!payload) throw new Error('Invalid spot API response');
+    const rawSpots = payload.spots;
+    const dataMode = res.headers.get('x-fishfinder-data-mode') ?? payload.data_mode ?? null;
 
     if (Array.isArray(rawSpots)) {
-      const filtered = rawSpots.filter(
-        (spot): spot is Spot =>
-          typeof spot?.id === 'string' &&
-          typeof spot?.name === 'string' &&
-          typeof spot?.lat === 'number' &&
-          typeof spot?.lng === 'number' &&
-          typeof spot?.water_type === 'string' &&
-          typeof spot?.spot_type === 'string' &&
-          isOklahomaSpot(spot),
-      );
+      const filtered: Spot[] = rawSpots.filter((spot) => {
+        if (
+          typeof spot?.id !== 'string' ||
+          typeof spot?.name !== 'string' ||
+          typeof spot?.lat !== 'number' ||
+          typeof spot?.lng !== 'number' ||
+          typeof spot?.water_type !== 'string' ||
+          typeof spot?.spot_type !== 'string'
+        ) return false;
+        return isOklahomaSpot(spot);
+      });
       if (rawSpots.length > 0 && filtered.length === 0) {
         throw new Error('No supported Oklahoma spots returned');
       }
@@ -237,9 +240,9 @@ async function getSpots(): Promise<SpotLoadResult> {
           ? 'fallback'
           : dataMode === 'cached' || dataMode === 'stale-cache'
             ? 'cached'
-            : 'live';
+            : 'provider';
 
-      const savedAt = filtered.length > 0 ? new Date().toISOString() : null;
+      const savedAt = source === 'provider' && filtered.length > 0 ? new Date().toISOString() : null;
       if (savedAt) cacheSpots(filtered, savedAt);
       return {
         spots: filtered,
@@ -265,7 +268,7 @@ export default function MobilePage() {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
   const [nearbyMode, setNearbyMode] = useState(false);
-  const [cacheSource, setCacheSource] = useState<'loading' | 'live' | 'cached' | 'fallback'>('loading');
+  const [cacheSource, setCacheSource] = useState<'loading' | 'provider' | 'cached' | 'fallback'>('loading');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
   const [isOnline, setIsOnline] = useState(true);
@@ -276,6 +279,7 @@ export default function MobilePage() {
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
+  const [conditionModes, setConditionModes] = useState<Record<string, SpotCondition['data_mode']>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
   const [baseLayer, setBaseLayer] = useState<BaseLayer>('explore');
   const [unitsPreference, setUnitsPreference] = useState<UnitPreference>('imperial');
@@ -333,10 +337,14 @@ export default function MobilePage() {
     try {
       const result = await getSpots();
       setSpots(result.spots);
+        setConditionScores({});
+        setConditionModes({});
+        setLoadingScores({});
+
       setCacheSource(result.source);
       setCachedAt(result.savedAt);
 
-      if (result.source === 'live' && isAutoRefresh) {
+      if (result.source === 'provider' && isAutoRefresh) {
         setConditionScores({});
         setLoadingScores({});
         scoreFetchInFlight.current = {};
@@ -388,6 +396,7 @@ export default function MobilePage() {
         setSpots([]);
         setSelectedSpot(null);
         setConditionScores({});
+        setConditionModes({});
       }
     });
 
@@ -567,15 +576,21 @@ export default function MobilePage() {
         .then(async (res) => {
           if (!res.ok) {
             setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
+            setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
             return;
           }
 
           const data = (await res.json()) as SpotCondition;
-          const fishingScore = typeof data.fishing_score === 'number' ? data.fishing_score : 0;
+          const mode = data.data_mode ?? 'fallback';
+          const fishingScore = mode === 'provider' && typeof data.fishing_score === 'number'
+            ? data.fishing_score
+            : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
+          setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
         .catch(() => {
           setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
+          setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
         })
         .finally(() => {
           scoreFetchInFlight.current[spot.id] = false;
@@ -587,7 +602,10 @@ export default function MobilePage() {
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
   const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
-  const rankedSpots = rankSpots(visibleSpots, conditionScores);
+  const rankedSpots = useMemo(
+    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] === 'provider'),
+    [visibleSpots, conditionModes, conditionScores],
+  );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
   const toggleMapLayer = (key: keyof MapLayers) => {
@@ -619,7 +637,7 @@ export default function MobilePage() {
           <AuthAccountButton />
         </div>
       </header>
-      <p style={{ position:'absolute', width:'1px', height:'1px', padding:0, margin:'-1px', overflow:'hidden', clip:'rect(0,0,0,0)', whiteSpace:'nowrap', border:0 }}>Oklahoma public fishing access, species, conditions, and AI-powered trip planning.</p>
+      <p style={{ position:'absolute', width:'1px', height:'1px', padding:0, margin:'-1px', overflow:'hidden', clip:'rect(0,0,0,0)', whiteSpace:'nowrap', border:0 }}>Oklahoma public fishing access, provider-reported environmental conditions, species information, and optional AI trip planning.</p>
 
       {backHint && (
         <div
@@ -649,16 +667,15 @@ export default function MobilePage() {
       <main style={PAGE_STYLES.main}>
 
         {/* MAP TAB */}
-{tab === "map" && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={false} onOpenAi={() => setTab("ai")} onOpenLogbook={() => setTab("log")} onRefresh={() => { void loadSpotData(false) }} />}
+{tab === "map" && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={Object.keys(conditionScores).length > 0} onOpenAi={() => setTab("ai")} onOpenLogbook={() => setTab("log")} onRefresh={() => { void loadSpotData(false) }} />}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
             <MapWrapper
               spots={visibleSpots}
               baseLayer={baseLayer}
               layers={mapLayers}
-              isOnline={isOnline}
               spotDataMode={spotDataMode}
-              spotDataStatusLabel={mapStatusLabel(isOnline)}
+              spotDataStatusLabel={mapStatusLabel(cacheSource, isOnline)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
               sheetOpen={sheetOpen}
@@ -700,8 +717,8 @@ export default function MobilePage() {
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
               </button>
             </div>
-            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'live' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
-              {!authReady ? 'Checking account…' : !isAuthenticated ? 'Sign in required to load spot data' : cacheSource === 'live' ? 'Online spot data cached' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'provider' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
+              {!authReady ? 'Checking account…' : !isAuthenticated ? 'Sign in required to load spot data' : cacheSource === 'provider' ? 'Provider spot data · not live conditions' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
               {locationStatus === 'denied' && ' · Location permission denied'}
               {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
@@ -726,14 +743,14 @@ export default function MobilePage() {
               <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
               {!sheetOpen && (
                 <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots Today</span>
+                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots · provider scores</span>
                   <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
                 </div>
               )}
               {sheetOpen && (
                 <div style={{ padding:'0 16px 16px', maxHeight:'45dvh', overflowY:'auto' }}>
                   <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between', gap:'8px' }}>
-                    <span>{nearbyMode ? '📍 NEAREST OKLAHOMA WATERS' : '🏆 OKLAHOMA TOP WATERS TODAY'}</span>
+                    <span>{nearbyMode ? '📍 NEAREST OKLAHOMA WATERS' : '🏆 OKLAHOMA TOP WATERS · PROVIDER SCORES'}</span>
                     <button type="button" onClick={(event) => { event.stopPropagation(); setNearbyMode(false); }} style={{ background:'transparent', border:0, color:'#0ea5e9', fontSize:'10px', cursor:'pointer', padding:0 }}>Show all</button>
                   </div>
                   {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
@@ -753,7 +770,7 @@ export default function MobilePage() {
                       </div>
                     );
                   }) : (
-                    <div style={{ color:'#64748b', fontSize:'12px', padding:'12px 0' }}>No spots match this filter yet.</div>
+                    <div style={{ color:'#64748b', fontSize:'12px', padding:'12px 0' }}>No provider condition scores are available for this filter.</div>
                   )}
                 </div>
               )}
@@ -788,7 +805,7 @@ export default function MobilePage() {
                 </div>
               );
             }) : (
-              <div style={{ color:'#64748b', fontSize:'12px', padding:'32px 0', textAlign:'center' }}>No live scores available for the current filter.</div>
+              <div style={{ color:'#64748b', fontSize:'12px', padding:'32px 0', textAlign:'center' }}>No provider condition scores are available for the current filter.</div>
             )}
           </div>
         )}
@@ -799,14 +816,21 @@ export default function MobilePage() {
         {/* BITE TIMES TAB */}
         {tab === 'bitetime' && (
           <div style={PAGE_STYLES.scrollPane}>
-            <BiteTimesTab />
+            <BiteTimesTab
+              lat={selectedSpot?.lat ?? coordinates?.latitude}
+              locationLabel={selectedSpot?.name ?? (coordinates ? 'device location' : undefined)}
+            />
           </div>
         )}
 
         {/* WEATHER TAB */}
         {tab === 'weather' && (
           <div style={PAGE_STYLES.scrollPane}>
-            <WeatherTab />
+            <WeatherTab
+              lat={selectedSpot?.lat ?? coordinates?.latitude}
+              lng={selectedSpot?.lng ?? coordinates?.longitude}
+              locationLabel={selectedSpot?.name ?? (coordinates ? 'device location' : undefined)}
+            />
           </div>
         )}
 
@@ -849,10 +873,10 @@ export default function MobilePage() {
             <div style={PAGE_STYLES.settingsCard}>
               <div style={{ fontSize:'13px', color:'#e2e8f0', marginBottom:'10px' }}>🗺 Map layers</div>
               {([
-                ['hotspots', '🔥 Hotspots'],
-                ['depth', '📏 Depth contours'],
-                ['waterTemp', '🌡 Water temperature'],
-                ['catchPins', '🎣 Catch pins'],
+                ['hotspots', '🔥 Calculated condition hotspots'],
+                ['depth', '🗺 Water reference layers'],
+                ['waterTemp', '🌡 Sampled water temperature'],
+                ['catchPins', '🎯 Condition-score markers'],
                 ['waypoints', '📍 Waypoints'],
               ] as [keyof MapLayers, string][]).map(([key, label]) => (
                 <button key={key} onClick={() => toggleMapLayer(key)} style={{ width:'100%', background:'none', border:'none', borderTop:'1px solid #1e293b', color:'#cbd5e1', padding:'10px 0', display:'flex', justifyContent:'space-between', cursor:'pointer', fontSize:'12px', textAlign:'left' }}>

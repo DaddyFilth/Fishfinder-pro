@@ -1,69 +1,163 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 
-const HOURS=['6A','7A','8A','9A','10A','11A','12P','1P','2P','3P','4P','5P','6P'];
-const TEMPS=[68,69,71,74,77,80,82,83,83,81,79,76,73];
-const WINDS=[4,4,5,6,7,8,9,9,8,10,11,9,7];
-const RAIN= [0,0,0,0,5,10,15,20,20,30,25,10,5];
-const PRESSURE=[1012,1013,1013,1012,1011,1010,1010,1011,1012,1013,1013,1012,1011];
-const TIDE=[{time:'4:22 AM',type:'LOW',height:'0.8 ft'},{time:'10:45 AM',type:'HIGH',height:'3.2 ft'},{time:'5:08 PM',type:'LOW',height:'0.6 ft'},{time:'11:31 PM',type:'HIGH',height:'3.4 ft'}];
+type Props = { lat?: number; lng?: number; locationLabel?: string };
+type Period = {
+  startTime: string;
+  endTime: string;
+  temperature: number;
+  temperatureUnit: string;
+  windSpeed: string;
+  windDirection: string;
+  shortForecast: string;
+};
 
-export default function WeatherTab(){
-  const [now,setNow]=useState(new Date());
-  useEffect(()=>{const t=setInterval(()=>setNow(new Date()),60000);return()=>clearInterval(t);},[]);
-  const idx=Math.min(Math.max(now.getHours()-6,0),12);
-  const pressureTrend=PRESSURE[idx]>PRESSURE[Math.max(0,idx-1)]?'Rising':PRESSURE[idx]<PRESSURE[Math.max(0,idx-1)]?'Falling':'Steady';
-  const pressureColor=pressureTrend==='Rising'?'#22c55e':pressureTrend==='Falling'?'#f97316':'#94a3b8';
+const NWS_HEADERS = { Accept: 'application/geo+json' };
 
-  return(
-    <div style={{height:'100%',overflowY:'auto',background:'#060d1a',padding:'16px'}}>
-      <div style={{fontSize:'14px',fontWeight:'bold',color:'#22d3ee',marginBottom:'4px'}}>Weather & Tides</div>
-      <div style={{fontSize:'10px',color:'#475569',marginBottom:'16px'}}>Local conditions</div>
-      <div style={{background:'linear-gradient(135deg,#0c1e3a,#0a1628)',border:'1px solid #1e293b',borderRadius:'12px',padding:'16px',marginBottom:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
-          <div><div style={{fontSize:'36px',fontWeight:'bold',color:'#e2e8f0'}}>{TEMPS[idx]}°F</div><div style={{fontSize:'11px',color:'#64748b'}}>Partly Cloudy</div></div>
-          <div style={{fontSize:'48px'}}>⛅</div>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}}>
-          {[{icon:'💨',label:'Wind',value:`${WINDS[idx]}mph SW`},{icon:'💧',label:'Humidity',value:'72%'},{icon:'👁',label:'Visibility',value:'10 mi'}].map(s=>(
-            <div key={s.label} style={{background:'rgba(255,255,255,0.04)',borderRadius:'8px',padding:'8px',textAlign:'center'}}>
-              <div style={{fontSize:'14px'}}>{s.icon}</div>
-              <div style={{fontSize:'10px',fontWeight:'bold',color:'#e2e8f0'}}>{s.value}</div>
-              <div style={{fontSize:'8px',color:'#475569'}}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'14px',marginBottom:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <div style={{fontSize:'10px',color:'#475569',fontWeight:'bold'}}>BAROMETRIC PRESSURE</div>
-          <div style={{fontSize:'10px',color:pressureColor,fontWeight:'bold'}}>{pressureTrend==='Rising'?'↑':pressureTrend==='Falling'?'↓':'→'} {pressureTrend}</div>
-        </div>
-        <div style={{display:'flex',alignItems:'flex-end',gap:'2px',height:'40px',marginBottom:'6px'}}>
-          {PRESSURE.map((p,i)=><div key={i} style={{flex:1,background:i===idx?'#0ea5e9':'#1e293b',borderRadius:'2px 2px 0 0',height:`${(p-1005)*8}px`}}/>)}
-        </div>
-        <div style={{fontSize:'11px',color:'#94a3b8'}}>Current: <span style={{color:'#e2e8f0',fontWeight:'bold'}}>{PRESSURE[idx]} hPa</span> · {pressureTrend==='Falling'?'Feeding likely to increase':'Good conditions'}</div>
-      </div>
-      <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'14px',marginBottom:'12px'}}>
-        <div style={{fontSize:'10px',color:'#475569',fontWeight:'bold',marginBottom:'10px'}}>TIDES TODAY</div>
-        {TIDE.map((t,i)=>(
-          <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 0',borderBottom:i<TIDE.length-1?'1px solid #0f172a':'none'}}>
-            <div style={{fontSize:'16px'}}>{t.type==='HIGH'?'🌊':'〰️'}</div>
-            <div style={{flex:1}}><div style={{fontSize:'12px',fontWeight:'bold',color:t.type==='HIGH'?'#0ea5e9':'#64748b'}}>{t.type} TIDE</div><div style={{fontSize:'10px',color:'#475569'}}>{t.time}</div></div>
-            <div style={{fontSize:'12px',fontWeight:'bold',color:'#e2e8f0'}}>{t.height}</div>
+function validCoordinates(lat?: number, lng?: number) {
+  return typeof lat === 'number' && typeof lng === 'number' &&
+    Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function isNwsUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'api.weather.gov';
+  } catch {
+    return false;
+  }
+}
+
+function isPeriod(value: unknown): value is Period {
+  if (!value || typeof value !== 'object') return false;
+  const period = value as Partial<Period>;
+  return typeof period.startTime === 'string' && typeof period.endTime === 'string' &&
+    typeof period.temperature === 'number' && Number.isFinite(period.temperature) &&
+    typeof period.temperatureUnit === 'string' && typeof period.windSpeed === 'string' &&
+    typeof period.windDirection === 'string' && typeof period.shortForecast === 'string';
+}
+
+function displayTemperature(period: Period) {
+  const fahrenheit = period.temperatureUnit === 'C' ? period.temperature * 9 / 5 + 32 : period.temperature;
+  return `${Math.round(fahrenheit)}°F`;
+}
+
+function displayHour(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'Unknown'
+    : date.toLocaleTimeString('en-US', { hour: 'numeric' });
+}
+
+function weatherIcon(forecast: string) {
+  const text = forecast.toLowerCase();
+  if (text.includes('thunder')) return '⛈';
+  if (text.includes('rain') || text.includes('shower')) return '🌧';
+  if (text.includes('snow')) return '❄️';
+  if (text.includes('cloud')) return '☁️';
+  if (text.includes('wind')) return '💨';
+  return '☀️';
+}
+
+export default function WeatherTab({ lat, lng, locationLabel }: Props) {
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(() => validCoordinates(lat, lng));
+  const [error, setError] = useState('');
+  const [clock, setClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setClock(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!validCoordinates(lat, lng)) return;
+
+    const controller = new AbortController();
+
+    const load = async () => {
+      await Promise.resolve();
+      setLoading(true);
+      setError('');
+      try {
+        const pointResponse = await fetch(
+          `https://api.weather.gov/points/${lat!.toFixed(4)},${lng!.toFixed(4)}`,
+          { headers: NWS_HEADERS, cache: 'no-store', signal: controller.signal },
+        );
+        if (!pointResponse.ok) throw new Error('NWS location lookup failed');
+        const point = await pointResponse.json() as { properties?: { forecastHourly?: unknown } };
+        if (!isNwsUrl(point.properties?.forecastHourly)) {
+          throw new Error('NWS returned an invalid forecast URL');
+        }
+
+        const response = await fetch(point.properties.forecastHourly, {
+          headers: NWS_HEADERS,
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('NWS forecast request failed');
+        const payload = await response.json() as {
+          properties?: { periods?: unknown[]; updateTime?: string; generatedAt?: string };
+        };
+        const next = Array.isArray(payload.properties?.periods)
+          ? payload.properties.periods.filter(isPeriod)
+          : [];
+        if (!next.length) throw new Error('NWS returned no usable forecast periods');
+        setPeriods(next);
+        setUpdatedAt(payload.properties?.updateTime ?? payload.properties?.generatedAt ?? null);
+      } catch (reason) {
+        if (!controller.signal.aborted) {
+          setPeriods([]);
+          setError(reason instanceof Error ? reason.message : 'Unable to load NWS forecast');
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    void load();
+    return () => controller.abort();
+  }, [lat, lng]);
+
+  if (!validCoordinates(lat, lng)) {
+    return <p style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Provider weather is unavailable until a spot or device location is selected.</p>;
+  }
+  if (loading) return <p style={{ padding: 16, color: '#60a5fa', fontSize: 12 }}>Loading NOAA/NWS forecast…</p>;
+  if (error || !periods.length) {
+    return <p role="alert" style={{ padding: 16, color: '#fca5a5', fontSize: 12 }}>{error || 'NWS forecast unavailable.'}</p>;
+  }
+
+  const current = periods.find((period) =>
+    Date.parse(period.startTime) <= clock && clock < Date.parse(period.endTime),
+  ) ?? periods[0];
+
+  return (
+    <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', marginBottom: 4 }}>Provider Weather</div>
+      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
+      <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>Forecast data, not a live observation. Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'time unavailable'}.</div>
+      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: '#e2e8f0' }}>{displayTemperature(current)}</div>
+            <div style={{ fontSize: 12, color: '#cbd5e1' }}>{current.shortForecast}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{current.windSpeed} {current.windDirection}</div>
           </div>
-        ))}
-        <div style={{fontSize:'10px',color:'#475569',marginTop:'8px'}}>💡 Best fishing 1hr before/after tide changes</div>
+          <div style={{ fontSize: 42 }}>{weatherIcon(current.shortForecast)}</div>
+        </div>
       </div>
-      <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:'12px',padding:'14px'}}>
-        <div style={{fontSize:'10px',color:'#475569',fontWeight:'bold',marginBottom:'10px'}}>HOURLY FORECAST</div>
-        <div style={{display:'flex',gap:'8px',overflowX:'auto',paddingBottom:'4px'}}>
-          {HOURS.map((h,i)=>(
-            <div key={h} style={{flexShrink:0,background:i===idx?'rgba(14,165,233,0.15)':'#0f172a',border:`1px solid ${i===idx?'#0ea5e9':'#1e293b'}`,borderRadius:'8px',padding:'8px',textAlign:'center',minWidth:'44px'}}>
-              <div style={{fontSize:'9px',color:i===idx?'#0ea5e9':'#475569',marginBottom:'4px'}}>{h}</div>
-              <div style={{fontSize:'12px',marginBottom:'4px'}}>{RAIN[i]>20?'🌧':RAIN[i]>5?'🌦':'☀️'}</div>
-              <div style={{fontSize:'10px',fontWeight:'bold',color:'#e2e8f0'}}>{TEMPS[i]}°</div>
-              <div style={{fontSize:'9px',color:'#334155'}}>{WINDS[i]}mph</div>
+      <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: 12, padding: 14 }}>
+        <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 10 }}>NWS HOURLY FORECAST</div>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {periods.slice(0, 12).map((period) => (
+            <div key={period.startTime} style={{ flexShrink: 0, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 8, textAlign: 'center', minWidth: 66 }}>
+              <div style={{ fontSize: 9, color: '#94a3b8' }}>{displayHour(period.startTime)}</div>
+              <div style={{ fontSize: 18, margin: '4px 0' }}>{weatherIcon(period.shortForecast)}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>{displayTemperature(period)}</div>
+              <div style={{ fontSize: 9, color: '#64748b' }}>{period.shortForecast}</div>
             </div>
           ))}
         </div>
