@@ -7,6 +7,9 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS role text;
 
 ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS role text;
+
+ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_role_check;
 
 UPDATE public.profiles
