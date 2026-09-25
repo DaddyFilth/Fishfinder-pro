@@ -7,15 +7,12 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function AuthAccountButton() {
   const [user, setUser] = useState<User | null>(null)
-  const [ready, setReady] = useState(() => false)
+  const [ready, setReady] = useState(() => createClient() === null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
-    if (!supabase) {
-      setReady(true)
-      return
-    }
+    if (!supabase) return
 
     let mounted = true
     supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
