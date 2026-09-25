@@ -6,8 +6,11 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const REMOTE = 'https://seamcast-spots.vercel.app/api/spots';
+const PROVIDER_CACHE_TTL_MS = 60_000;
 
 type AnyRec = Record<string, unknown>;
+
+const providerCache = new Map<string, { expiresAt: number; payload: AnyRec }>();
 
 function num(v: unknown, fallback: number): number {
   const n = typeof v === 'number' ? v : Number(v);
@@ -27,6 +30,7 @@ function normalize(payload: unknown): AnyRec {
   const root = (payload && typeof payload === 'object' ? payload : {}) as AnyRec;
   const rawList =
     (Array.isArray(root.spots) && root.spots) ||
+    (Array.isArray(root.microSpots) && root.microSpots) ||
     (Array.isArray(payload) ? payload : []);
 
   const spots = (rawList as AnyRec[])
@@ -42,6 +46,8 @@ function normalize(payload: unknown): AnyRec {
         name,
         lat: itemLat,
         lng: itemLng,
+        water_type: item.water_type ?? 'freshwater',
+        spot_type: item.spot_type ?? 'lake',
         source: 'seamcast-spots',
         live: false,
         data_mode: 'provider',
@@ -98,30 +104,55 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
   }
 
+  const cacheKey = `${lat.toFixed(4)}:${lon.toFixed(4)}`;
+  const cached = providerCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return NextResponse.json(cached.payload, {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+        'x-fishfinder-data-mode': String(cached.payload.data_mode),
+      },
+    });
+  }
+
   try {
     const res = await fetch(`${REMOTE}?lat=${lat}&lon=${lon}`, {
       headers: { Accept: 'application/json' },
-      cache: 'no-store',
+      next: { revalidate: 30 },
     });
     if (!res.ok) {
-      return NextResponse.json(
-        { error: 'Remote spots API failed.', live: false },
-        { status: 502 },
-      );
+      if (cached) {
+        const stale = { ...cached.payload, data_mode: 'cached', source: 'seamcast-spots-cache' };
+        return NextResponse.json(stale, {
+          headers: {
+            'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+            'x-fishfinder-data-mode': 'cached',
+          },
+        });
+      }
+      return NextResponse.json(normalize(DEFAULT_SPOTS), {
+        headers: { 'Cache-Control': 'private, max-age=30', 'x-fishfinder-data-mode': 'fallback' },
+      });
     }
-    const text = await res.text();
-    const json = JSON.parse(text) as unknown;
-    const normalized = normalize(json);
+    const normalized = normalize(await res.json());
+    if (normalized.data_mode === 'provider') {
+      providerCache.set(cacheKey, { expiresAt: Date.now() + PROVIDER_CACHE_TTL_MS, payload: normalized });
+    }
     return NextResponse.json(normalized, {
       headers: {
-        'Cache-Control': 'no-store',
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
         'x-fishfinder-data-mode': String(normalized.data_mode),
       },
     });
   } catch {
-    return NextResponse.json(
-      { error: 'Unable to load fishing spots.', live: false },
-      { status: 502 },
-    );
+    if (cached) {
+      const stale = { ...cached.payload, data_mode: 'cached', source: 'seamcast-spots-cache' };
+      return NextResponse.json(stale, {
+        headers: { 'Cache-Control': 'private, max-age=30', 'x-fishfinder-data-mode': 'cached' },
+      });
+    }
+    return NextResponse.json(normalize(DEFAULT_SPOTS), {
+      headers: { 'Cache-Control': 'private, max-age=30', 'x-fishfinder-data-mode': 'fallback' },
+    });
   }
 }
