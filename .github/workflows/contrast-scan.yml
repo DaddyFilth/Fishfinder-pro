@@ -34,7 +34,7 @@ jobs:
       - name: Contrast Scan Action
         id: contrast_scan
         if: env.CONTRAST_API_KEY != '' && env.CONTRAST_ORGANIZATION_ID != '' && env.CONTRAST_AUTH_HEADER != '' && env.CONTRAST_ARTIFACT_PATH != ''
-        uses: Contrast-Security-OSS/contrastscan-action@7352a45d9678ec8a434cf061b07ffb51c1e351a1
+        uses: Contrast-Security-OSS/contrastscan-action@339c87f4614b05aae7373929c56573c1bf362c02
         with:
           artifact: ${{ env.CONTRAST_ARTIFACT_PATH }}
           apiKey: ${{ env.CONTRAST_API_KEY }}
