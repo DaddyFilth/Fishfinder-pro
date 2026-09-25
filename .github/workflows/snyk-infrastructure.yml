@@ -43,7 +43,7 @@ jobs:
         # In this case we want to upload the issues to GitHub Code Scanning
         continue-on-error: true
         if: env.SNYK_TOKEN != ''
-        uses: snyk/actions/iac@14818c4695ecc4045f33c9cee9e795a788711ca4
+        uses: snyk/actions/iac@12140f4059e244892ae643824a95459a102120dd
         with:
           # Add the path to the configuration file that you would like to test.
           # For example `deployment.yaml` for a Kubernetes deployment manifest
