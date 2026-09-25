@@ -81,6 +81,7 @@ function ResetPasswordContent() {
       return
     }
     setMessage('Your password has been updated. You can now log in.')
+    router.refresh()
     setTimeout(() => router.replace('/auth/login'), 900)
   }
 

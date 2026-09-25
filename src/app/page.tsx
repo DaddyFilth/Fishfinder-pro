@@ -111,7 +111,6 @@ type SpotLoadResult = {
 
   type UnitPreference = 'imperial' | 'metric'
   type AutoRefreshPreference = 'off' | '15' | '30' | '60'
-  type NotificationState = 'loading' | 'unsupported' | NotificationPermission
 
   const BASE_STYLE_OPTIONS = [
     { id: 'explore', label: 'Dark / Explore' },
@@ -129,8 +128,7 @@ type SpotLoadResult = {
     units: 'fishfinder.units',
     mapStyle: 'fishfinder.map-style',
     autoRefresh: 'fishfinder.auto-refresh',
-    notifications: 'fishfinder.notifications.enabled',
-  } as const
+    } as const
 
   function readStoredValue(key: string, fallback: string) {
     if (typeof window === 'undefined') return fallback
@@ -284,8 +282,6 @@ export default function MobilePage() {
   const [baseLayer, setBaseLayer] = useState<BaseLayer>('explore');
   const [unitsPreference, setUnitsPreference] = useState<UnitPreference>('imperial');
   const [autoRefreshPreference, setAutoRefreshPreference] = useState<AutoRefreshPreference>('off');
-  const [notificationState, setNotificationState] = useState<NotificationState>('loading');
-  const [notificationsPreferred, setNotificationsPreferred] = useState(false);
   const [mapLayers, setMapLayers] = useState<MapLayers>({
     hotspots: true,
     depth: false,
@@ -316,16 +312,7 @@ export default function MobilePage() {
         : 'off',
     );
 
-    setNotificationsPreferred(
-      readStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false') === 'true',
-    );
 
-    if (!('Notification' in window)) {
-      setNotificationState('unsupported');
-      return;
-    }
-
-    setNotificationState(Notification.permission);
     }, 0);
     return () => clearTimeout(timer);
   }, []);
@@ -484,47 +471,6 @@ export default function MobilePage() {
     };
   }, [tab, sheetOpen]);
 
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      setNotificationState('unsupported');
-      setNotificationsPreferred(false);
-      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
-      return;
-    }
-
-    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-      setNotificationState('denied');
-      setNotificationsPreferred(false);
-      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
-      return;
-    }
-
-    try {
-      const permission = Notification.permission === 'denied'
-        ? Notification.permission
-        : await Notification.requestPermission();
-      setNotificationState(permission);
-
-      const enabled = permission === 'granted';
-      setNotificationsPreferred(enabled);
-      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, String(enabled));
-
-      if (enabled && 'serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration('/');
-        if (registration) {
-          await registration.showNotification('SeamCast notifications enabled', {
-            body: 'Browser permission is enabled. This app does not currently schedule live fishing alerts.',
-            icon: '/icons/icon-192.png',
-            tag: 'seamcast-notifications-enabled',
-          });
-        }
-      }
-    } catch {
-      setNotificationState('denied');
-      setNotificationsPreferred(false);
-      saveStoredValue(SETTINGS_STORAGE_KEYS.notifications, 'false');
-    }
-  };
 
   const locationSettingStatus = (
     locationStatus === 'locating' ? 'LOCATING' :
@@ -891,34 +837,9 @@ export default function MobilePage() {
               </div>
             </div>
             <SettingCard
-              icon="🔔"
-              title="Notifications"
-              description="Browser permission only. Server-sent hot-bite alerts require VAPID keys, subscription storage, and review."
-              status={notificationState === 'unsupported' ? 'UNAVAILABLE' : notificationState.toUpperCase()}
-            >
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <PreferenceButton
-                  label={notificationsPreferred ? 'Browser permission on' : 'Enable browser permission'}
-                  selected={notificationsPreferred && notificationState === 'granted'}
-                  onSelect={() => void requestNotificationPermission()}
-                />
-              </div>
-              {notificationState === 'denied' && (
-                <p style={{ margin: '8px 0 0', color: '#fca5a5', fontSize: '10px' }}>
-                  Browser permission is blocked. Enable it in Android browser/site settings.
-                </p>
-              )}
-              {notificationState === 'unsupported' && (
-                <p style={{ margin: '8px 0 0', color: '#fca5a5', fontSize: '10px' }}>
-                  This browser or app shell does not expose the Notifications API.
-                </p>
-              )}
-            </SettingCard>
-
-            <SettingCard
               icon="📍"
               title="Location"
-              description="Uses browser GPS only for local nearby-water sorting. Coordinates stay on this device by default."
+              description="Uses your device location permission for nearby-water sorting. Coordinates stay on this device by default."
               status={locationSettingStatus}
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

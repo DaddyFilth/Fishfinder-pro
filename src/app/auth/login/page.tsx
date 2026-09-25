@@ -37,13 +37,19 @@ function bannerStyle(background: string, color: string) {
 
 function mapAuthError(mode: Mode, message: string) {
   const lower = message.toLowerCase()
-  if (lower.includes('already registered') || lower.includes('already exists')) {
+  if (lower.includes('confirm')) {
+    return new Error('Please confirm your email before logging in.')
+  }
+  if (lower.includes('rate') || lower.includes('too many')) {
+    return new Error('Too many attempts. Please try again later.')
+  }
+  if (mode === 'signup' && (lower.includes('already registered') || lower.includes('already exists'))) {
     return new Error('An account with this email already exists. Try logging in instead.')
   }
-  if (mode === 'login') {
-    return new Error('Invalid email or password.')
+  if (mode === 'login' || mode === 'signup') {
+    return new Error(mode === 'login' ? 'Invalid email or password.' : 'Unable to create the account. Check your details and try again.')
   }
-  return new Error(String(message).slice(0, 180) || 'Unable to create the account.')
+  return new Error('Authentication failed. Please try again.')
 }
 
 export default function LoginPage() {
