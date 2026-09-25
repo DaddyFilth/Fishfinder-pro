@@ -12,7 +12,10 @@ export default function AuthAccountButton() {
 
   useEffect(() => {
     const supabase = createClient()
-    if (!supabase) return
+    if (!supabase) {
+      setReady(true)
+      return
+    }
 
     let mounted = true
     supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
