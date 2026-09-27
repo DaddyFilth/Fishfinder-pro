@@ -8,9 +8,18 @@ import {
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { enforceRateLimit } from '@/lib/security';
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+type EnvironmentalSpot = {
+  lat: number;
+  lng: number;
+  water_type?: string | null;
+  usgs_site_id?: string | null;
+  noaa_station_id?: string | null;
+};
 
 export async function GET(
   _req: NextRequest,
@@ -32,34 +41,37 @@ export async function GET(
 
   const { id } = parsed.data;
   const supabase = getSupabaseAdmin();
+  let spot: EnvironmentalSpot | null = null;
 
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Condition storage is not configured; no conditions were generated.', data_mode: 'unavailable' },
-      { status: 503, headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'unavailable' } },
-    );
+  if (supabase) {
+    const { data, error: spotErr } = await supabase
+      .from('spots')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!spotErr && data) spot = data;
   }
 
-  const { data: spot, error: spotErr } = await supabase
-    .from('spots')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Provider weather remains available for bundled/public pins even when the
+  // optional snapshot database is unavailable in preview or offline mode.
+  spot ??= DEFAULT_SPOTS.find((candidate) => candidate.id === id) ?? null;
 
-  if (spotErr || !spot) {
+  if (!spot) {
     return NextResponse.json(
       { error: 'Spot not found', data_mode: 'unavailable' },
       { status: 404 },
     );
   }
 
-  const { data: cached, error: cacheReadError } = await supabase
-    .from('environmental_snapshots')
-    .select('*')
-    .eq('spot_id', id)
-    .order('captured_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: cached, error: cacheReadError } = supabase
+    ? await supabase
+      .from('environmental_snapshots')
+      .select('*')
+      .eq('spot_id', id)
+      .order('captured_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    : { data: null, error: null };
   const cachedIsFallback =
     cached?.data_mode === 'fallback' ||
     (Array.isArray(cached?.data_sources) && cached.data_sources.some((source: unknown) =>
@@ -236,11 +248,13 @@ export async function GET(
     data_sources: dataSources,
   };
 
-  const { data: inserted, error: insertErr } = await supabase
-    .from('environmental_snapshots')
-    .insert(snapshot)
-    .select()
-    .single();
+  const { data: inserted, error: insertErr } = supabase
+    ? await supabase
+      .from('environmental_snapshots')
+      .insert(snapshot)
+      .select()
+      .single()
+    : { data: null, error: new Error('Snapshot storage unavailable') };
 
   if (insertErr) {
     console.warn('[API] snapshot cache write error', {

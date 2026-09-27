@@ -48,6 +48,24 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+.weather-card-enter {
+  animation: weather-card-enter 420ms ease-out both;
+}
+
+.weather-icon-float {
+  animation: weather-icon-float 4s ease-in-out infinite;
+}
+
+@keyframes weather-card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes weather-icon-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+}
+
 .leaflet-container {
   height: 100% !important;
   width: 100% !important;

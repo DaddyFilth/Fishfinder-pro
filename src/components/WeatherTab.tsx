@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CloudSun, Droplets, RefreshCw, Wind } from 'lucide-react';
 
 type Props = { lat?: number; lng?: number; locationLabel?: string };
 type Period = {
@@ -49,16 +50,6 @@ function displayHour(value: string) {
   return Number.isNaN(date.getTime())
     ? 'Unknown'
     : date.toLocaleTimeString('en-US', { hour: 'numeric' });
-}
-
-function weatherIcon(forecast: string) {
-  const text = forecast.toLowerCase();
-  if (text.includes('thunder')) return '⛈';
-  if (text.includes('rain') || text.includes('shower')) return '🌧';
-  if (text.includes('snow')) return '❄️';
-  if (text.includes('cloud')) return '☁️';
-  if (text.includes('wind')) return '💨';
-  return '☀️';
 }
 
 export default function WeatherTab({ lat, lng, locationLabel }: Props) {
@@ -123,11 +114,11 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
   }, [lat, lng]);
 
   if (!validCoordinates(lat, lng)) {
-    return <p style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Provider weather is unavailable until a spot or device location is selected.</p>;
+    return <div style={{ padding: 20, color: '#94a3b8', fontSize: 13 }}>Select a spot to see live NOAA weather.</div>;
   }
-  if (loading) return <p style={{ padding: 16, color: '#60a5fa', fontSize: 12 }}>Loading NOAA/NWS forecast…</p>;
+  if (loading) return <div className="weather-card-enter" style={{ padding: 20, color: '#7dd3fc', fontSize: 12 }}><RefreshCw size={15} className="weather-icon-float" style={{ verticalAlign: 'middle', marginRight: 8 }} />Reading NOAA forecast…</div>;
   if (error || !periods.length) {
-    return <p role="alert" style={{ padding: 16, color: '#fca5a5', fontSize: 12 }}>{error || 'NWS forecast unavailable.'}</p>;
+    return <div role="alert" style={{ padding: 20, color: '#fca5a5', fontSize: 12 }}>Live NOAA weather is unavailable right now. No estimated data is shown.</div>;
   }
 
   const current = periods.find((period) =>
@@ -135,31 +126,24 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
   ) ?? periods[0];
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', marginBottom: 4 }}>Provider Weather</div>
-      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
-      <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>Forecast data, not a live observation. Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'time unavailable'}.</div>
-      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#e2e8f0' }}>{displayTemperature(current)}</div>
-            <div style={{ fontSize: 12, color: '#cbd5e1' }}>{current.shortForecast}</div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{current.windSpeed} {current.windDirection}</div>
-          </div>
-          <div style={{ fontSize: 42 }}>{weatherIcon(current.shortForecast)}</div>
-        </div>
+    <div style={{ height: '100%', overflowY: 'auto', background: 'linear-gradient(180deg, #071827 0%, #060d1a 48%)', padding: 16 }}>
+      <div className="weather-card-enter" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <CloudSun size={22} color="#67e8f9" aria-hidden="true" />
+        <div style={{ fontSize: 16, fontWeight: 800, color: '#e2f7ff' }}>Live conditions</div>
       </div>
-      <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: 12, padding: 14 }}>
-        <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 10 }}>NWS HOURLY FORECAST</div>
+      <div style={{ fontSize: 11, color: '#7dd3fc', marginBottom: 5 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
+      <div style={{ fontSize: 10, color: '#78909c', marginBottom: 14 }}>Forecast data, not a live observation · Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'recently'}</div>
+      <div className="weather-card-enter" style={{ background: 'linear-gradient(135deg, #12334a, #0c1b2a)', border: '1px solid #24536a', borderRadius: 16, padding: 18, marginBottom: 12, boxShadow: '0 14px 32px rgba(0,0,0,.2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+          <div><div style={{ fontSize: 42, lineHeight: 1, fontWeight: 850, color: '#f0f9ff' }}>{displayTemperature(current)}</div><div style={{ fontSize: 13, color: '#d5f3ff', marginTop: 8 }}>{current.shortForecast}</div></div>
+          <div className="weather-icon-float" style={{ color: '#a5f3fc' }} aria-hidden="true"><CloudSun size={58} strokeWidth={1.4} /></div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, marginTop: 18, color: '#a9d8e9', fontSize: 11 }}><span><Wind size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{current.windSpeed} {current.windDirection}</span><span><Droplets size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />NOAA data</span></div>
+      </div>
+      <div style={{ background: '#09131f', border: '1px solid #1c3442', borderRadius: 14, padding: 14 }}>
+        <div style={{ fontSize: 10, color: '#7dd3fc', fontWeight: 800, letterSpacing: '.08em', marginBottom: 10 }}>NEXT 12 HOURS</div>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {periods.slice(0, 12).map((period) => (
-            <div key={period.startTime} style={{ flexShrink: 0, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 8, textAlign: 'center', minWidth: 66 }}>
-              <div style={{ fontSize: 9, color: '#94a3b8' }}>{displayHour(period.startTime)}</div>
-              <div style={{ fontSize: 18, margin: '4px 0' }}>{weatherIcon(period.shortForecast)}</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>{displayTemperature(period)}</div>
-              <div style={{ fontSize: 9, color: '#64748b' }}>{period.shortForecast}</div>
-            </div>
-          ))}
+          {periods.slice(0, 12).map((period) => (<div key={period.startTime} style={{ flexShrink: 0, background: '#0d1c29', border: '1px solid #1d3a49', borderRadius: 10, padding: 9, textAlign: 'center', minWidth: 72 }}><div style={{ fontSize: 9, color: '#8fb2c0' }}>{displayHour(period.startTime)}</div><div style={{ color: '#a5f3fc', margin: '6px 0' }} aria-hidden="true"><CloudSun size={19} /></div><div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0' }}>{displayTemperature(period)}</div><div style={{ fontSize: 9, color: '#78909c', marginTop: 4, whiteSpace: 'normal' }}>{period.shortForecast}</div></div>))}
         </div>
       </div>
     </div>
