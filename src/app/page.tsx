@@ -34,7 +34,7 @@ type DataMode =
 
 interface SpotCondition {
   fishing_score?: number | null;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable';
 }
 
 function resolveSpotDataMode(
@@ -509,6 +509,12 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator && locationStatus === 'idle') {
+      startLocationTracking();
+    }
+  }, []);
+
+  useEffect(() => {
     if (!authReady || !isAuthenticated || !spots.length) return;
 
     // Keep provider fan-out bounded. The map can contain many pins, but loading
@@ -522,15 +528,15 @@ export default function MobilePage() {
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
 
       fetch(`/api/spots/${spot.id}/conditions`)
-        .then(async (res) => {
-          if (!res.ok) {
-            setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
-            setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
-            return;
-          }
+  .then(async (res) => {
+  const data = (await res.json().catch(() => ({}))) as SpotCondition;
+  if (!res.ok) {
+  setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
+  setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
+  return;
+  }
 
-          const data = (await res.json()) as SpotCondition;
-          const mode = data.data_mode ?? 'fallback';
+  const mode = data.data_mode ?? 'fallback';
           const fishingScore = mode === 'provider' && typeof data.fishing_score === 'number'
             ? data.fishing_score
             : 0;

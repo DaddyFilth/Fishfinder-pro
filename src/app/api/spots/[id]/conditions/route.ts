@@ -25,7 +25,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const limited = enforceRateLimit(_req, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
+  const limited = enforceRateLimit(_req, { name: 'spot-conditions', limit: 180, windowMs: 60_000 });
   if (limited) return limited;
 
   const parsed = z
@@ -185,14 +185,15 @@ export async function GET(
   if (noProviderData) {
     return NextResponse.json(
       {
-        error:
-          'Provider environmental data is temporarily unavailable; no conditions were generated.',
+        spot_id: id,
+        fishing_score: null,
         data_mode: 'unavailable',
+        warning: 'Live provider data is temporarily unavailable. The spot remains available without an estimated score.',
       },
       {
-        status: 503,
+        status: 200,
         headers: {
-          'Cache-Control': 'no-store',
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
           'x-fishfinder-data-mode': 'unavailable',
         },
       },
