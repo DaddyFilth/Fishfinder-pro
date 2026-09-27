@@ -511,7 +511,10 @@ export default function MobilePage() {
   useEffect(() => {
     if (!authReady || !isAuthenticated || !spots.length) return;
 
-    const visibleSpots = filterSpots(spots, mapFilter);
+    // Keep provider fan-out bounded. The map can contain many pins, but loading
+    // every condition endpoint at once trips upstream 429 limits and makes the
+    // map look like it is failing while a spot is being opened.
+    const visibleSpots = filterSpots(spots, mapFilter).slice(0, 6);
     visibleSpots.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
