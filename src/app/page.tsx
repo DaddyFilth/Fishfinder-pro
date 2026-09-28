@@ -379,8 +379,7 @@ export default function MobilePage() {
       const signedIn = Boolean(session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Keep public map data available across auth changes; only account data is gated.
-      void loadSpotData(false);
+      // Spot discovery is public; keep condition requests stable across auth changes.
       if (!signedIn) {
         setSelectedSpot(null);
         setConditionScores({});
