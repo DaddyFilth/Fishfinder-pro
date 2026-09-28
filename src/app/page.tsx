@@ -290,6 +290,7 @@ export default function MobilePage() {
     waypoints: true,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
+  const conditionRequestGenerationRef = useRef(0);
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
@@ -377,13 +378,12 @@ export default function MobilePage() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
+      conditionRequestGenerationRef.current += 1;
       setIsAuthenticated(signedIn);
       setAuthReady(true);
       // Spot discovery is public; keep condition requests stable across auth changes.
       if (!signedIn) {
         setSelectedSpot(null);
-        setConditionScores({});
-        setConditionModes({});
       }
     });
 
@@ -511,7 +511,8 @@ export default function MobilePage() {
   useEffect(() => {
     if (!spots.length) return;
 
-    const visibleSpots = filterSpots(spots, mapFilter);
+    const visibleSpots = filterSpots(spots, mapFilter).slice(0, 60);
+    const requestGeneration = conditionRequestGenerationRef.current;
     visibleSpots.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
@@ -520,6 +521,7 @@ export default function MobilePage() {
 
       fetch(`/api/spots/${spot.id}/conditions`)
         .then(async (res) => {
+          if (requestGeneration !== conditionRequestGenerationRef.current) return;
           if (!res.ok) {
             setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
             setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
@@ -527,6 +529,7 @@ export default function MobilePage() {
           }
 
           const data = (await res.json()) as SpotCondition;
+          if (requestGeneration !== conditionRequestGenerationRef.current) return;
           const mode = data.data_mode ?? 'fallback';
           const fishingScore = mode === 'provider' && typeof data.fishing_score === 'number'
             ? data.fishing_score
@@ -535,11 +538,13 @@ export default function MobilePage() {
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
         .catch(() => {
+          if (requestGeneration !== conditionRequestGenerationRef.current) return;
           setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
           setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
         })
         .finally(() => {
           scoreFetchInFlight.current[spot.id] = false;
+          if (requestGeneration !== conditionRequestGenerationRef.current) return;
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
     });
