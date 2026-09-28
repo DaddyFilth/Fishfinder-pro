@@ -290,7 +290,6 @@ export default function MobilePage() {
     waypoints: true,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
-  const conditionRequestGenerationRef = useRef(0);
   const refreshInFlightRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
@@ -510,8 +509,12 @@ export default function MobilePage() {
   useEffect(() => {
     if (!spots.length) return;
 
-    const visibleSpots = filterSpots(spots, mapFilter);
-    visibleSpots.forEach((spot) => {
+  const filteredSpotsForConditions = filterSpots(spots, mapFilter);
+  const spotsForConditions = (nearbyMode && coordinates
+    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
+    : filteredSpotsForConditions
+  ).slice(0, 60);
+  spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
@@ -542,7 +545,7 @@ export default function MobilePage() {
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
     });
-  }, [authReady, isAuthenticated, spots, mapFilter, conditionScores]);
+  }, [authReady, isAuthenticated, spots, mapFilter, nearbyMode, coordinates, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
