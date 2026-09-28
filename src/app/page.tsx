@@ -344,12 +344,13 @@ export default function MobilePage() {
   useEffect(() => {
   const supabase = createClient();
   let mounted = true;
+  // Spot discovery is public; start it without waiting for auth initialization.
+  void loadSpotData(false);
   if (!supabase) {
   queueMicrotask(() => {
   if (!mounted) return;
   setIsAuthenticated(false);
   setAuthReady(true);
-  void loadSpotData(false);
   });
   return () => {
   mounted = false;
@@ -364,12 +365,10 @@ export default function MobilePage() {
       setIsAuthenticated(signedIn);
       setAuthReady(true);
       // Spot discovery is public; authentication is only required for account features.
-      void loadSpotData(false);
   } catch {
   if (!mounted) return;
   setIsAuthenticated(false);
   setAuthReady(true);
-  void loadSpotData(false);
   }
   };
 
@@ -640,12 +639,6 @@ export default function MobilePage() {
                 setSelectedSpot(null);
               }}
             />
-
-            {!authReady && (
-              <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.48)', backdropFilter:'blur(3px)' }}>
-                <div style={{ background:'rgba(7,17,27,0.96)', border:'1px solid #1d3442', borderRadius:'14px', padding:'18px 20px', color:'#cbd5e1', fontSize:'13px', fontWeight:700 }}>Checking account…</div>
-              </div>
-            )}
 
 
             {/* Floating spot count badge */}
