@@ -349,6 +349,7 @@ export default function MobilePage() {
   if (!mounted) return;
   setIsAuthenticated(false);
   setAuthReady(true);
+  void loadSpotData(false);
   });
   return () => {
   mounted = false;
@@ -368,7 +369,7 @@ export default function MobilePage() {
   if (!mounted) return;
   setIsAuthenticated(false);
   setAuthReady(true);
-  setSpots([]);
+  void loadSpotData(false);
   }
   };
 
