@@ -559,7 +559,6 @@ export default function FishingMap({
         <MapDataSourceBadge mode={spotDataMode} />
 
       <MapContainer
-        key={baseLayer}
         center={[OKLAHOMA_MAP_VIEW.center.lat, OKLAHOMA_MAP_VIEW.center.lng]}
           zoom={OKLAHOMA_MAP_VIEW.zoom}
           minZoom={MAP_MIN_ZOOM}
