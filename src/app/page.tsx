@@ -557,7 +557,7 @@ export default function MobilePage() {
 
           const data = (await res.json()) as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-          const fishingScore = mode === 'provider' && typeof data.fishing_score === 'number'
+          const fishingScore = typeof data.fishing_score === 'number'
             ? data.fishing_score
             : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
@@ -578,8 +578,8 @@ export default function MobilePage() {
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
   const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
   const rankedSpots = useMemo(
-    () => rankSpots(visibleSpots, conditionScores),
-    [visibleSpots, conditionScores],
+    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
+    [visibleSpots, conditionModes, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
