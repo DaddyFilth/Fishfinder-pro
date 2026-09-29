@@ -71,7 +71,12 @@ export async function POST(request: NextRequest) {
     const candidates = parsed.data.candidates
       .filter((candidate) => distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng) <= input.radiusMiles * 1.35)
       .filter((candidate, index, list) => list.findIndex((other) => other.name.toLowerCase() === candidate.name.toLowerCase()) === index)
-      .map((candidate) => ({ ...candidate, distance_miles: Math.round(distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng)) }));
+      .map((candidate) => ({ 
+        ...candidate, 
+        source_url: undefined, 
+        source_title: 'AI suggestion (unverified)', 
+        distance_miles: Math.round(distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng)) 
+      }));
     return NextResponse.json({ candidates, source: 'ai-discovered', verified: false, searched_at: new Date().toISOString() }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('[spot-discovery] provider failed:', error);
