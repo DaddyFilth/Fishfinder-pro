@@ -1,6 +1,6 @@
+'use client';
 import { createClient } from '@/lib/supabase/client';
 import { ProLogger } from '@/lib/logbook/pro-logger';
-'use client';
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
 import { SPECIES_NAMES } from '@/lib/speciesCatalog';
@@ -52,8 +52,19 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
     };
 
     try {
-      // Use ProLogger for Sensor Integration, Gamification, and Intelligence
-      const { data: { user } } = await createClient().auth.getUser(); if (!user) throw new Error('Auth required'); const result = await ProLogger.logCatchPro(user.id, entryData);
+      // Use the server-side API route instead of ProLogger directly
+      const response = await fetch('/api/pro-logger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ catchData: entryData }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to log catch');
+      }
+
+      const result = await response.json();
       
       const entry: CatchEntry = {
         id: result.catchId,
@@ -70,9 +81,9 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
       if (result.achievementsUnlocked.length > 0) {
         alert(`🏆 Achievement Unlocked: ${result.achievementsUnlocked.join(', ')}`);
       }
-    } catch(e) { 
+    } catch(e: any) { 
       console.error(e); 
-      alert('Error logging catch. Please try again.');
+      alert(`Error logging catch: ${e.message}. Please try again.`);
     }
     finally { setSaving(false); }
   };

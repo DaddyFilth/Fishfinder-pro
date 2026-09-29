@@ -1,5 +1,0 @@
-models:
-  llama-3.2-1b:
-    cmd: |
-      llama-cli server --port ${PORT} --model /root/Fishfinder-pro/llama-3.2-1b.gguf --ctx-size 2048 --host 127.0.0.1
-
