@@ -35,8 +35,8 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
     const length = form.length_in ? Number(form.length_in) : null;
     if (!form.species || (weight !== null && (!Number.isFinite(weight) || weight <= 0)) || (length !== null && (!Number.isFinite(length) || length <= 0))) return;
     setSaving(true);
-    const entry: CatchEntry = {
-      id: crypto.randomUUID(),
+    
+    const entryData = {
       species: form.species,
       weight_lbs: form.weight_lbs ? parseFloat(form.weight_lbs) : null,
       length_in:  form.length_in  ? parseFloat(form.length_in)  : null,
@@ -48,17 +48,30 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
       caught_at: new Date().toISOString(),
       photo_url: form.photo_url || undefined,
     };
+
     try {
-      const response = await fetch('/api/catches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry),
-      });
-      if (!response.ok) throw new Error('Could not save catch');
+      // Use ProLogger for Sensor Integration, Gamification, and Intelligence
+      const result = await ProLogger.logCatchPro('current_user_id', entryData); // userId should come from auth
+      
+      const entry: CatchEntry = {
+        id: result.catchId,
+        ...entryData,
+      };
+      
       setCatches((previous) => [entry, ...previous]);
       setShowForm(false);
       setForm({ species:'Largemouth Bass', weight_lbs:'', length_in:'', bait:'', notes:'', photo_url:'' });
-    } catch(e) { console.error(e); }
+      
+      if (result.xpEarned) {
+        alert(`🎣 Catch logged! You earned ${result.xpEarned} XP! Current Level: ${result.newLevel}`);
+      }
+      if (result.achievementsUnlocked.length > 0) {
+        alert(`🏆 Achievement Unlocked: ${result.achievementsUnlocked.join(', ')}`);
+      }
+    } catch(e) { 
+      console.error(e); 
+      alert('Error logging catch. Please try again.');
+    }
     finally { setSaving(false); }
   };
 

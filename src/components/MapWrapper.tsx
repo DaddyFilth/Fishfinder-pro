@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import HotZoneOverlay from '@/components/HotZoneOverlay';
 
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
@@ -313,6 +314,17 @@ export default function FishingMap({
   const mapShellRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef<SpotMarkerRegistry['current']>({});
   const [mapSize, setMapSize] = useState(() => ({
+  const [condition, setCondition] = useState<FishingCondition>('stable');
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      (err) => console.error('GPS Error:', err),
+      { enableHighAccuracy: true }
+    );
+  }, []);
+
     width: typeof window === 'undefined' ? 0 : window.innerWidth,
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
   }));
@@ -833,6 +845,14 @@ export default function FishingMap({
                     )}
                   </div>
                 </Popup>
+          {userLocation && (
+            <HotZoneOverlay 
+              center={userLocation} 
+              condition={condition} 
+              visible={showMapOverlays} 
+            />
+          )}
+
               </Marker>
             );
           })}

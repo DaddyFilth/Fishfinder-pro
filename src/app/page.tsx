@@ -5,8 +5,10 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import SpeciesTab from "@/components/SpeciesTab";
-import BiteTimesTab from "@/components/BiteTimesTab";
+import SpeciesTab from \"@/components/SpeciesTab\";
+import QuickScan from '@/components/QuickScan';
+import PredictiveAlerts from '@/components/PredictiveAlerts';
+import BiteTimesTab from \"@/components/BiteTimesTab\";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
@@ -572,6 +574,20 @@ export default function MobilePage() {
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>
+
+      {/* QUICK SCAN WIDGET */}
+      <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
+        <div style={{ pointerEvents: 'auto' }}>
+          <PredictiveAlerts 
+            coordinates={coordinates} 
+            onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
+          />
+          <QuickScan 
+            coordinates={coordinates} 
+            onSpeciesSelect={(s) => { setTab('species'); setSelectedSpecies(s); }}
+          />
+        </div>
+      </div>
 
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
