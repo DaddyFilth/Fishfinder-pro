@@ -1,36 +1,46 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getAiModel, getAiProviderName, getAiVisionModel } from './ollama'
+import { getAiModel, getAiProviderName, getAiVisionModel, getOllama } from './ollama'
 
 afterEach(() => {
   vi.unstubAllEnvs()
 })
 
 describe('AI provider selection', () => {
-  it('prefers Groq when its key is configured', () => {
-    vi.stubEnv('GROQ_API_KEY', 'groq-key')
-    vi.stubEnv('GROQ_MODEL', 'groq-model')
-    vi.stubEnv('OPENAI_MODEL', 'openai-model')
-    vi.stubEnv('GROQ_VISION_MODEL', 'groq-vision')
-
+  it('always uses Groq provider', () => {
     expect(getAiProviderName()).toBe('groq')
-    expect(getAiModel()).toBe('groq-model')
-    expect(getAiVisionModel()).toBe('groq-vision')
   })
 
-  it('uses the Groq defaults when models are not configured', () => {
-    vi.stubEnv('GROQ_API_KEY', 'groq-key')
-    vi.stubEnv('GROQ_MODEL', undefined)
-    vi.stubEnv('GROQ_VISION_MODEL', undefined)
+  it('uses configured Groq model', () => {
+    vi.stubEnv('GROQ_MODEL', 'groq-custom-model')
+    expect(getAiModel()).toBe('groq-custom-model')
+  })
 
+  it('uses default Groq model when GROQ_MODEL is unset', () => {
+    vi.stubEnv('GROQ_MODEL', undefined)
     expect(getAiProviderName()).toBe('groq')
     expect(getAiModel()).toBe('llama-3.3-70b-versatile')
-    expect(getAiVisionModel()).toBe('meta-llama/llama-4-scout-17b-16e-instruct')
   })
 
-  it('requires Groq credentials before creating a client', async () => {
-    vi.stubEnv('GROQ_API_KEY', undefined)
-    const { getGroq } = await import('./ollama')
+  it('uses configured Groq vision model', () => {
+    vi.stubEnv('GROQ_VISION_MODEL', 'groq-vision-model')
+    expect(getAiVisionModel()).toBe('groq-vision-model')
+  })
 
-    expect(() => getGroq()).toThrow('GROQ_API_KEY is not configured.')
+  it('throws when GROQ_VISION_MODEL is unset', () => {
+    vi.stubEnv('GROQ_VISION_MODEL', undefined)
+    expect(() => getAiVisionModel()).toThrow('GROQ_VISION_MODEL must be configured for image requests.')
+  })
+
+  it('configures getOllama with Groq base URL and apiKey', () => {
+    vi.stubEnv('GROQ_API_KEY', 'test-groq-key')
+    const client = getOllama()
+    
+    expect(client.apiKey).toBe('test-groq-key')
+    expect(client.baseURL).toBe('https://api.groq.com/openai/v1')
+  })
+
+  it('throws when GROQ_API_KEY is missing in getOllama', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    expect(() => getOllama()).toThrow('GROQ_API_KEY must be configured.')
   })
 })
