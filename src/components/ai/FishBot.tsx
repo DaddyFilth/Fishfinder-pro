@@ -27,6 +27,17 @@ export default function FishBot({ spot, conditions }: Props) {
   const spotLat = toCoordinate(spotData.lat ?? spotData.latitude);
   const spotLon = toCoordinate(spotData.lng ?? spotData.lon ?? spotData.longitude);
   const targetSpecies = typeof spotData.species === 'string' ? spotData.species : undefined;
+  const c = conditions as Record<string, unknown>;
+  const liveFeed = c && c.data_mode === 'provider'
+    ? {
+        source: 'seamcast-spots',
+        data_mode: 'provider',
+        conditions: c.provider ?? undefined,
+        overallBite: c.score_breakdown ?? undefined,
+        speciesLikely: c.species,
+        recommendedBaits: c.recommended_baits,
+      }
+    : undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +54,7 @@ export default function FishBot({ spot, conditions }: Props) {
             lon: spotLon,
             targetSpecies,
             conditions,
-            liveFeed: conditions,
+            liveFeed,
           }),
         });
 

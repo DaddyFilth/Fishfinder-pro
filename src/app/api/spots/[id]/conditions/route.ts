@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { enforceRateLimit } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,9 @@ const requestSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const limited = enforceRateLimit(request, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
+
   const parsed = requestSchema.safeParse({
     ...(await params),
     lat: request.nextUrl.searchParams.get('lat'),
