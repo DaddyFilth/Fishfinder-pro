@@ -68,10 +68,11 @@ export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
   const bodyResult = await readJsonBody(req, 16_384)
   if (!bodyResult.ok) return bodyResult.response
-  const { lat, lon, targetSpecies } = bodyResult.value as {
+  const { lat, lon, targetSpecies, liveFeed } = bodyResult.value as {
     lat?: unknown
     lon?: unknown
     targetSpecies?: unknown
+    liveFeed?: unknown
   }
 
     if (
@@ -82,7 +83,15 @@ export async function POST(req: NextRequest) {
     }
 
     const safeSpecies = typeof targetSpecies === 'string' ? targetSpecies.trim().slice(0, 80) : ''
-    const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
+    const suppliedFeed = parseSpotsContext(liveFeed)
+    const spotsData = suppliedFeed
+      ? {
+          ...suppliedFeed,
+          source: suppliedFeed.source ?? 'seamcast-spots',
+          data_mode: suppliedFeed.data_mode ?? 'provider',
+          observed_at: suppliedFeed.observed_at ?? suppliedFeed.conditions?.issuedAt,
+        }
+      : await fetchSpotsContext(lat, lon, safeSpecies)
     const context = buildContextMessage(spotsData)
 
     try {

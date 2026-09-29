@@ -20,10 +20,12 @@ export default function FishBot({ spot, conditions }: Props) {
 
   const spotData = spot as Record<string, unknown>;
   const spotName = typeof spotData.name === 'string' ? spotData.name : 'this spot';
-  const spotLat = typeof spotData.lat === 'number' ? spotData.lat : spotData.latitude;
-  const spotLon = typeof (spotData.lng ?? spotData.lon ?? spotData.longitude) === 'number'
-    ? (spotData.lng ?? spotData.lon ?? spotData.longitude)
-    : undefined;
+  const toCoordinate = (value: unknown): number | undefined => {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const spotLat = toCoordinate(spotData.lat ?? spotData.latitude);
+  const spotLon = toCoordinate(spotData.lng ?? spotData.lon ?? spotData.longitude);
   const targetSpecies = typeof spotData.species === 'string' ? spotData.species : undefined;
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function FishBot({ spot, conditions }: Props) {
             lon: spotLon,
             targetSpecies,
             conditions,
+            liveFeed: conditions,
           }),
         });
 
@@ -96,8 +99,9 @@ export default function FishBot({ spot, conditions }: Props) {
           message: userMsg,
           spot,
           conditions,
-          lat: typeof spotData.lat === 'number' ? spotData.lat : undefined,
-          lon: typeof (spotData.lng ?? spotData.lon) === 'number' ? (spotData.lng ?? spotData.lon) as number : undefined,
+          liveFeed: conditions,
+          lat: spotLat,
+          lon: spotLon,
           history: messages.map((message) => ({
             role: message.role === 'bot' ? 'assistant' : 'user',
             content: message.text,
