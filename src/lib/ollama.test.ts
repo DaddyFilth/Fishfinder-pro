@@ -17,6 +17,7 @@ describe('AI provider selection', () => {
 
   it('uses default Groq model when GROQ_MODEL is unset', () => {
     vi.stubEnv('GROQ_MODEL', undefined)
+    expect(getAiProviderName()).toBe('groq')
     expect(getAiModel()).toBe('llama-3.3-70b-versatile')
   })
 
