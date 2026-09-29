@@ -16,7 +16,7 @@ export function getAiVisionModel(): string {
   throw new Error('GROQ_VISION_MODEL must be configured for image requests.')
 }
 
-export function getOllama() {
+export function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY?.trim()
   if (!apiKey) {
     throw new Error('GROQ_API_KEY must be configured.')

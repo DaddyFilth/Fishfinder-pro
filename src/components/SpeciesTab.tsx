@@ -231,7 +231,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
                 <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>Record: {species.record}</span>
               </div>
             </div>
-            <div aria-hidden="true" style={{ color: '#64748b', fontSize: '16px' }}>›</div>
+            <div aria-hidden="true" style={{ color: '#64748b', fontSize: '16px' }}>❯</div>
           </button>
         ))}
         {filtered.length === 0 && <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0', fontSize: '13px' }}>No species found</div>}

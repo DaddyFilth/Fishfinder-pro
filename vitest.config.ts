@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 /**
  * Vitest does not read `tsconfig.json` path aliases on its own, so `@/*` imports in app code
@@ -11,5 +11,8 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  test: {
+    exclude: [...configDefaults.exclude, 'workers/agent-visibility-template/**'],
   },
 });

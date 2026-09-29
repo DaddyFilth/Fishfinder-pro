@@ -549,7 +549,7 @@ export default function MobilePage() {
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
   const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
   const rankedSpots = useMemo(
-    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] === 'provider'),
+    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
     [visibleSpots, conditionModes, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
