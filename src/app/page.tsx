@@ -298,6 +298,31 @@ export default function MobilePage() {
 
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
   useEffect(() => {
+    // Request location once when the app starts so every feature shares one device position.
+    // The browser remembers the user's decision; the app cannot grant permission itself.
+    if (locationStatus !== 'idle' || coordinates) return;
+
+    setLocationStatus('locating');
+    locationCleanupRef.current = watchDeviceLocation(
+      (nextCoordinates) => {
+        setCoordinates(nextCoordinates);
+        setLocationStatus('active');
+        setNearbyMode(true);
+      },
+      (status) => {
+        locationCleanupRef.current?.();
+        locationCleanupRef.current = null;
+        setLocationStatus(status);
+      },
+    );
+
+    return () => {
+      locationCleanupRef.current?.();
+      locationCleanupRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
     setBaseLayer(storedMapStyle === 'satellite' ? 'satellite' : 'explore');

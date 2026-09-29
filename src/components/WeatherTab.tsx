@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { requestDeviceLocation, type Coordinates } from '@/lib/region';
 
 type Props = { lat?: number; lng?: number; locationLabel?: string };
 type Period = {
@@ -50,11 +51,20 @@ function weatherIcon(forecast: string) {
 }
 
 export default function WeatherTab({ lat, lng, locationLabel }: Props) {
+  const [deviceLocation, setDeviceLocation] = useState<Coordinates | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => validCoordinates(lat, lng));
+  const effectiveLat = lat ?? deviceLocation?.latitude;
+  const effectiveLng = lng ?? deviceLocation?.longitude;
+  const effectiveLocationLabel = locationLabel ?? (deviceLocation ? 'device location' : undefined);
+  const [loading, setLoading] = useState(() => validCoordinates(effectiveLat, effectiveLng));
   const [error, setError] = useState('');
   const [clock, setClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (validCoordinates(lat, lng)) return;
+    return requestDeviceLocation(setDeviceLocation);
+  }, [lat, lng]);
 
   useEffect(() => {
     const interval = setInterval(() => setClock(Date.now()), 60_000);
@@ -62,7 +72,7 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!validCoordinates(lat, lng)) return;
+    if (!validCoordinates(effectiveLat, effectiveLng)) return;
 
     const controller = new AbortController();
 
@@ -72,7 +82,7 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
       setError('');
       try {
         const response = await fetch(
-          `/api/weather?lat=${encodeURIComponent(lat!.toFixed(4))}&lng=${encodeURIComponent(lng!.toFixed(4))}`,
+          `/api/weather?lat=${encodeURIComponent(effectiveLat!.toFixed(4))}&lng=${encodeURIComponent(effectiveLng!.toFixed(4))}`,
           { cache: 'no-store', signal: controller.signal },
         );
         const payload = await response.json() as { periods?: unknown[]; updatedAt?: string | null; error?: string };
@@ -93,10 +103,10 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
 
     void load();
     return () => controller.abort();
-  }, [lat, lng]);
+  }, [effectiveLat, effectiveLng]);
 
-  if (!validCoordinates(lat, lng)) {
-    return <p style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Provider weather is unavailable until a spot or device location is selected.</p>;
+  if (!validCoordinates(effectiveLat, effectiveLng)) {
+    return <p style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Waiting for device location to load weather.</p>;
   }
   if (loading) return <p style={{ padding: 16, color: '#60a5fa', fontSize: 12 }}>Loading NOAA/NWS forecast…</p>;
   if (error || !periods.length) {
@@ -110,7 +120,7 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
   return (
     <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', marginBottom: 4 }}>Provider Weather</div>
-      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
+      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{effectiveLocationLabel ? ` · ${effectiveLocationLabel}` : ''}</div>
       <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>Forecast data, not a live observation. Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'time unavailable'}.</div>
       <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
