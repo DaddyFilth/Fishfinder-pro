@@ -761,9 +761,9 @@ export default function FishingMap({
                               </div>
                             </div>
 
-                            {Object.entries(c.score_breakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
+                            {c.score_breakdown && Object.entries(c.score_breakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
 
-                            {c.score_breakdown.recommendations.length > 0 && (
+                            {c.score_breakdown && c.score_breakdown.recommendations.length > 0 && (
                               <div style={{ marginTop: 10 }}>
                                 <div style={{ fontSize: 11, color: '#86efac', marginBottom: 4, fontWeight: 700 }}>Recommendations</div>
                                 {c.score_breakdown.recommendations.map((r, i) => (
@@ -771,7 +771,7 @@ export default function FishingMap({
                                 ))}
                               </div>
                             )}
-                            {c.score_breakdown.warnings.length > 0 && (
+                            {c.score_breakdown && c.score_breakdown.warnings.length > 0 && (
                               <div style={{ marginTop: 10 }}>
                                 <div style={{ fontSize: 11, color: '#fca5a5', marginBottom: 4, fontWeight: 700 }}>Warnings</div>
                                 {c.score_breakdown.warnings.map((w, i) => (

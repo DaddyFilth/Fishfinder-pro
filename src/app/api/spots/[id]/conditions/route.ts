@@ -35,8 +35,17 @@ export async function GET(
 
   if (!supabase) {
     return NextResponse.json(
-      { error: 'Condition storage is not configured; no conditions were generated.', data_mode: 'unavailable' },
-      { status: 503, headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'unavailable' } },
+      {
+        spot_id: id,
+        fishing_score: 0,
+        score_breakdown: null,
+        data_sources: [],
+        cached: false,
+        stale: true,
+        data_mode: 'fallback',
+        warning: 'Live condition storage is unavailable; showing the spot without a provider score.',
+      },
+      { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' } },
     );
   }
 

@@ -512,7 +512,10 @@ export default function MobilePage() {
   const spotsForConditions = (nearbyMode && coordinates
     ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
     : filteredSpotsForConditions
-  ).slice(0, 60);
+  // Avoid a request burst: the conditions route is shared by every visible spot.
+  // The first page of choices is enough to populate the ranked panel; selecting a
+  // spot can still load its details on demand.
+  ).slice(0, 12);
   spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
@@ -550,8 +553,8 @@ export default function MobilePage() {
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
   const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
   const rankedSpots = useMemo(
-    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] === 'provider'),
-    [visibleSpots, conditionModes, conditionScores],
+    () => rankSpots(visibleSpots, conditionScores),
+    [visibleSpots, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
   const topSpots = rankedSpots.slice(0, 8);
@@ -676,7 +679,7 @@ export default function MobilePage() {
               <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
               {!sheetOpen && (
                 <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots · provider scores</span>
+                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots · available scores</span>
                   <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
                 </div>
               )}
