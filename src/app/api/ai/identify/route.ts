@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiVisionModel, getOllama } from '@/lib/ollama';
+import { getAiVisionModel, getGroqClient } from '@/lib/ollama';
 import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const openai = getOllama();
+    const openai = getGroqClient();
     const response = await openai.chat.completions.create({
       model: getAiVisionModel(),
       max_tokens: 600,

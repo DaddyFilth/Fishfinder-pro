@@ -1,4 +1,4 @@
-import { getAiModel, getAiProviderName, getOllama } from '@/lib/ollama';
+import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/ollama';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const airTempF = conditionData.air_temp_c != null ? Math.round(Number(conditionData.air_temp_c) * 9 / 5 + 32) : 'unknown';
 
   try {
-    const response = await getOllama().chat.completions.create({
+    const response = await getGroqClient().chat.completions.create({
       model: getAiModel(),
       max_tokens: 400,
       temperature: 0.3,

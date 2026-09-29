@@ -31,7 +31,7 @@ export function getAiVisionModel(): string {
  * @throws {Error} If GROQ_API_KEY is unset, empty, or whitespace-only.
  * Errors from SDK initialization also propagate to the caller.
  */
-export function getOllama() {
+export function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY?.trim()
   if (!apiKey) {
     throw new Error('GROQ_API_KEY must be configured.')
