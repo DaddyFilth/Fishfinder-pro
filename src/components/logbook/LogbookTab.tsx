@@ -100,7 +100,6 @@ export default function LogbookTab() {
 }
 
 
-import { useSyncExternalStore, useRef, useState, type CSSProperties } from 'react';
 
 export interface LogbookTrip {
   id: string;
