@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   '/auth/callback',
   '/api/auth',
   '/api/auth/recover',
+  '/api/feed/cloudflare',
   '/offline',
   '/manifest.json',
   '/sw.js',
