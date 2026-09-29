@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/client';
+import { ProLogger } from '@/lib/logbook/pro-logger';
 'use client';
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
@@ -51,7 +53,7 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
 
     try {
       // Use ProLogger for Sensor Integration, Gamification, and Intelligence
-      const result = await ProLogger.logCatchPro('current_user_id', entryData); // userId should come from auth
+      const { data: { user } } = await createClient().auth.getUser(); if (!user) throw new Error('Auth required'); const result = await ProLogger.logCatchPro(user.id, entryData);
       
       const entry: CatchEntry = {
         id: result.catchId,

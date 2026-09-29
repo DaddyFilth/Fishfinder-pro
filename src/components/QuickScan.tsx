@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { speciesForCoordinates, biteRateFor, type Coordinates } from '@/lib/region';
-import { SPECIES, type Species } from '@/lib/speciesCatalog';
+import { speciesForCoordinates, type Coordinates } from '@/lib/region';
+import { SPECIES, biteRateFor, type Species } from '@/lib/speciesCatalog';
 
 interface QuickScanProps {
   coordinates: Coordinates | null;

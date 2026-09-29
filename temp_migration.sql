@@ -1,4 +1,4 @@
--- Migration: 20261001_pro_features_foundation.sql
+ `-- Migration: 20261001_pro_features_foundation.sql
 
 -- 1. GAMIFICATION: Update profiles for XP and Leveling
 ALTER TABLE public.profiles 
@@ -49,3 +49,4 @@ ALTER TABLE public.realtime_alerts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "achievements_read_public" ON public.achievements FOR SELECT TO authenticated USING (true);
 CREATE POLICY "badges_read_own" ON public.user_badges FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE POLICY "alerts_read_public" ON public.realtime_alerts FOR SELECT TO authenticated USING (true);
+`

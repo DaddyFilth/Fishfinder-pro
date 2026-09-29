@@ -5,10 +5,10 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import SpeciesTab from \"@/components/SpeciesTab\";
+import SpeciesTab from "@/components/SpeciesTab";
 import QuickScan from '@/components/QuickScan';
 import PredictiveAlerts from '@/components/PredictiveAlerts';
-import BiteTimesTab from \"@/components/BiteTimesTab\";
+import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
@@ -165,7 +165,7 @@ type SpotLoadResult = {
       <section style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '10px', padding: '14px', marginBottom: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-            <span aria-hidden="true" style={{ fontSize: '20px' }}>{icon}</span>
+            <span aria-hidden=@true@ style={{ fontSize: '20px' }}>{icon}</span>
             <div>
               <h3 style={{ margin: 0, fontSize: '13px', color: '#e2e8f0' }}>{title}</h3>
               <p style={{ margin: '3px 0 0', fontSize: '10px', color: '#94a3b8' }}>{description}</p>
@@ -187,7 +187,7 @@ type SpotLoadResult = {
   function PreferenceButton({ label, selected, onSelect }: PreferenceButtonProps) {
     return (
       <button
-        type="button"
+        type=@button@
         aria-pressed={selected}
         onClick={onSelect}
         style={{
@@ -276,6 +276,7 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [selectedSpecies, setSelectedSpecies] = useState<any | null>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -592,7 +593,7 @@ export default function MobilePage() {
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
-          <span aria-hidden="true" style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
+          <span aria-hidden=@true@ style={{ fontSize:'18px', flexShrink:0 }}>🎣</span>
           <h1 style={{ fontSize:'14px', fontWeight:'800', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', margin:0, background:'linear-gradient(90deg,#22d3ee,#0ea5e9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Oklahoma SeamCast</h1>
         </div>
         <div style={{ display:'flex', gap:'7px', alignItems:'center', flexShrink:0 }}>
@@ -604,7 +605,7 @@ export default function MobilePage() {
 
       {backHint && (
         <div
-          role="status"
+          role=@status@
           style={{
             position: 'fixed',
             left: '50%',
@@ -630,7 +631,7 @@ export default function MobilePage() {
       <main style={PAGE_STYLES.main}>
 
         {/* MAP TAB */}
-{tab === "map" && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={Object.keys(conditionScores).length > 0} onOpenAi={() => setTab("ai")} onOpenLogbook={() => setTab("log")} onRefresh={() => { void loadSpotData(false) }} />}
+{tab === @map@ && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={Object.keys(conditionScores).length > 0} onOpenAi={() => setTab(@ai@)} onOpenLogbook={() => setTab(@log@)} onRefresh={() => { void loadSpotData(false) }} />}
         {tab === 'map' && (
           <div style={{ position:'absolute', inset:0 }}>
             <MapWrapper
@@ -662,7 +663,7 @@ export default function MobilePage() {
               <div style={PAGE_STYLES.mapBadge}>
                 {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}public waters
               </div>
-              <button type="button" onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
+              <button type=@button@ onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
               </button>
             </div>
@@ -700,7 +701,7 @@ export default function MobilePage() {
                 <div style={{ padding:'0 16px 16px', maxHeight:'45dvh', overflowY:'auto' }}>
                   <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between', gap:'8px' }}>
                     <span>{nearbyMode ? '📍 NEAREST OKLAHOMA WATERS' : '🏆 OKLAHOMA TOP WATERS · PROVIDER SCORES'}</span>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); setNearbyMode(false); }} style={{ background:'transparent', border:0, color:'#0ea5e9', fontSize:'10px', cursor:'pointer', padding:0 }}>Show all</button>
+                    <button type=@button@ onClick={(event) => { event.stopPropagation(); setNearbyMode(false); }} style={{ background:'transparent', border:0, color:'#0ea5e9', fontSize:'10px', cursor:'pointer', padding:0 }}>Show all</button>
                   </div>
                   {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
                     const scoreValue = loadingScores[spot.id] ? '…' : score;
@@ -840,9 +841,9 @@ export default function MobilePage() {
               </div>
             </div>
             <SettingCard
-              icon="📍"
-              title="Location"
-              description="Uses your device location permission for nearby-water sorting. Coordinates stay on this device by default."
+              icon=@📍@
+              title=@Location@
+              description=@Uses your device location permission for nearby-water sorting. Coordinates stay on this device by default.@
               status={locationSettingStatus}
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -852,7 +853,7 @@ export default function MobilePage() {
                   onSelect={startLocationTracking}
                 />
                 <PreferenceButton
-                  label="Show all waters"
+                  label=@Show all waters@
                   selected={!nearbyMode}
                   onSelect={() => setNearbyMode(false)}
                 />
@@ -860,14 +861,14 @@ export default function MobilePage() {
             </SettingCard>
 
             <SettingCard
-              icon="🌡"
-              title="Units"
-              description="Saved locally. Temperature and location formatting stays in Fahrenheit/miles for now."
+              icon=@🌡@
+              title=@Units@
+              description=@Saved locally. Temperature and location formatting stays in Fahrenheit/miles for now.@
               status={unitPreferenceLabel}
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <PreferenceButton
-                  label="Imperial (lbs, ft, °F)"
+                  label=@Imperial (lbs, ft, °F)@
                   selected={unitsPreference === 'imperial'}
                   onSelect={() => {
                     setUnitsPreference('imperial');
@@ -875,7 +876,7 @@ export default function MobilePage() {
                   }}
                 />
                 <PreferenceButton
-                  label="Metric (kg, m, °C)"
+                  label=@Metric (kg, m, °C)@
                   selected={unitsPreference === 'metric'}
                   onSelect={() => {
                     setUnitsPreference('metric');
@@ -891,9 +892,9 @@ export default function MobilePage() {
             </SettingCard>
 
             <SettingCard
-              icon="🗺"
-              title="Map Style"
-              description="Selects the active base map immediately. Dark and Explore use the same current tile source."
+              icon=@🗺@
+              title=@Map Style@
+              description=@Selects the active base map immediately. Dark and Explore use the same current tile source.@
               status={mapStyleLabel}
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -912,9 +913,9 @@ export default function MobilePage() {
             </SettingCard>
 
             <SettingCard
-              icon="🔁"
-              title="Auto-refresh"
-              description="Refreshes only while the app is visible and online. AI and image routes never refresh automatically."
+              icon=@🔁@
+              title=@Auto-refresh@
+              description=@Refreshes only while the app is visible and online. AI and image routes never refresh automatically.@
               status={autoRefreshLabel}
             >
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

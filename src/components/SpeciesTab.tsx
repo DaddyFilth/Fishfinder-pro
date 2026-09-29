@@ -183,7 +183,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
             }}>
               <div style={{ fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px', fontSize: '14px' }}>
                 🎣 Master Guide Tactical Blueprint
-              </div}
+              </div>
               {strategy}
             </div>
           )}

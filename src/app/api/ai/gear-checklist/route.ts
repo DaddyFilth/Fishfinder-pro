@@ -1,3 +1,5 @@
+import { z } from 'zod';
+const ChecklistSchema = z.array(z.object({ item: z.string(), spec: z.string(), priority: z.enum(['Essential', 'Recommended']), reason: z.string() }));
 import { NextRequest, NextResponse } from 'next/server';
 import { getGroqClient } from '@/lib/ollama';
 import { getAiModel } from '@/lib/ollama';
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
     const content = response.choices[0]?.message?.content || '[]';
     const parsed = JSON.parse(content.replace(/```json|```/g, ''));
 
-    return NextResponse.json({ checklist: parsed });
+    const validated = ChecklistSchema.parse(parsed); return NextResponse.json({ checklist: validated });
   } catch (error) {
     console.error('[gear-checklist] error:', error);
     return NextResponse.json({ error: 'Failed to generate checklist.' }, { status: 500 });
