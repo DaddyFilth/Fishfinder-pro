@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { z } from 'zod';
 import { enforceRateLimit, isHttpUrl, isSameOrigin, readJsonBody } from '@/lib/security';
+import { getAiModel, getGroq } from '@/lib/ollama';
 
 const requestSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -45,19 +45,22 @@ export async function POST(request: NextRequest) {
   }
   const input = inputResult.data;
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.GROQ_API_KEY) {
     return NextResponse.json({ error: 'Spot discovery is not configured.' }, { status: 503 });
   }
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 20_000, maxRetries: 1 });
-    const prompt = `Find public fishing spots near latitude ${input.lat}, longitude ${input.lng}, within about ${input.radiusMiles} miles. Search official parks, fish and wildlife pages, public access guides, and reputable local fishing resources. Return only spots with a precise public name, coordinates, and a source URL. Exclude private ponds, businesses, vague regions, and duplicates. Respond as JSON matching {"candidates":[{"name":"...","lat":0,"lng":0,"water_type":"freshwater|saltwater","spot_type":"lake|river|reservoir|bay|coast|pond|marsh|sound","notes":"short access or fishery context","source_url":"https://...","source_title":"..."}]}.`;
-    const result = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      tools: [{ type: 'web_search_preview' }],
-      input: prompt,
+    const prompt = `Find public fishing spots near latitude ${input.lat}, longitude ${input.lng}, within about ${input.radiusMiles} miles. Return only spots with a precise public name, coordinates, and a source URL. Exclude private ponds, businesses, vague regions, and duplicates. Respond as JSON matching {"candidates":[{"name":"...","lat":0,"lng":0,"water_type":"freshwater|saltwater","spot_type":"lake|river|reservoir|bay|coast|pond|marsh|sound","notes":"short access or fishery context","source_url":"https://...","source_title":"..."}]}.`;
+    const result = await getGroq().chat.completions.create({
+      model: getAiModel(),
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You return only valid JSON. Do not invent source URLs.' },
+        { role: 'user', content: prompt },
+      ],
     });
-    const text = result.output_text.replace(/```(?:json)?\s*|\s*```$/gi, '').trim();
+    const text = result.choices[0]?.message?.content?.trim() || '';
     let responseJson: unknown;
     try {
       responseJson = JSON.parse(text) as unknown;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiModel, getOllama } from '@/lib/ollama';
+import { getAiModel, getGroq } from '@/lib/ollama';
 import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
@@ -76,7 +76,7 @@ Respond with ONLY valid JSON in this exact format:
 } Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
   try {
-    const openai = getOllama();
+    const openai = getGroq();
     const res = await openai.chat.completions.create({
       model: getAiModel(),
       max_tokens: 600,

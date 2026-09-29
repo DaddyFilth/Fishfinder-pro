@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiModel, getOllama } from '@/lib/ollama';
+import { getAiModel, getGroq } from '@/lib/ollama';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const ollama = getOllama();
+    const ollama = getGroq();
 
     const spotSummary = spots
       .slice(0, 10)

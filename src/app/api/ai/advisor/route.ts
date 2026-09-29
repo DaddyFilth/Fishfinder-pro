@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { getAiModel, getOllama } from '@/lib/ollama'
+import { getAiModel, getGroq } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
@@ -39,7 +39,7 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
 }
 
 async function callAi(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
-  const response = await getOllama().chat.completions.create({
+  const response = await getGroq().chat.completions.create({
     model: getAiModel(),
     messages,
     temperature: 0.7,
