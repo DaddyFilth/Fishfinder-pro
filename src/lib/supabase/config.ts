@@ -38,9 +38,7 @@ export function getSupabasePublishableKey() {
 export function getSupabaseServiceRoleKey() {
   return firstDefined([
     process.env.SUPABASE_SERVICE_ROLE_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
     process.env.SUPABASE_SECRET_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY,
   ])
 }
 

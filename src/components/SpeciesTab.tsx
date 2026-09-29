@@ -38,6 +38,8 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   const [loadingChecklist, setLoadingChecklist] = useState(false);
 
   useEffect(() => {
+    setStrategy(null);
+    setChecklist(null);
     if (selected) {
       import('@/lib/storage').then(({ StorageManager }) => {
         StorageManager.get('STRATEGIES', selected.id).then(cached => {
