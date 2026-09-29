@@ -43,3 +43,6 @@ export function getGroqClient() {
     timeout: 10000,
   })
 }
+
+/** @deprecated use getGroqClient */
+export const getOllama = getGroqClient

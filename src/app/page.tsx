@@ -529,7 +529,7 @@ export default function MobilePage() {
 
           const data = (await res.json()) as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-          const fishingScore = mode === 'provider' && typeof data.fishing_score === 'number'
+          const fishingScore = mode !== 'fallback' && typeof data.fishing_score === 'number'
             ? data.fishing_score
             : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
