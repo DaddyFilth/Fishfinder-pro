@@ -34,7 +34,6 @@ describe('AI provider selection', () => {
     vi.stubEnv('GROQ_API_KEY', 'test-groq-key')
     const client = getOllama()
     
-    // @ts-ignore - accessing private properties for validation
     expect(client.apiKey).toBe('test-groq-key')
     expect(client.baseURL).toBe('https://api.groq.com/openai/v1')
   })
