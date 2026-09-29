@@ -213,7 +213,7 @@ Every field is required and must be generated for every spot. Always use Fahrenh
   }
 
   const fallbackResults: RankedSpot[] = spots.map((spot, index) => {
-    const score = Math.max(45, Math.min(88, 68 + ((spot.name.length * 7 + index * 5) % 21) - 10));
+    const score = Math.max(45, Math.min(88, 68 + ((spot.name.length * 7 + spot.id.length * 5) % 21) - 10));
     const milesAway = typeof userLat === 'number' && typeof userLng === 'number'
       ? round(distanceMiles(userLat, userLng, spot.lat, spot.lng))
       : null;
