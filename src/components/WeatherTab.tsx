@@ -13,21 +13,9 @@ type Period = {
   shortForecast: string;
 };
 
-const NWS_HEADERS = { Accept: 'application/geo+json' };
-
 function validCoordinates(lat?: number, lng?: number) {
   return typeof lat === 'number' && typeof lng === 'number' &&
     Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-}
-
-function isNwsUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'api.weather.gov';
-  } catch {
-    return false;
-  }
 }
 
 function isPeriod(value: unknown): value is Period {
@@ -83,31 +71,16 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
       setLoading(true);
       setError('');
       try {
-        const pointResponse = await fetch(
-          `https://api.weather.gov/points/${lat!.toFixed(4)},${lng!.toFixed(4)}`,
-          { headers: NWS_HEADERS, cache: 'no-store', signal: controller.signal },
+        const response = await fetch(
+          `/api/weather?lat=${encodeURIComponent(lat!.toFixed(4))}&lng=${encodeURIComponent(lng!.toFixed(4))}`,
+          { cache: 'no-store', signal: controller.signal },
         );
-        if (!pointResponse.ok) throw new Error('NWS location lookup failed');
-        const point = await pointResponse.json() as { properties?: { forecastHourly?: unknown } };
-        if (!isNwsUrl(point.properties?.forecastHourly)) {
-          throw new Error('NWS returned an invalid forecast URL');
-        }
-
-        const response = await fetch(point.properties.forecastHourly, {
-          headers: NWS_HEADERS,
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error('NWS forecast request failed');
-        const payload = await response.json() as {
-          properties?: { periods?: unknown[]; updateTime?: string; generatedAt?: string };
-        };
-        const next = Array.isArray(payload.properties?.periods)
-          ? payload.properties.periods.filter(isPeriod)
-          : [];
-        if (!next.length) throw new Error('NWS returned no usable forecast periods');
+        const payload = await response.json() as { periods?: unknown[]; updatedAt?: string | null; error?: string };
+        if (!response.ok) throw new Error(payload.error || 'Weather provider unavailable');
+        const next = Array.isArray(payload.periods) ? payload.periods.filter(isPeriod) : [];
+        if (!next.length) throw new Error('Weather provider returned no usable forecast periods');
         setPeriods(next);
-        setUpdatedAt(payload.properties?.updateTime ?? payload.properties?.generatedAt ?? null);
+        setUpdatedAt(payload.updatedAt ?? null);
       } catch (reason) {
         if (!controller.signal.aborted) {
           setPeriods([]);
