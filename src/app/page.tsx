@@ -344,6 +344,8 @@ export default function MobilePage() {
   useEffect(() => {
   const supabase = createClient();
   let mounted = true;
+  // Spot discovery is public; start it without waiting for auth initialization.
+  void loadSpotData(false);
   if (!supabase) {
   queueMicrotask(() => {
   if (!mounted) return;
@@ -360,15 +362,13 @@ export default function MobilePage() {
   const { data } = await supabase.auth.getSession();
   if (!mounted) return;
   const signedIn = Boolean(data.session?.user);
-  setIsAuthenticated(signedIn);
-  setAuthReady(true);
-  if (signedIn) void loadSpotData(false);
-  else setSpots([]);
+      setIsAuthenticated(signedIn);
+      setAuthReady(true);
+      // Spot discovery is public; authentication is only required for account features.
   } catch {
   if (!mounted) return;
   setIsAuthenticated(false);
   setAuthReady(true);
-  setSpots([]);
   }
   };
 
@@ -378,12 +378,9 @@ export default function MobilePage() {
       const signedIn = Boolean(session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      if (signedIn) void loadSpotData(false);
-      else {
-        setSpots([]);
+      // Spot discovery is public; keep condition requests stable across auth changes.
+      if (!signedIn) {
         setSelectedSpot(null);
-        setConditionScores({});
-        setConditionModes({});
       }
     });
 
@@ -509,10 +506,14 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    if (!authReady || !isAuthenticated || !spots.length) return;
+    if (!spots.length) return;
 
-    const visibleSpots = filterSpots(spots, mapFilter);
-    visibleSpots.forEach((spot) => {
+  const filteredSpotsForConditions = filterSpots(spots, mapFilter);
+  const spotsForConditions = (nearbyMode && coordinates
+    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
+    : filteredSpotsForConditions
+  ).slice(0, 60);
+  spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
@@ -543,7 +544,7 @@ export default function MobilePage() {
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
     });
-  }, [authReady, isAuthenticated, spots, mapFilter, conditionScores]);
+  }, [authReady, isAuthenticated, spots, mapFilter, nearbyMode, coordinates, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
@@ -639,20 +640,6 @@ export default function MobilePage() {
               }}
             />
 
-            {!authReady && (
-              <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.48)', backdropFilter:'blur(3px)' }}>
-                <div style={{ background:'rgba(7,17,27,0.96)', border:'1px solid #1d3442', borderRadius:'14px', padding:'18px 20px', color:'#cbd5e1', fontSize:'13px', fontWeight:700 }}>Checking account…</div>
-              </div>
-            )}
-            {authReady && !isAuthenticated && (
-              <div role="status" style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:20, background:'rgba(2,6,23,0.42)', backdropFilter:'blur(3px)' }}>
-                <div style={{ maxWidth:'300px', margin:'16px', textAlign:'center', background:'rgba(7,17,27,0.97)', border:'1px solid #1d3442', borderRadius:'16px', padding:'22px', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
-                  <div style={{ fontSize:'15px', fontWeight:800, color:'#e2f7ff' }}>Sign in to explore spots</div>
-                  <p style={{ margin:'8px 0 16px', color:'#94a3b8', fontSize:'12px', lineHeight:1.5 }}>Public spot results are available without an account. Sign in for saved community reports, catch logging, and account features.</p>
-                  <a href="/auth/login?next=/" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', minHeight:'38px', padding:'0 16px', borderRadius:'9px', background:'#0369a1', color:'white', fontSize:'12px', fontWeight:800, textDecoration:'none' }}>Log in or create account</a>
-                </div>
-              </div>
-            )}
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
@@ -664,7 +651,7 @@ export default function MobilePage() {
               </button>
             </div>
             <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'provider' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
-              {!authReady ? 'Checking account…' : !isAuthenticated ? 'Sign in required to load spot data' : cacheSource === 'provider' ? 'Provider spot data · not live conditions' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+              {!authReady ? 'Checking account…' : cacheSource === 'provider' ? 'Provider spot data · not live conditions' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
               {locationStatus === 'denied' && ' · Location permission denied'}
               {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
