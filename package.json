@@ -19,6 +19,7 @@
     "scrape:usace": "tsx scripts/scrape/usace-lakes.ts --debug"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.100",
     "@base-ui/react": "^1.8.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
@@ -30,6 +31,7 @@
     "@types/leaflet": "^1.9.22",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "ai": "^7.0.122",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

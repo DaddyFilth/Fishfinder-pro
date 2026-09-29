@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { getAiModel, getGroq } from '@/lib/ollama'
+import { generateGatewayText, getAiModel, getGroq, hasGroqCredentials } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +57,7 @@ async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderCo
 }
 
 async function callAi(messages: ChatMessage[]): Promise<string> {
+  if (!hasGroqCredentials()) return generateGatewayText(messages, { maxTokens: 1024, temperature: 0.7 })
   const response = await getGroq().chat.completions.create({
     model: getAiModel(),
     messages,
@@ -136,7 +137,7 @@ export async function POST(req: NextRequest) {
         response: reply,
         source: 'ai',
         data_mode: 'ai-generated',
-        live_data: false,
+        live_data: Boolean(spotsData),
         context: spotsData
           ? {
               source: spotsData.source,
