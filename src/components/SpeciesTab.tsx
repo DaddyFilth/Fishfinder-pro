@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- catalog images are local static field-guide assets. */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import GearChecklist from '@/components/GearChecklist';
 
 function getFallbackImage(speciesName: string) {
   return `/api/species-image/${encodeURIComponent(speciesName)}`;
@@ -31,6 +32,78 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Species | null>(null);
   const [condition, setCondition] = useState<FishingCondition>('stable');
+  const [strategy, setStrategy] = useState<string | null>(null);
+  const [loadingStrategy, setLoadingStrategy] = useState(false);
+  const [checklist, setChecklist] = useState<any[] | null>(null);
+  const [loadingChecklist, setLoadingChecklist] = useState(false);
+
+  useEffect(() => {
+    if (selected) {
+      import('@/lib/storage').then(({ StorageManager }) => {
+        StorageManager.get('STRATEGIES', selected.id).then(cached => {
+          if (cached) setStrategy(cached);
+        });
+        StorageManager.get('CHECKLISTS', selected.id).then(cached => {
+          if (cached) setChecklist(cached);
+        });
+      });
+    }
+  }, [selected]);
+
+  async function generateStrategy() {
+    if (!coordinates) return;
+    setLoadingStrategy(true);
+    try {
+      const res = await fetch('/api/ai/species-strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          speciesId: selected?.id,
+          lat: coordinates.lat,
+          lon: coordinates.lng,
+        }),
+      });
+      const data = await res.json();
+      setStrategy(data.strategy);
+      if (data.strategy && selected) {
+        import('@/lib/storage').then(({ StorageManager }) => {
+          StorageManager.set('STRATEGIES', selected.id, data.strategy);
+        });
+      }
+    } catch (e) {
+      console.error('Strategy error:', e);
+    } finally {
+      setLoadingStrategy(false);
+    }
+  }
+
+  async function generateChecklist() {
+    if (!coordinates || !selected) return;
+    setLoadingChecklist(true);
+    try {
+      const res = await fetch('/api/ai/gear-checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          speciesId: selected.id,
+          lat: coordinates.lat,
+          lon: coordinates.lng,
+        }),
+      });
+      const data = await res.json();
+      setChecklist(data.checklist);
+      if (data.checklist) {
+        import('@/lib/storage').then(({ StorageManager }) => {
+          StorageManager.set('CHECKLISTS', selected.id, data.checklist);
+        });
+      }
+    } catch (e) {
+      console.error('Checklist error:', e);
+    } finally {
+      setLoadingChecklist(false);
+    }
+  }
+
 
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const regionalSpecies = useMemo(() => speciesForCoordinates(SPECIES, coordinates), [coordinates]);
@@ -69,16 +142,54 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           />
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#e2e8f0' }}>{selected.name}</div>
           <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', marginBottom: '8px' }}>{selected.scientificName}</div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
             <span style={{ background: '#0c4a6e', color: '#7dd3fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.habitat}</span>
             <span style={{ background: '#312e81', color: '#c4b5fd', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.group}</span>
             <span style={{ background: selected.oklahomaStatus === 'Game fish' ? '#14532d' : selected.oklahomaStatus === 'Special concern' ? '#7f1d1d' : '#164e63', color: selected.oklahomaStatus === 'Game fish' ? '#86efac' : selected.oklahomaStatus === 'Special concern' ? '#fecaca' : '#a5f3fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.oklahomaStatus}</span>
             <span style={{ background: selected.difficulty === 'Easy' ? '#14532d' : selected.difficulty === 'Medium' ? '#713f12' : '#7f1d1d', color: selected.difficulty === 'Easy' ? '#4ade80' : selected.difficulty === 'Medium' ? '#fbbf24' : '#f87171', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>{selected.difficulty}</span>
             <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '10px', padding: '3px 8px', borderRadius: '10px' }}>Record: {selected.record}</span>
           </div>
+          <button 
+            onClick={generateStrategy}
+            disabled={loadingStrategy || !coordinates}
+            style={{ 
+              background: '#0891b2', color: 'white', border: 'none', borderRadius: '8px', 
+              padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer',
+              width: '100%', transition: 'background 0.2s', opacity: (loadingStrategy || !coordinates) ? 0.6 : 1
+            }}
+          >
+            {loadingStrategy ? 'Consulting Master Guide...' : coordinates ? '✨ Generate AI Strategy' : 'Enable GPS for Strategy'}
+          </button>
+          <button 
+            onClick={generateChecklist}
+            disabled={loadingChecklist || !coordinates || !selected}
+            style={{ 
+              background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '8px', 
+              padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer',
+              marginTop: '8px', width: '100%', transition: 'all 0.2s', opacity: (loadingChecklist || !coordinates || !selected) ? 0.6 : 1
+            }}
+          >
+            {loadingChecklist ? 'Packing Gear...' : '🎒 Generate Gear Checklist'}
+          </button>
         </div>
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {strategy && (
+            <div style={{ 
+              background: 'rgba(8, 145, 178, 0.1)', border: '1px solid #0891b2', 
+              borderRadius: '12px', padding: '14px', color: '#e2e8f0', 
+              fontSize: '13px', lineHeight: 1.6, whiteSpace: 'pre-wrap',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px', fontSize: '14px' }}>
+                🎣 Master Guide Tactical Blueprint
+              </div}
+              {strategy}
+            </div>
+          )}
+          {checklist && (
+            <GearChecklist items={checklist} />
+          )}
           <div style={{ background: 'linear-gradient(135deg,#082f49,#0a0f1e)', border: '1px solid #155e75', borderRadius: '12px', padding: '14px' }}>
             <div style={{ fontSize: '11px', color: '#67e8f9', fontWeight: 'bold', marginBottom: '8px' }}>CONDITION-BASED ESTIMATE</div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
