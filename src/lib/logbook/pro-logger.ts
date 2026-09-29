@@ -1,4 +1,4 @@
-import { supabase } from '../supabase/client';
+import { createAdminClient } from '../supabase/admin';
 import { EnvironmentManager } from '../environment/manager';
 import { fetchNwsWeather, fetchUSGSWaterData, fetchMarineConditions } from '../fetchers/environmental';
 
@@ -16,7 +16,7 @@ export class ProLogger {
     const snapshot = await this.captureSnapshot(catchData.latitude, catchData.longitude, catchData.spot_id);
     
     // 2. DATABASE: Save the catch with the snapshot
-    const { data: catchRecord, error: catchError } = await supabase
+    const admin = createAdminClient(); const { data: catchRecord, error: catchError } = await admin
       .from('catches')
       .insert([{ 
         ...catchData, 
@@ -29,7 +29,7 @@ export class ProLogger {
 
     // 3. GAMIFICATION: Calculate XP and Update Profile
     const xpEarned = this.calculateXP(catchData.species, catchData.weight_lbs);
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .update({ 
         xp: (await this.getCurrentXP(userId)) + xpEarned,
@@ -93,7 +93,7 @@ export class ProLogger {
   }
 
   private static async getCurrentXP(userId: string): Promise<number> {
-    const { data } = await supabase.from('profiles').select('xp').eq('id', userId).single();
+    const admin = createAdminClient(); const { data } = await admin.from('profiles').select('xp').eq('id', userId).single();
     return data?.xp || 0;
   }
 
@@ -101,7 +101,7 @@ export class ProLogger {
     const unlocked: string[] = [];
     
     // Example: "First Catch" achievement
-    const { data: catches } = await supabase.from('catches').select('id').eq('user_id', userId);
+    const admin = createAdminClient(); const { data: catches } = await admin.from('catches').select('id').eq('user_id', userId);
     if (catches && catches.length === 1) {
       await this.grantBadge(userId, 'first_catch');
       unlocked.push('first_catch');
@@ -111,6 +111,6 @@ export class ProLogger {
   }
 
   private static async grantBadge(userId: string, achievementId: string) {
-    await supabase.from('user_badges').insert({ user_id: userId, achievement_id: achievementId });
+    const admin = createAdminClient(); await admin.from('user_badges').insert({ user_id: userId, achievement_id: achievementId });
   }
 }

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+const StrategySchema = z.object({ strategy: z.string().min(1) });
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.6,
     });
 
-    return NextResponse.json({ strategy: response.choices[0]?.message?.content });
+    const result = { strategy: response.choices[0]?.message?.content || '' }; const validated = StrategySchema.parse(result); return NextResponse.json(validated);
   } catch (error) {
     console.error('[species-strategy] error:', error);
     return NextResponse.json({ error: 'Failed to generate strategy.' }, { status: 500 });
