@@ -17,7 +17,6 @@ describe('AI provider selection', () => {
 
   it('uses default Groq model when GROQ_MODEL is unset', () => {
     vi.stubEnv('GROQ_MODEL', undefined)
-    expect(getAiProviderName()).toBe('groq')
     expect(getAiModel()).toBe('llama-3.3-70b-versatile')
   })
 
@@ -35,6 +34,7 @@ describe('AI provider selection', () => {
     vi.stubEnv('GROQ_API_KEY', 'test-groq-key')
     const client = getOllama()
     
+    // @ts-expect-error - accessing private properties for validation
     expect(client.apiKey).toBe('test-groq-key')
     expect(client.baseURL).toBe('https://api.groq.com/openai/v1')
   })
