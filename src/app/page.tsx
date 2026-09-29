@@ -522,7 +522,7 @@ export default function MobilePage() {
       scoreFetchInFlight.current[spot.id] = true;
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
 
-      fetch(`/api/spots/${spot.id}/conditions`)
+      fetch(`/api/spots/${encodeURIComponent(spot.id)}/conditions?lat=${encodeURIComponent(spot.lat)}&lng=${encodeURIComponent(spot.lng)}`)
         .then(async (res) => {
           if (!res.ok) {
             setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
@@ -720,7 +720,7 @@ export default function MobilePage() {
         {/* AI TAB */}
         {tab === 'ai' && (
           <div style={PAGE_STYLES.padPane}>
-            <SpotSuggester spots={visibleSpots} />
+            <SpotSuggester spots={visibleSpots} selectedSpot={selectedSpot} />
           </div>
         )}
 
@@ -773,7 +773,7 @@ export default function MobilePage() {
         {/* SOCIAL TAB */}
         {tab === 'species' && (
   <div style={{ ...PAGE_STYLES.scrollPane, padding: 0 }}>
-  <SpeciesTab coordinates={coordinates} />
+  <SpeciesTab coordinates={selectedSpot ? { latitude: selectedSpot.lat, longitude: selectedSpot.lng } : coordinates} spotName={selectedSpot?.name} />
   </div>
         )}
         {/* SETTINGS TAB */}

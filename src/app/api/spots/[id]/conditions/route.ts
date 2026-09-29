@@ -1,293 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  fetchNWSConditions,
-  fetchUSGSWaterData,
-  fetchMarineConditions,
-  fetchTideData,
-} from '@/lib/fetchers/environmental';
-import { calculateFishingScore } from '@/lib/scoring/fishingScore';
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { enforceRateLimit } from '@/lib/security';
 import { z } from 'zod';
 
-const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+export const dynamic = 'force-dynamic';
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const limited = enforceRateLimit(_req, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
-  if (limited) return limited;
+const requestSchema = z.object({
+  id: z.string().min(1).max(128),
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+});
 
-  const parsed = z
-    .object({ id: z.string().min(1).max(128) })
-    .safeParse(await params);
-
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const parsed = requestSchema.safeParse({
+    ...(await params),
+    lat: request.nextUrl.searchParams.get('lat'),
+    lng: request.nextUrl.searchParams.get('lng'),
+  });
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid spot ID' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Spot coordinates are required.', data_mode: 'fallback' }, { status: 400 });
   }
 
-  const { id } = parsed.data;
-  const supabase = getSupabaseAdmin();
-
-  if (!supabase) {
-    return NextResponse.json(
-      {
-        spot_id: id,
-        fishing_score: 0,
-        score_breakdown: null,
-        data_sources: [],
-        cached: false,
-        stale: true,
-        data_mode: 'fallback',
-        warning: 'Live condition storage is unavailable; showing the spot without a provider score.',
-      },
-      { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' } },
-    );
-  }
-
-  const { data: spot, error: spotErr } = await supabase
-    .from('spots')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (spotErr || !spot) {
-    return NextResponse.json(
-      { error: 'Spot not found', data_mode: 'unavailable' },
-      { status: 404 },
-    );
-  }
-
-  const { data: cached, error: cacheReadError } = await supabase
-    .from('environmental_snapshots')
-    .select('*')
-    .eq('spot_id', id)
-    .order('captured_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const cachedIsFallback =
-    cached?.data_mode === 'fallback' ||
-    (Array.isArray(cached?.data_sources) && cached.data_sources.some((source: unknown) =>
-      typeof source === 'string' && source.toLowerCase().includes('fallback'),
-    ));
-
-  if (cacheReadError) {
-    console.warn('[API] snapshot cache read error', {
-      provider: 'Supabase',
-      spotId: id,
-      operation: 'read',
+  const { id, lat, lng } = parsed.data;
+  try {
+    const response = await fetch(`https://seamcast-spots.vercel.app/api/spots?lat=${lat}&lon=${lng}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
     });
-  }
+    if (!response.ok) throw new Error(`Provider returned ${response.status}`);
+    const payload = await response.json() as Record<string, unknown>;
+    const bite = payload.overallBite as Record<string, unknown> | undefined;
+    const score = Number(bite?.score);
+    const fishingScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
 
-  const cacheAgeMs = cached
-    ? Date.now() - new Date(cached.captured_at).getTime()
-    : Number.POSITIVE_INFINITY;
-
-  if (cached && !cachedIsFallback && cacheAgeMs <= CACHE_MAX_AGE_MS) {
-    return NextResponse.json(
-      {
-        ...cached,
-        cached: true,
-        stale: false,
-        data_mode: 'cached',
-      },
-      {
-        headers: {
-          'Cache-Control': 'public, max-age=1800',
-          'x-fishfinder-data-mode': 'cached',
-        },
-      },
-    );
-  }
-
-  const [nws, usgs, marine, tides] = await Promise.allSettled([
-    fetchNWSConditions(spot.lat, spot.lng),
-    spot.usgs_site_id
-      ? fetchUSGSWaterData(spot.usgs_site_id)
-      : Promise.resolve(null),
-    spot.water_type !== 'freshwater'
-      ? fetchMarineConditions(spot.lat, spot.lng)
-      : Promise.resolve(null),
-    spot.noaa_station_id
-      ? fetchTideData(spot.noaa_station_id)
-      : Promise.resolve(null),
-  ]);
-
-  if (nws.status === 'rejected') {
-    const reason = nws.reason as { status?: number; name?: string } | undefined;
-
-    console.warn('[NWS] conditions unavailable', {
-      provider: 'NWS',
-      spotId: id,
-      status: typeof reason?.status === 'number' ? reason.status : null,
-      kind: reason?.name ?? 'unknown',
-    });
-  }
-
-  if (usgs.status === 'rejected') {
-    console.warn('[USGS] conditions unavailable', {
-      provider: 'USGS',
-      spotId: id,
-    });
-  }
-
-  if (marine.status === 'rejected') {
-    console.warn('[Marine] conditions unavailable', {
-      provider: 'Open-Meteo Marine',
-      spotId: id,
-    });
-  }
-
-  if (tides.status === 'rejected') {
-    console.warn('[Tides] conditions unavailable', {
-      provider: 'NOAA Tides',
-      spotId: id,
-    });
-  }
-
-  const nwsData = nws.status === 'fulfilled' ? nws.value : null;
-  const usgsData = usgs.status === 'fulfilled' ? usgs.value : null;
-  const marineData = marine.status === 'fulfilled' ? marine.value : null;
-  const tideData = tides.status === 'fulfilled' ? tides.value : null;
-
-  const noProviderData =
-    nwsData === null &&
-    usgsData === null &&
-    marineData === null &&
-    tideData === null;
-
-  if (noProviderData && cached && !cachedIsFallback) {
-    return NextResponse.json(
-      {
-        ...cached,
-        cached: true,
-        stale: true,
-        data_mode: 'stale-cache',
-        warning:
-          'Live environmental data is temporarily unavailable. Showing the latest cached conditions.',
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store',
-          'x-fishfinder-data-mode': 'stale-cache',
-        },
-      },
-    );
-  }
-
-  if (noProviderData) {
-    return NextResponse.json(
-      {
-        error:
-          'Provider environmental data is temporarily unavailable; no conditions were generated.',
-        data_mode: 'unavailable',
-      },
-      {
-        status: 503,
-        headers: {
-          'Cache-Control': 'no-store',
-          'x-fishfinder-data-mode': 'unavailable',
-        },
-      },
-    );
-  }
-
-  const dataSources = [
-    nwsData?.source,
-    usgsData?.source,
-    marineData?.source,
-    tideData?.source,
-  ].filter(Boolean);
-
-  const water_temp_c =
-    (usgsData?.water_temp_c as number | null) ??
-    (marineData?.sea_surface_temp_c ?? null);
-
-  const water_level_ft =
-    (usgsData?.water_level_ft as number | null) ?? null;
-
-  const water_level_m =
-    water_level_ft !== null
-      ? Math.round(water_level_ft * 0.3048 * 100) / 100
-      : null;
-
-  const scoreInput = {
-    air_temp_c: nwsData?.air_temp_c ?? null,
-    water_temp_c,
-    wind_speed_ms: nwsData?.wind_speed_ms ?? null,
-    wave_height_m: marineData?.wave_height_m ?? null,
-    dissolved_oxygen_mgl:
-      (usgsData?.dissolved_oxygen_mgl as number | null) ?? null,
-    tide_type: null,
-    is_daytime: nwsData?.is_daytime ?? undefined,
-  };
-
-  const scoreResult = calculateFishingScore(scoreInput);
-
-  const snapshot = {
-    spot_id: id,
-    air_temp_c: nwsData?.air_temp_c ?? null,
-    wind_speed_ms: nwsData?.wind_speed_ms ?? null,
-    water_temp_c,
-    water_level_m,
-    flow_rate_cfs: (usgsData?.flow_rate_cfs as number | null) ?? null,
-    dissolved_oxygen_mgl: scoreInput.dissolved_oxygen_mgl,
-    wave_height_m: marineData?.wave_height_m ?? null,
-    wave_period_s: marineData?.wave_period_s ?? null,
-    swell_direction_deg: marineData?.wave_direction_deg ?? null,
-    tide_height_m: tideData?.tide_height_m ?? null,
-    fishing_score: scoreResult.total,
-    score_breakdown: scoreResult,
-    data_sources: dataSources,
-  };
-
-  const { data: inserted, error: insertErr } = await supabase
-    .from('environmental_snapshots')
-    .insert(snapshot)
-    .select()
-    .single();
-
-  if (insertErr) {
-    console.warn('[API] snapshot cache write error', {
-      provider: 'Supabase',
-      spotId: id,
-      operation: 'insert',
-    });
-
-    return NextResponse.json(
-      {
-        ...snapshot,
-        captured_at: new Date().toISOString(),
-        cached: false,
-        stale: false,
-        data_mode: 'provider',
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store',
-          'x-fishfinder-cache': 'write-failed',
-          'x-fishfinder-data-mode': 'provider',
-        },
-      },
-    );
-  }
-
-  return NextResponse.json(
-    {
-      ...inserted,
+    return NextResponse.json({
+      spot_id: id,
+      fishing_score: fishingScore,
+      score_breakdown: bite ?? null,
+      data_sources: ['seamcast-spots'],
+      provider: payload.conditions ?? null,
+      species: payload.speciesLikely ?? [],
+      recommended_baits: payload.recommendedBaits ?? [],
+      micro_spots: payload.microSpots ?? [],
       cached: false,
       stale: false,
       data_mode: 'provider',
-    },
-    {
-      headers: {
-        'Cache-Control': 'public, max-age=1800',
-        'x-fishfinder-data-mode': 'provider',
-      },
-    },
-  );
+    }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
+  } catch (error) {
+    console.warn('[spot-conditions] seamcast-spots unavailable', { id, error: error instanceof Error ? error.message : 'unknown' });
+    return NextResponse.json({
+      spot_id: id,
+      fishing_score: 0,
+      score_breakdown: null,
+      data_sources: [],
+      cached: false,
+      stale: true,
+      data_mode: 'fallback',
+      warning: 'Provider conditions are temporarily unavailable. Spot details remain available.',
+    }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' } });
+  }
 }

@@ -32,6 +32,7 @@ interface RankedSpot {
 
 interface Props {
   spots: Spot[];
+  selectedSpot?: Spot | null;
 }
 
 interface UserLocation {
@@ -55,7 +56,7 @@ const scoreColor = (score: number) =>
         ? '#f97316'
         : '#6b7280';
 
-export default function SpotSuggester({ spots }: Props) {
+export default function SpotSuggester({ spots, selectedSpot }: Props) {
   const [results, setResults] = useState<RankedSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +78,15 @@ export default function SpotSuggester({ spots }: Props) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            spots: typeof lat === 'number' && typeof lng === 'number'
-              ? spots
-                  .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
-                  .sort((a, b) => b.lat - a.lat)
+            spots: selectedSpot
+              ? [selectedSpot, ...spots.filter((spot) => spot.id !== selectedSpot.id)]
+                  .filter((spot) => typeof lat !== 'number' || typeof lng !== 'number' || distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
                   .slice(0, 10)
-              : [],
+              : typeof lat === 'number' && typeof lng === 'number'
+                ? spots
+                    .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
+                    .slice(0, 10)
+                : spots.slice(0, 10),
             species: selectedSpecies,
             userLat: lat,
             userLng: lng,
@@ -124,7 +128,7 @@ export default function SpotSuggester({ spots }: Props) {
         setLoading(false);
       }
     },
-    [selectedSpecies, spots],
+    [selectedSpecies, selectedSpot, spots],
   );
 
   const saveLocation = (lat: number, lng: number): UserLocation => {
@@ -135,6 +139,11 @@ export default function SpotSuggester({ spots }: Props) {
   };
 
   const handleFind = () => {
+    if (selectedSpot) {
+      setUserLocation({ lat: selectedSpot.lat, lng: selectedSpot.lng });
+      void runSuggestion(selectedSpot.lat, selectedSpot.lng);
+      return;
+    }
     setLocating(true);
 
     if (!navigator.geolocation) {
@@ -193,7 +202,7 @@ export default function SpotSuggester({ spots }: Props) {
             lineHeight: 1.5,
           }}
         >
-          Find nearby Oklahoma waters with AI-generated trip ideas based on the selected spot metadata. Verify live conditions before traveling.
+          Build a trip plan for the selected spot with Groq AI and SeamCast spot context. Verify live conditions before traveling.
         </p>
       </div>
 
@@ -230,7 +239,7 @@ export default function SpotSuggester({ spots }: Props) {
           ? 'Getting your location...'
           : loading
             ? 'Finding the best spots...'
-            : 'Find Fishing Spots Near Me'}
+            : selectedSpot ? `Plan a trip for ${selectedSpot.name}` : 'Find Fishing Spots Near Me'}
       </button>
 
       {userLocation ? (

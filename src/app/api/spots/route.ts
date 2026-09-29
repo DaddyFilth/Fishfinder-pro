@@ -104,10 +104,10 @@ export async function GET(req: NextRequest) {
       cache: 'no-store',
     });
     if (!res.ok) {
-      return NextResponse.json(
-        { error: 'Remote spots API failed.', live: false },
-        { status: 502 },
-      );
+      const normalized = normalize({ spots: DEFAULT_SPOTS });
+      return NextResponse.json(normalized, {
+        headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' },
+      });
     }
     const text = await res.text();
     const json = JSON.parse(text) as unknown;
@@ -119,9 +119,9 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch {
-    return NextResponse.json(
-      { error: 'Unable to load fishing spots.', live: false },
-      { status: 502 },
-    );
+    const normalized = normalize({ spots: DEFAULT_SPOTS });
+    return NextResponse.json(normalized, {
+      headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' },
+    });
   }
 }

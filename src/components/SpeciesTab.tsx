@@ -23,7 +23,7 @@ import {
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
-export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates | null }) {
+export default function SpeciesTab({ coordinates, spotName }: { coordinates?: Coordinates | null; spotName?: string }) {
   const [filter, setFilter] = useState<SpeciesFilter>('All');
   const [groupFilter, setGroupFilter] = useState<SpeciesGroupFilter>('All');
   const [statusFilter, setStatusFilter] = useState<OklahomaSpeciesStatusFilter>('All');
@@ -139,7 +139,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
   return (
     <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: '#060d1a', borderRadius: '16px', overflow: 'hidden' }}>
       <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #1e293b', background: 'linear-gradient(180deg, #0b1b2d 0%, #081321 100%)', flexShrink: 0 }}>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px' }}>Oklahoma Species Guide</div>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '4px' }}>Species at {spotName ?? 'your selected area'}</div><div style={{ fontSize: '10px', color: '#64748b', marginBottom: '8px' }}>Target species and tactics are filtered to the selected spot region.</div>
         <input
           aria-label="Search fish species"
           value={search}
@@ -231,7 +231,7 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
                 <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>Record: {species.record}</span>
               </div>
             </div>
-            <div aria-hidden="true" style={{ color: '#64748b', fontSize: '16px' }}>›</div>
+            <div aria-hidden="true" style={{ color: '#64748b', fontSize: '16px' }}>��</div>
           </button>
         ))}
         {filtered.length === 0 && <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0', fontSize: '13px' }}>No species found</div>}
