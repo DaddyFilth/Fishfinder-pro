@@ -99,7 +99,6 @@ export default function LogbookTab() {
   );
 }
 
-'use client';
 
 import { useSyncExternalStore, useRef, useState, type CSSProperties } from 'react';
 
