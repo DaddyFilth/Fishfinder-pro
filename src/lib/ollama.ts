@@ -17,8 +17,13 @@ export function getAiVisionModel(): string {
 }
 
 export function getOllama() {
+  const apiKey = process.env.GROQ_API_KEY?.trim()
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY must be configured.')
+  }
+
   return new OpenAI({
-    apiKey: process.env.GROQ_API_KEY || 'missing',
+    apiKey,
     baseURL: 'https://api.groq.com/openai/v1',
     timeout: 10000,
   })
