@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+
 const base = 'https://www.fishfinder-pro.online'
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
