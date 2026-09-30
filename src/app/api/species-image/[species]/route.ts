@@ -31,7 +31,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ species: string }> }
 ) {
-  const limited = enforceRateLimit(request, { name: 'species-image', limit: 10, windowMs: 60_000 });
+  const limited = await enforceRateLimit(request, { name: 'species-image', limit: 10, windowMs: 60_000 });
   if (limited) return limited;
 
   const { species } = await params;
