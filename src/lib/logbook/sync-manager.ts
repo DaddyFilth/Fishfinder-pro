@@ -1,5 +1,5 @@
 import { LogbookManager } from './manager';
-import { supabase } from '../supabase/client';
+import { createClient } from '../supabase/client';
 
 export class SyncManager {
   private static isSyncing = false;
@@ -24,10 +24,16 @@ export class SyncManager {
 
       console.log(`[SyncManager] Found ${queue.length} items in sync queue. Processing...`);
 
+      const supabase = createClient();
+      if (!supabase) {
+        this.isSyncing = false;
+        return;
+      }
+
       for (const item of queue) {
         try {
           const { data, id } = item;
-          
+
           // Attempt to push to Supabase via the API or Client
           const { error } = await supabase
             .from('catches')

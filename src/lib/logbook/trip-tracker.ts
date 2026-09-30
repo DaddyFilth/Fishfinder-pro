@@ -1,4 +1,3 @@
-import { Geolocation } from '@capacitor/geolocation';
 import { openDB } from 'idb';
 
 export interface Breadcrumb {
@@ -54,8 +53,10 @@ export class TripTracker {
     if (!this.activeTripId) return;
 
     try {
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+        });
       });
 
       const breadcrumb: Breadcrumb = {

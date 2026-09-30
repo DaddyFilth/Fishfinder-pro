@@ -1,6 +1,6 @@
 import { createAdminClient } from '../supabase/admin';
 import { EnvironmentManager } from '../environment/manager';
-import { fetchNwsWeather, fetchUSGSWaterData, fetchMarineConditions } from '../fetchers/environmental';
+import { fetchNWSConditions, fetchUSGSWaterData, fetchMarineConditions } from '../fetchers/environmental';
 
 export interface ProCatchResult {
   catchId: string;
@@ -54,7 +54,7 @@ export class ProLogger {
 
   private static async captureSnapshot(lat: number, lng: number, spotId?: string) {
     const [nws, marine] = await Promise.all([
-      fetchNwsWeather(lat, lng),
+      fetchNWSConditions(lat, lng),
       fetchMarineConditions(lat, lng)
     ]);
 

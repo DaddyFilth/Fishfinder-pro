@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import type { LogbookTrip } from './LogbookTab';
+import type { LogbookTrip } from './LogbookTripsTab';
 
 const STORAGE_KEY = 'fishfinder.logbook.trips.v1';
 

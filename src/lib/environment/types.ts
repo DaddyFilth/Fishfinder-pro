@@ -8,6 +8,7 @@ export interface SolunarData {
 }
 
 export interface BarometricTrend {
+  timestamp: number;
   currentPressure: number;
   trend: 'rising' | 'falling' | 'stable';
   impact: 'positive' | 'negative' | 'neutral';

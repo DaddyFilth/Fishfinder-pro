@@ -5,6 +5,7 @@ const STORE_NAMES = {
   CATALOG: 'species-catalog',
   STRATEGIES: 'ai-strategies',
   SITES: 'cached-spots',
+  CHECKLISTS: 'gear-checklists',
 };
 
 export class StorageManager {
@@ -18,6 +19,9 @@ export class StorageManager {
       }
       if (!db.objectStoreNames.contains(STORE_NAMES.SITES)) {
         db.createObjectStore(STORE_NAMES.SITES);
+      }
+      if (!db.objectStoreNames.contains(STORE_NAMES.CHECKLISTS)) {
+        db.createObjectStore(STORE_NAMES.CHECKLISTS);
       }
     },
   });

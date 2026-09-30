@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 interface ProStatsProps {
   userId: string;
@@ -12,6 +12,8 @@ export default function ProStatsPanel({ userId }: ProStatsProps) {
 
   useEffect(() => {
     async function loadStats() {
+      const supabase = createClient();
+      if (!supabase) return;
       const { data: profile } = await supabase
         .from('profiles')
         .select('xp, level, life_list')
@@ -29,6 +31,8 @@ export default function ProStatsPanel({ userId }: ProStatsProps) {
     loadStats();
 
     async function checkAlerts() {
+      const supabase = createClient();
+      if (!supabase) return;
       const { data: alerts } = await supabase
         .from('realtime_alerts')
         .select('*')

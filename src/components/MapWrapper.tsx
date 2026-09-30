@@ -314,20 +314,19 @@ export default function FishingMap({
   const mapShellRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef<SpotMarkerRegistry['current']>({});
   const [mapSize, setMapSize] = useState(() => ({
+    width: typeof window === 'undefined' ? 0 : window.innerWidth,
+    height: typeof window === 'undefined' ? 0 : window.innerHeight,
+  }));
   const [condition, setCondition] = useState<FishingCondition>('stable');
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [deviceLocation, setDeviceLocation] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      (pos) => setDeviceLocation([pos.coords.latitude, pos.coords.longitude]),
       (err) => console.error('GPS Error:', err),
       { enableHighAccuracy: true }
     );
   }, []);
-
-    width: typeof window === 'undefined' ? 0 : window.innerWidth,
-    height: typeof window === 'undefined' ? 0 : window.innerHeight,
-  }));
   const baseLayers: Record<BaseLayer, { url: string; attribution: string; label: string; maxZoom?: number }> = {
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -846,10 +845,10 @@ export default function FishingMap({
                   </div>
                 </Popup>
           {userLocation && (
-            <HotZoneOverlay 
-              center={userLocation} 
-              condition={condition} 
-              visible={showMapOverlays} 
+            <HotZoneOverlay
+              center={[userLocation.latitude, userLocation.longitude]}
+              condition={condition}
+              visible={showMapOverlays}
             />
           )}
 
