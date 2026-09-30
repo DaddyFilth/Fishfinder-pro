@@ -33,6 +33,25 @@
       }
     },
     "optional": {
+      "GROQ_API_KEY": {
+        "value": "[your-groq-key]",
+        "type": "API Key (Secret)",
+        "environments": ["Production", "Preview"],
+        "description": "Current production AI provider secret",
+        "security": "SECRET - never expose to the browser"
+      },
+      "GROQ_MODEL": {
+        "value": "llama-3.3-70b-versatile",
+        "type": "String",
+        "environments": ["Production", "Preview"],
+        "description": "Current production text model"
+      },
+      "GROQ_VISION_MODEL": {
+        "value": "[your-groq-vision-model]",
+        "type": "String",
+        "environments": ["Production", "Preview"],
+        "description": "Vision model used for fish identification"
+      },
       "OLLAMA_BASE_URL": {
         "value": "http://localhost:11434/v1",
         "type": "URL",
@@ -67,8 +86,8 @@
         "value": "[your-openai-key]",
         "type": "API Key (Secret)",
         "environments": ["Production"],
-        "description": "OpenAI API key for GPT models",
-        "required": "Only if NOT using Ollama",
+        "description": "OpenAI API key used by the current spot-discovery route",
+        "required": "Only if /api/spots/discover is enabled",
         "howToGet": "https://platform.openai.com/api-keys",
         "security": "⚠️ SECRET - Production only",
         "warning": "Never expose in Preview/Dev or commit to Git",
