@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getGroqClient } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
@@ -68,20 +69,15 @@ export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
   const bodyResult = await readJsonBody(req, 16_384)
   if (!bodyResult.ok) return bodyResult.response
-  const { lat, lon, targetSpecies } = bodyResult.value as {
-    lat?: unknown
-    lon?: unknown
-    targetSpecies?: unknown
-  }
+  const parsed = z.object({
+    lat: z.number().finite().min(-90).max(90),
+    lon: z.number().finite().min(-180).max(180),
+    targetSpecies: z.string().trim().max(80).optional(),
+  }).strict().safeParse(bodyResult.value)
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid coordinates or species.' }, { status: 400 })
 
-    if (
-      typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
-      typeof lon !== 'number' || !Number.isFinite(lon) || lon < -180 || lon > 180
-    ) {
-      return NextResponse.json({ error: 'Coordinates required' }, { status: 400 })
-    }
-
-    const safeSpecies = typeof targetSpecies === 'string' ? targetSpecies.trim().slice(0, 80) : ''
+  const { lat, lon, targetSpecies } = parsed.data
+  const safeSpecies = targetSpecies ?? ''
     const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
     const context = buildContextMessage(spotsData)
 

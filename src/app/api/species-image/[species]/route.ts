@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth/server';
 import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 import { isSafeGeneratedSvg } from '@/lib/svg';
+import { enforceRateLimit } from '@/lib/security';
 
 export const runtime = 'nodejs';
 
@@ -27,9 +28,12 @@ function decodeSpeciesParam(species: string) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ species: string }> }
 ) {
+  const limited = enforceRateLimit(request, { name: 'species-image', limit: 10, windowMs: 60_000 });
+  if (limited) return limited;
+
   const { species } = await params;
   const speciesName = decodeSpeciesParam(species);
 

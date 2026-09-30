@@ -1,5 +1,10 @@
 import { z } from 'zod';
-const StrategySchema = z.object({ strategy: z.string().min(1) });
+const StrategySchema = z.object({ strategy: z.string().trim().min(1).max(8_000) });
+const RequestSchema = z.object({
+  speciesId: z.string().trim().min(1).max(80),
+  lat: z.number().finite().min(-90).max(90),
+  lon: z.number().finite().min(-180).max(180),
+}).strict();
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -13,11 +18,11 @@ export async function POST(req: NextRequest) {
   const bodyResult = await readJsonBody(req, 16_384);
   if (!bodyResult.ok) return bodyResult.response;
 
-  const { speciesId, lat, lon } = bodyResult.value as { speciesId?: string; lat?: number; lon?: number };
-
-  if (!speciesId || typeof lat !== 'number' || typeof lon !== 'number') {
-    return NextResponse.json({ error: 'Species ID and coordinates are required.' }, { status: 400 });
+  const parsedRequest = RequestSchema.safeParse(bodyResult.value);
+  if (!parsedRequest.success) {
+    return NextResponse.json({ error: 'Species ID and valid coordinates are required.' }, { status: 400 });
   }
+  const { speciesId, lat, lon } = parsedRequest.data;
 
   const species = SPECIES.find(s => s.id === speciesId);
   if (!species) {

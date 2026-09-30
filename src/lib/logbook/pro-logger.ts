@@ -18,9 +18,11 @@ export class ProLogger {
     // 2. DATABASE: Save the catch with the snapshot
     const admin = createAdminClient(); const { data: catchRecord, error: catchError } = await admin
       .from('catches')
-      .insert([{ 
-        ...catchData, 
-        weather_snapshot: snapshot 
+      .insert([{
+        ...catchData,
+        user_id: userId,
+        is_public: false,
+        weather_snapshot: snapshot,
       }])
       .select()
       .single();
