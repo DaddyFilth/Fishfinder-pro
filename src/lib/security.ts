@@ -7,10 +7,7 @@ export { isHttpUrl, isImageDataUrl } from './urls'
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
 let redis: Redis | null = null
-let redisDisabled = false
-
 function getRedis() {
-  if (redisDisabled) return null
   const url = process.env.REDIS_URL?.trim()
   if (!url) return null
   if (!redis) {
@@ -65,9 +62,11 @@ async function enforceDistributedRateLimit(
     }
     return null
   } catch (error) {
-    console.error('[rate-limit] Redis unavailable; using local fallback:', error)
-    redisDisabled = true
-    return null
+    console.error('[rate-limit] Redis unavailable:', error)
+    return NextResponse.json(
+      { error: 'Rate limiting service is temporarily unavailable.' },
+      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+    )
   }
 }
 
@@ -77,7 +76,6 @@ export async function enforceRateLimit(
 ) {
   const distributed = await enforceDistributedRateLimit(request, options)
   if (distributed) return distributed
-  if (process.env.REDIS_URL?.trim() && redisDisabled) return localRateLimit(request, options)
   if (process.env.REDIS_URL?.trim()) return null
   return localRateLimit(request, options)
 }
