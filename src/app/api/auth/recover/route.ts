@@ -8,7 +8,7 @@ import { enforceRateLimit, readJsonBody } from '@/lib/security'
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'auth-recovery',
     limit: 5,
     windowMs: 15 * 60_000,

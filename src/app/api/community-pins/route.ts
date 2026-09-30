@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'community-pins-write',
     limit: 12,
     windowMs: 60 * 60 * 1000,

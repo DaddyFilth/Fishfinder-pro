@@ -63,7 +63,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'community-spot-submissions',
     limit: 5,
     windowMs: 60 * 60 * 1000,

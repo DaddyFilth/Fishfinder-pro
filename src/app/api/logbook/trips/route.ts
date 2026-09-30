@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'logbook-trips-write',
     limit: 20,
     windowMs: 60_000,

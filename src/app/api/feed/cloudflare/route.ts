@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 
-  const limited = enforceRateLimit(request, { name: 'cloudflare-feed', limit: 120, windowMs: 60_000 })
+  const limited = await enforceRateLimit(request, { name: 'cloudflare-feed', limit: 120, windowMs: 60_000 })
   if (limited) return limited
 
   const bodyResult = await readJsonBody(request, 512_000)

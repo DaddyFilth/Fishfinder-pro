@@ -31,7 +31,7 @@ function distanceMiles(aLat: number, aLng: number, bLat: number, bLng: number) {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = enforceRateLimit(request, { name: 'spot-discovery', limit: 6, windowMs: 60_000 });
+  const limited = await enforceRateLimit(request, { name: 'spot-discovery', limit: 6, windowMs: 60_000 });
   if (limited) return limited;
   if (!isSameOrigin(request)) {
     return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
