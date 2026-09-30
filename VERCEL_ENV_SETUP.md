@@ -51,7 +51,21 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Vercel Environment:** Production ONLY (do not expose in preview/dev)
 - **⚠️ SECURITY:** This is a secret - never commit to Git
 
-### OLLAMA_BASE_URL (Optional)
+### GROQ_API_KEY (Required for AI features)
+- **Value Type:** Secret API Key
+- **Environment:** Production (and Preview if AI is needed there)
+- **Security:** Never expose in `NEXT_PUBLIC_*` variables or commit it.
+- **Purpose:** Current production AI provider is Groq.
+
+### GROQ_MODEL (Optional)
+- **Default:** `llama-3.3-70b-versatile`
+- **Environment:** Production/Preview as needed.
+
+### GROQ_VISION_MODEL (Required for fish-image identification)
+- **Environment:** Production/Preview as needed.
+- **Purpose:** Vision model used by `/api/ai/identify`.
+
+### OLLAMA_BASE_URL (Legacy/Local-only)
 - **Value Type:** URL
 - **Default:** `http://localhost:11434/v1`
 - **Format:** Base URL to your Ollama instance
@@ -73,7 +87,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Only needed if:** Using Ollama for image analysis
 - **Vercel Environment:** Development, Preview, Production
 
-### OPENAI_API_KEY (Optional Alternative to Ollama)
+### OPENAI_API_KEY (Only for spot discovery)
 - **Value Type:** Secret API Key
 - **Format:** Starts with `sk-`
 - **How to Get:**
@@ -112,8 +126,10 @@ https://vercel.com/dashboard
 - **Environments:** Check Production ONLY
 - **⚠️ Security:** Do NOT check Development/Preview
 
-### 5. (Optional) Add OLLAMA Configuration
-If using Ollama for local AI inference:
+### 5. Configure production AI
+Use the Groq variables above for the current deployed application. Do not set `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel; localhost refers to the Vercel runtime, not your personal computer.
+
+If you intentionally run Ollama locally:
 
 - **Name:** `OLLAMA_BASE_URL`
   - **Value:** `http://localhost:11434/v1`
@@ -127,8 +143,8 @@ If using Ollama for local AI inference:
   - **Value:** `llama3.2-vision`
   - **Environments:** Your choice
 
-### 6. (Optional) Add OpenAI Configuration
-If NOT using Ollama:
+### 6. Configure OpenAI only for spot discovery
+If `/api/spots/discover` is enabled, add `OPENAI_API_KEY` to Production. Other AI routes currently use Groq.
 
 - **Name:** `OPENAI_API_KEY`
   - **Value:** Your OpenAI API key (starts with `sk-`)
@@ -264,6 +280,6 @@ OLLAMA_VISION_MODEL = llama3.2-vision
 
 ---
 
-**Last Updated:** September 2, 2026  
+**Last Updated:** September 30, 2026  
 **Project:** Fishfinder-Pro  
 **Status:** Ready for Vercel deployment
