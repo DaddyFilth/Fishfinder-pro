@@ -137,7 +137,7 @@ function logNwsFailure(
   });
 }
 
-export async function fetchNWSConditions(lat: number, lng: number) {
+export async function fetchNwsWeather(lat: number, lng: number) {
   const pointUrl = getNwsPointUrl(lat, lng);
 
   if (!pointUrl) {
@@ -214,6 +214,8 @@ export async function fetchNWSConditions(lat: number, lng: number) {
     return null;
   }
 }
+
+export const fetchNWSConditions = fetchNwsWeather
 
 export async function fetchUSGSWaterData(siteId: string) {
   try {

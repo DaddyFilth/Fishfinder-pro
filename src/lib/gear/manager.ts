@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { GearItem, DigitalTackleBox, TACKLE_BOX_STORE } from './types';
 
 export class GearManager {
-  private static dbPromise = openDB('fishfinder-gear', 1, {
+  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-gear', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(TACKLE_BOX_STORE)) {
         db.createObjectStore(TACKLE_BOX_STORE, { keyPath: 'userId' });

@@ -6,3 +6,5 @@ export function createClient() {
   if (!config) return null
   return createBrowserClient(config.url, config.key)
 }
+
+export const supabase = createClient()!

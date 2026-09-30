@@ -4,7 +4,7 @@ import { Catch, LOGBOOK_STORE } from './types';
 export const SYNC_QUEUE_STORE = 'sync_queue';
 
 export class LogbookManager {
-  private static dbPromise = openDB('fishfinder-logbook', 1, {
+  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-logbook', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(LOGBOOK_STORE)) {
         db.createObjectStore(LOGBOOK_STORE, { keyPath: 'id' });

@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { SolunarData, BarometricTrend, SOLUNAR_STORE, BARO_STORE } from './types';
 
 export class EnvironmentManager {
-  private static dbPromise = openDB('fishfinder-env', 1, {
+  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-env', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(SOLUNAR_STORE)) {
         db.createObjectStore(SOLUNAR_STORE, { keyPath: 'date' });
@@ -56,7 +56,6 @@ export class EnvironmentManager {
     }
 
     const entry: BarometricTrend = {
-      timestamp: Date.now(),
       currentPressure: pressure,
       trend,
       impact,
