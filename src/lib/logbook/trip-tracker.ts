@@ -18,7 +18,7 @@ export interface Trip {
 export const TRIPS_STORE = 'user_trips';
 
 export class TripTracker {
-  private static dbPromise = openDB('fishfinder-trips', 1, {
+  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-trips', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(TRIPS_STORE)) {
         db.createObjectStore(TRIPS_STORE, { keyPath: 'id' });

@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import { CommunitySpot, COMMUNITY_STORE } from './types';
 
 export class CommunityManager {
-  private static dbPromise = openDB('fishfinder-community', 1, {
+  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-community', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(COMMUNITY_STORE)) {
         db.createObjectStore(COMMUNITY_STORE, { keyPath: 'id' });

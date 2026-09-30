@@ -6,10 +6,10 @@ import { enforceRateLimit, isHttpUrl, isImageDataUrl, isSameOrigin, readJsonBody
 // `id` and `user_id` are intentionally excluded — they are set server-side.
 const CatchSchema = z.object({
   species: z.string().min(1).max(80),
-  weight_lbs: z.number().nullable(),
-  length_in: z.number().nullable(),
-  bait: z.string().max(100),
-  notes: z.string().max(500),
+  weight_lbs: z.number().finite().nonnegative().max(1000).nullable(),
+  length_in: z.number().finite().positive().max(1000).nullable(),
+  bait: z.string().trim().max(100),
+  notes: z.string().trim().max(500),
   spot_id: z.string().trim().min(1).max(128),
   spot_name: z.string().max(200),
   lat: z.number().min(-90).max(90),
@@ -74,6 +74,9 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const spotId = searchParams.get('spot_id');
+  if (spotId && (spotId.length > 128 || spotId.includes('\u0000'))) {
+    return NextResponse.json({ error: 'Invalid spot ID.' }, { status: 400 });
+  }
 
   // Always filter to the authenticated user's own catches.
   let query = context.supabase

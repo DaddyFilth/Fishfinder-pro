@@ -5,10 +5,14 @@ const STORE_NAMES = {
   CATALOG: 'species-catalog',
   STRATEGIES: 'ai-strategies',
   SITES: 'cached-spots',
+  CHECKLISTS: 'checklists',
 };
 
 export class StorageManager {
-  private static dbPromise: Promise<IDBPDatabase> = openDB(DB_NAME, 1, {
+  private static dbPromise: Promise<IDBPDatabase> =
+    typeof window === 'undefined'
+      ? Promise.reject(new Error('IndexedDB is only available in the browser'))
+      : openDB(DB_NAME, 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(STORE_NAMES.CATALOG)) {
         db.createObjectStore(STORE_NAMES.CATALOG);

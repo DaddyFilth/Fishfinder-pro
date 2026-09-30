@@ -61,8 +61,8 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           speciesId: selected?.id,
-          lat: coordinates.lat,
-          lon: coordinates.lng,
+          lat: coordinates.latitude,
+          lon: coordinates.longitude,
         }),
       });
       const data = await res.json();
@@ -88,8 +88,8 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           speciesId: selected.id,
-          lat: coordinates.lat,
-          lon: coordinates.lng,
+          lat: coordinates.latitude,
+          lon: coordinates.longitude,
         }),
       });
       const data = await res.json();
