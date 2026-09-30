@@ -12,7 +12,7 @@ import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 
 export async function POST(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'gear-checklist', limit: 15, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'gear-checklist', limit: 15, windowMs: 60_000 });
   if (limited) return limited;
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
 
