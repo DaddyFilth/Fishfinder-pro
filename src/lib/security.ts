@@ -1,24 +1,88 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import Redis from 'ioredis'
 
 export { isHttpUrl, isImageDataUrl } from './urls'
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
+let redis: Redis | null = null
+let redisDisabled = false
+
+function getRedis() {
+  if (redisDisabled) return null
+  const url = process.env.REDIS_URL?.trim()
+  if (!url) return null
+  if (!redis) {
+    redis = new Redis(url, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      connectTimeout: 1500,
+    })
+    redis.on('error', (error) => console.error('[rate-limit] Redis error:', error))
+  }
+  return redis
+}
+
 function clientKey(request: Request) {
-  // Prefer platform-set identity headers. Never use the first arbitrary
-  // X-Forwarded-For value as the primary rate-limit identity.
   const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (vercelForwarded) return vercelForwarded
   if (realIp) return realIp
   if (process.env.NODE_ENV === 'production') return 'unknown'
-
   const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
   return forwarded || 'unknown'
 }
 
-export function enforceRateLimit(
+async function enforceDistributedRateLimit(
+  request: Request,
+  options: { limit: number; windowMs: number; name: string },
+) {
+  const client = getRedis()
+  if (!client) return null
+
+  const now = Date.now()
+  const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
+  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
+
+  try {
+    if (client.status === 'wait') await client.connect()
+    const count = await client.incr(key)
+    if (count === 1) await client.expire(key, windowSeconds)
+    if (count > options.limit) {
+      const ttl = await client.ttl(key)
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.max(1, ttl)),
+            'Cache-Control': 'no-store',
+          },
+        },
+      )
+    }
+    return null
+  } catch (error) {
+    console.error('[rate-limit] Redis unavailable; using local fallback:', error)
+    redisDisabled = true
+    return null
+  }
+}
+
+export async function enforceRateLimit(
+  request: Request,
+  options: { limit: number; windowMs: number; name: string },
+) {
+  const distributed = await enforceDistributedRateLimit(request, options)
+  if (distributed) return distributed
+  if (process.env.REDIS_URL?.trim() && redisDisabled) return localRateLimit(request, options)
+  if (process.env.REDIS_URL?.trim()) return null
+  return localRateLimit(request, options)
+}
+
+function localRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
@@ -54,7 +118,6 @@ export function enforceRateLimit(
       },
     )
   }
-
   return null
 }
 
