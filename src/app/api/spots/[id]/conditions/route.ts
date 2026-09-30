@@ -16,7 +16,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const limited = enforceRateLimit(_req, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
+  const limited = await enforceRateLimit(_req, { name: 'spot-conditions', limit: 60, windowMs: 60_000 });
   if (limited) return limited;
 
   const parsed = z
