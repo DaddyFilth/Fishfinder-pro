@@ -5,7 +5,12 @@ import { enforceRateLimit } from '@/lib/security';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const REMOTE = 'https://seamcast-spots.vercel.app/api/spots';
+const REMOTE_PROVIDERS = [
+  process.env.SPOTS_API,
+  process.env.NEXT_PUBLIC_SPOTS_API_URL,
+  'https://seamcast-api.vercel.app/api/spots',
+  'https://seamcast-spots.vercel.app/api/spots',
+].filter((value, index, list): value is string => Boolean(value) && list.indexOf(value) === index);
 
 type AnyRec = Record<string, unknown>;
 
@@ -98,30 +103,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
   }
 
-  try {
-    const res = await fetch(`${REMOTE}?lat=${lat}&lon=${lon}`, {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: 'Remote spots API failed.', live: false },
-        { status: 502 },
-      );
+  for (const provider of REMOTE_PROVIDERS) {
+    try {
+      const remoteUrl = new URL(provider);
+      remoteUrl.searchParams.set('lat', String(lat));
+      remoteUrl.searchParams.set('lon', String(lon));
+      const res = await fetch(remoteUrl, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!res.ok) continue;
+
+      const normalized = normalize(await res.json() as unknown);
+      return NextResponse.json(normalized, {
+        headers: {
+          'Cache-Control': 'no-store',
+          'x-fishfinder-data-mode': String(normalized.data_mode),
+        },
+      });
+    } catch {
+      continue;
     }
-    const text = await res.text();
-    const json = JSON.parse(text) as unknown;
-    const normalized = normalize(json);
-    return NextResponse.json(normalized, {
-      headers: {
-        'Cache-Control': 'no-store',
-        'x-fishfinder-data-mode': String(normalized.data_mode),
-      },
-    });
-  } catch {
-    return NextResponse.json(
-      { error: 'Unable to load fishing spots.', live: false },
-      { status: 502 },
-    );
   }
+
+  return NextResponse.json(
+    { error: 'Unable to load fishing spots.', live: false },
+    { status: 502 },
+  );
 }
