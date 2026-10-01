@@ -576,20 +576,6 @@ export default function MobilePage() {
   return (
     <div style={PAGE_STYLES.root}>
 
-      {/* QUICK SCAN WIDGET */}
-      <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <PredictiveAlerts 
-            coordinates={coordinates} 
-            onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
-          />
-          <QuickScan 
-            coordinates={coordinates} 
-            onSpeciesSelect={(s) => { setTab('species'); setSelectedSpecies(s); }}
-          />
-        </div>
-      </div>
-
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
@@ -657,6 +643,18 @@ export default function MobilePage() {
               }}
             />
 
+            <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
+              <div style={{ pointerEvents: 'auto' }}>
+                <PredictiveAlerts
+                  coordinates={coordinates}
+                  onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }}
+                />
+                <QuickScan
+                  coordinates={coordinates}
+                  onSpeciesSelect={(species) => { setTab('species'); setSelectedSpecies(species); }}
+                />
+              </div>
+            </div>
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>

@@ -136,11 +136,16 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>
+      <style>{`\n        @keyframes seamcast-cloud-drift {\n          from { transform: translateX(-18px); }\n          to { transform: translateX(18px); }\n        }\n        @media (prefers-reduced-motion: reduce) {\n          .seamcast-cloud { animation: none !important; }\n        }\n      `}</style>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', marginBottom: 4 }}>Provider Weather</div>
       <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
       <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>Forecast data, not a live observation. Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'time unavailable'}.</div>
-      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ background: 'linear-gradient(180deg, #12304a 0%, #0f172a 72%)', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.72 }}>
+          <span className="seamcast-cloud" style={{ position: 'absolute', top: 18, left: '12%', width: 70, height: 22, borderRadius: 999, background: 'rgba(186, 230, 253, 0.28)', filter: 'blur(1px)', animation: 'seamcast-cloud-drift 12s ease-in-out infinite alternate' }} />
+          <span className="seamcast-cloud" style={{ position: 'absolute', top: 48, right: '8%', width: 96, height: 26, borderRadius: 999, background: 'rgba(224, 242, 254, 0.2)', filter: 'blur(1px)', animation: 'seamcast-cloud-drift 16s ease-in-out infinite alternate-reverse' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, position: 'relative' }}>
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, color: '#e2e8f0' }}>{displayTemperature(current)}</div>
             <div style={{ fontSize: 12, color: '#cbd5e1' }}>{current.shortForecast}</div>
