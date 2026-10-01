@@ -271,6 +271,7 @@ export default function MobilePage() {
   const [cacheSource, setCacheSource] = useState<'loading' | 'provider' | 'cached' | 'fallback'>('loading');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [tab, setTab] = useState<'map'|'log'|'gallery'|'ai'|'top'|'species'|'bitetime'|'weather'|'settings'>('map');
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [backHint, setBackHint] = useState(false);
@@ -298,6 +299,10 @@ export default function MobilePage() {
   const appBadge = badgeState(isOnline);
 
 
+  useEffect(() => {
+    const hydrationTimer = window.setTimeout(() => setIsHydrated(true), 0);
+    return () => window.clearTimeout(hydrationTimer);
+  }, []);
   useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -560,6 +565,19 @@ export default function MobilePage() {
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };
+
+  if (!isHydrated) {
+    return (
+      <div style={PAGE_STYLES.root} aria-busy="true">
+        <div style={{ ...PAGE_STYLES.header, justifyContent: 'center' }}>
+          <span style={{ fontSize: '14px', fontWeight: 800, color: '#67e8f9' }}>Oklahoma SeamCast</span>
+        </div>
+        <main style={{ ...PAGE_STYLES.main, display: 'grid', placeItems: 'center', color: '#94a3b8', fontSize: '13px' }}>
+          Loading fishing dashboard…
+        </main>
+      </div>
+    );
+  }
 
   const tabs = [
     { id: 'map', icon: '🗺️', label: 'Explore' },
