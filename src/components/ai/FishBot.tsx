@@ -40,7 +40,6 @@ export default function FishBot({ spot, conditions }: Props) {
             lat: spotLat,
             lon: spotLon,
             targetSpecies,
-            conditions,
           }),
         });
 

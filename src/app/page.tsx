@@ -720,7 +720,7 @@ export default function MobilePage() {
         {/* AI TAB */}
         {tab === 'ai' && (
           <div style={PAGE_STYLES.padPane}>
-            <SpotSuggester spots={visibleSpots} />
+            <SpotSuggester spots={spots} coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null} />
           </div>
         )}
 

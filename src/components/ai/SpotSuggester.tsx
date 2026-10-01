@@ -32,6 +32,7 @@ interface RankedSpot {
 
 interface Props {
   spots: Spot[];
+  coordinates: UserLocation | null;
 }
 
 interface UserLocation {
@@ -55,7 +56,7 @@ const scoreColor = (score: number) =>
         ? '#f97316'
         : '#6b7280';
 
-export default function SpotSuggester({ spots }: Props) {
+export default function SpotSuggester({ spots, coordinates }: Props) {
   const [results, setResults] = useState<RankedSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export default function SpotSuggester({ spots }: Props) {
   const [selectedSpecies, setSelectedSpecies] = useState(SPECIES[0]?.name ?? '');
 
   const runSuggestion = useCallback(
-    async (lat?: number, lng?: number) => {
+    async (lat: number, lng: number) => {
       setLoading(true);
       setError(null);
       setResults([]);
@@ -77,11 +78,10 @@ export default function SpotSuggester({ spots }: Props) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            spots: typeof lat === 'number' && typeof lng === 'number'
-              ? spots
-                  .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
-                  .sort((a, b) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: a.lat, longitude: a.lng }) - distanceMiles({ latitude: lat, longitude: lng }, { latitude: b.lat, longitude: b.lng }))
-              : spots,
+            spots: [...spots].sort((a, b) =>
+              distanceMiles({ latitude: lat, longitude: lng }, { latitude: a.lat, longitude: a.lng }) -
+              distanceMiles({ latitude: lat, longitude: lng }, { latitude: b.lat, longitude: b.lng }),
+            ),
             species: selectedSpecies,
             userLat: lat,
             userLng: lng,
@@ -134,35 +134,9 @@ export default function SpotSuggester({ spots }: Props) {
   };
 
   const handleFind = () => {
-    setLocating(true);
-
-    if (!navigator.geolocation) {
-      setLocating(false);
-      void runSuggestion();
-
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = saveLocation(
-          position.coords.latitude,
-          position.coords.longitude,
-        );
-
-        setLocating(false);
-        void runSuggestion(location.lat, location.lng);
-      },
-      () => {
-        setLocating(false);
-        void runSuggestion();
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 6000,
-        maximumAge: 900000,
-      },
-    );
+    if (!coordinates) return;
+    const location = saveLocation(coordinates.lat, coordinates.lng);
+    void runSuggestion(location.lat, location.lng);
   };
 
   return (
@@ -206,13 +180,13 @@ export default function SpotSuggester({ spots }: Props) {
         >
           {SPECIES.map((species) => <option key={species.id} value={species.name}>{species.name}</option>)}
         </select>
-        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI results are estimates, not provider conditions or catch reports. Only the top 10 spots within 25 miles of your device will be shown.</span>
+        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI uses your active GPS location and evaluates the full spot catalog. It does not run without GPS.</span>
       </label>
 
       <button
         type="button"
         onClick={handleFind}
-        disabled={loading || locating}
+        disabled={loading || locating || !coordinates}
         style={{
           width: '100%',
           border: 0,
