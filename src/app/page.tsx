@@ -276,7 +276,6 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [selectedSpecies, setSelectedSpecies] = useState<any | null>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -647,11 +646,11 @@ export default function MobilePage() {
               <div style={{ pointerEvents: 'auto' }}>
                 <PredictiveAlerts
                   coordinates={coordinates}
-                  onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }}
+                  onSpeciesSelect={() => { setTab('species'); }}
                 />
                 <QuickScan
                   coordinates={coordinates}
-                  onSpeciesSelect={(species) => { setTab('species'); setSelectedSpecies(species); }}
+                  onSpeciesSelect={() => { setTab('species'); }}
                 />
               </div>
             </div>

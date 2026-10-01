@@ -463,10 +463,6 @@ export default function FishingMap({
     load(id);
   };
 
-  useEffect(() => {
-    spots.forEach((spot) => load(spot.id));
-  }, [load, spots]);
-
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>
       <style>{`
