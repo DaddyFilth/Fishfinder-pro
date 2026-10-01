@@ -512,10 +512,9 @@ export default function MobilePage() {
     if (!spots.length) return;
 
   const filteredSpotsForConditions = filterSpots(spots, mapFilter);
-  const spotsForConditions = (nearbyMode && coordinates
-    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
-    : filteredSpotsForConditions
-  ).slice(0, 60);
+  const spotsForConditions = nearbyMode && coordinates
+    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates)
+    : filteredSpotsForConditions;
   spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
@@ -551,7 +550,8 @@ export default function MobilePage() {
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
-  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
+  // GPS changes ordering and distance labels, but never removes catalog spots.
+  const visibleSpots = nearbyMode && coordinates ? nearbySpots : filteredSpots;
   const rankedSpots = useMemo(
     () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
     [visibleSpots, conditionModes, conditionScores],
@@ -575,20 +575,6 @@ export default function MobilePage() {
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>
-
-      {/* QUICK SCAN WIDGET */}
-      <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <PredictiveAlerts 
-            coordinates={coordinates} 
-            onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
-          />
-          <QuickScan 
-            coordinates={coordinates} 
-            onSpeciesSelect={(s) => { setTab('species'); setSelectedSpecies(s); }}
-          />
-        </div>
-      </div>
 
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
@@ -741,6 +727,14 @@ export default function MobilePage() {
         {/* TOP SPOTS TAB */}
         {tab === 'top' && (
           <div style={PAGE_STYLES.padPane}>
+            <PredictiveAlerts
+              coordinates={coordinates}
+              onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }}
+            />
+            <QuickScan
+              coordinates={coordinates}
+              onSpeciesSelect={(species) => { setTab('species'); setSelectedSpecies(species); }}
+            />
             <div style={PAGE_STYLES.sectionTitle}>🏆 Top Spots</div>
             {rankedSpots.length > 0 ? rankedSpots.map(({ spot, score }, i) => {
               const scoreValue = loadingScores[spot.id] ? '…' : score;

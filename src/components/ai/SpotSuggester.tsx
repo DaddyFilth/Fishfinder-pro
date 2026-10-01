@@ -80,9 +80,8 @@ export default function SpotSuggester({ spots }: Props) {
             spots: typeof lat === 'number' && typeof lng === 'number'
               ? spots
                   .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
-                  .sort((a, b) => b.lat - a.lat)
-                  .slice(0, 10)
-              : [],
+                  .sort((a, b) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: a.lat, longitude: a.lng }) - distanceMiles({ latitude: lat, longitude: lng }, { latitude: b.lat, longitude: b.lng }))
+              : spots,
             species: selectedSpecies,
             userLat: lat,
             userLng: lng,
