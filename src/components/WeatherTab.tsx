@@ -155,9 +155,12 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
         </div>
       </div>
       <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: 12, padding: 14 }}>
-        <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 10 }}>NWS HOURLY FORECAST</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+          <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>NWS HOURLY FORECAST</div>
+          <div style={{ fontSize: 9, color: '#475569' }}>Next 24 hours</div>
+        </div>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {periods.slice(0, 12).map((period) => (
+          {periods.slice(0, 24).map((period) => (
             <div key={period.startTime} style={{ flexShrink: 0, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 8, textAlign: 'center', minWidth: 66 }}>
               <div style={{ fontSize: 9, color: '#94a3b8' }}>{displayHour(period.startTime)}</div>
               <div style={{ fontSize: 18, margin: '4px 0' }}>{weatherIcon(period.shortForecast)}</div>

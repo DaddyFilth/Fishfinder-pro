@@ -642,19 +642,6 @@ export default function MobilePage() {
               }}
             />
 
-            <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
-              <div style={{ pointerEvents: 'auto' }}>
-                <PredictiveAlerts
-                  coordinates={coordinates}
-                  onSpeciesSelect={() => { setTab('species'); }}
-                />
-                <QuickScan
-                  coordinates={coordinates}
-                  onSpeciesSelect={() => { setTab('species'); }}
-                />
-              </div>
-            </div>
-
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
               <div style={PAGE_STYLES.mapBadge}>
@@ -737,8 +724,18 @@ export default function MobilePage() {
 
         {/* TOP SPOTS TAB */}
         {tab === 'top' && (
-          <div style={PAGE_STYLES.padPane}>
+          <div style={{ ...PAGE_STYLES.scrollPane, padding: 16 }}>
             <div style={PAGE_STYLES.sectionTitle}>🏆 Top Spots</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              <PredictiveAlerts
+                coordinates={coordinates}
+                onSpeciesSelect={() => { setTab('species'); }}
+              />
+              <QuickScan
+                coordinates={coordinates}
+                onSpeciesSelect={() => { setTab('species'); }}
+              />
+            </div>
             {rankedSpots.length > 0 ? rankedSpots.map(({ spot, score }, i) => {
               const scoreValue = loadingScores[spot.id] ? '…' : score;
               return (
@@ -773,6 +770,16 @@ export default function MobilePage() {
         {/* WEATHER TAB */}
         {tab === 'weather' && (
           <div style={PAGE_STYLES.scrollPane}>
+            <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <PredictiveAlerts
+                coordinates={coordinates}
+                onSpeciesSelect={() => { setTab('species'); }}
+              />
+              <QuickScan
+                coordinates={coordinates}
+                onSpeciesSelect={() => { setTab('species'); }}
+              />
+            </div>
             <WeatherTab
               lat={selectedSpot?.lat ?? coordinates?.latitude}
               lng={selectedSpot?.lng ?? coordinates?.longitude}
