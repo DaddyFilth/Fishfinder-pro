@@ -128,6 +128,8 @@ const S = {
 
 interface Cond {
   fishing_score: number;
+  bite_score?: number | null;
+  bite_level?: string | null;
   air_temp_c: number | null;
   water_temp_c: number | null;
   wind_speed_ms: number | null;
@@ -703,6 +705,7 @@ export default function FishingMap({
 
           {spots.map((spot) => {
             const c = conditions[spot.id];
+            const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
 
@@ -791,8 +794,8 @@ export default function FishingMap({
                           <>
                             <div
                               style={{
-                                background: `linear-gradient(135deg,${scoreColor(c.fishing_score)}20,${scoreColor(c.fishing_score)}08)`,
-                                border: `1px solid ${scoreColor(c.fishing_score)}50`,
+                                background: `linear-gradient(135deg,${scoreColor(displayScore)}20,${scoreColor(displayScore)}08)`,
+                                border: `1px solid ${scoreColor(displayScore)}50`,
                                 borderRadius: 12,
                                 padding: 12,
                                 marginBottom: 10,
@@ -800,8 +803,8 @@ export default function FishingMap({
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(c.fishing_score), lineHeight: 1 }}>{c.fishing_score}</div>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(c.fishing_score) }}>{scoreLabel(c.fishing_score)}</div>
+                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(displayScore), lineHeight: 1 }}>{displayScore}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(displayScore) }}>{c.bite_score != null ? 'AI bite score' : scoreLabel(displayScore)}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: 11, color: '#cbd5e1' }}>
                                   <div>{depthLabel(c.water_level_m, c.flow_rate_cfs)}</div>

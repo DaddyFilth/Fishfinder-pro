@@ -35,9 +35,10 @@ type DataMode =
   | 'offline-fallback'
   | 'loading';
 
-interface SpotCondition {
-  fishing_score?: number | null;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  interface SpotCondition {
+    fishing_score?: number | null;
+    bite_score?: number | null;
+    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
 }
 
 function resolveSpotDataMode(
@@ -561,9 +562,11 @@ export default function MobilePage() {
 
           const data = result.data as unknown as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-          const fishingScore = mode !== 'fallback' && typeof data.fishing_score === 'number'
-            ? data.fishing_score
-            : 0;
+  const fishingScore = mode !== 'fallback'
+    ? (typeof data.bite_score === 'number'
+      ? data.bite_score
+      : (typeof data.fishing_score === 'number' ? data.fishing_score : 0))
+    : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
