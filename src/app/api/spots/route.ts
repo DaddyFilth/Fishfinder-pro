@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -211,7 +211,27 @@ export async function GET(req: NextRequest) {
   const { payload, reason } = await fetchRemoteSpots(key, `${REMOTE}?lat=${lat}&lon=${lon}`);
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
-    return NextResponse.json({ error: 'Live AI spot feed is unavailable.' }, { status: 503 });
+    // Keep the 76 permanent map locations visible, but strip all catalog metadata.
+    // Live AI conditions are fetched separately for a selected marker; no stale
+    // score, species, bait, weather, or prediction is presented here.
+    const markers = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+      id,
+      name,
+      lat,
+      lng,
+      water_type,
+      spot_type,
+      source: 'permanent-map-marker',
+      live: false,
+      data_mode: 'provider',
+    }));
+    return NextResponse.json({
+      spots: markers,
+      source: 'permanent-map-marker',
+      live: false,
+      data_mode: 'provider',
+      observed_at: null,
+    }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
   }
 
   return NextResponse.json(payload, {

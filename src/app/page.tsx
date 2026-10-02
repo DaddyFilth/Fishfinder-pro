@@ -16,7 +16,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -242,9 +242,17 @@ async function getSpots(): Promise<SpotLoadResult> {
       return { spots: filtered, source: 'provider', savedAt: new Date().toISOString() };
     }
   } catch {
-    return { spots: [], source: 'provider', savedAt: null };
+  // Permanent coordinates remain available as map anchors; no cataloged
+  // conditions, scores, species, bait, or predictions are attached.
+  return {
+  spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
+  })),
+  source: 'provider',
+  savedAt: null,
+  };
   }
-
+  
   return { spots: [], source: 'provider', savedAt: null };
 }
 
@@ -253,7 +261,10 @@ async function getSpots(): Promise<SpotLoadResult> {
  * spot data, map navigation, location tracking, and locally stored settings.
  */
 export default function MobilePage() {
-  const [spots, setSpots] = useState<Spot[]>([]);
+  // Coordinates are permanent map anchors; live AI conditions are loaded separately.
+  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
+  })));
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
