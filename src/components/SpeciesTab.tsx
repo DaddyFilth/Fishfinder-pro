@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable @next/next/no-img-element -- catalog images are local static field-guide assets. */
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- catalog images and legacy cached strategy data use these compatibility boundaries. */
 import { useMemo, useState, useEffect } from 'react';
 import GearChecklist from '@/components/GearChecklist';
 

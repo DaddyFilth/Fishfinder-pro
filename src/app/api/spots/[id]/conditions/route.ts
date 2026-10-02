@@ -9,6 +9,7 @@ import {
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { enforceRateLimit } from '@/lib/security';
+import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
@@ -198,6 +199,9 @@ function unavailablePayload(id: string): Json {
     swell_direction_deg: null,
     tide_height_m: null,
     fishing_score: neutralScore.total,
+    bite_score: null,
+    bite_level: null,
+    ai_micro_spots: [],
     score_breakdown: neutralScore,
     data_sources: [],
     cached: false,
@@ -244,6 +248,12 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
       }
     }
 
+    const seamcast = await fetchSeamcastSpotSuggestions(spot.lat, spot.lng);
+    const biteScore = typeof seamcast?.overallBite?.score === 'number'
+      ? seamcast.overallBite.score
+      : null;
+    const biteLevel = seamcast?.overallBite?.level ?? null;
+
     const cachedIsFallback = Boolean(
       cached && (
         cached.data_mode === 'fallback' ||
@@ -264,7 +274,15 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     if (cached && !cachedIsFallback && cacheAgeMs <= CACHE_MAX_AGE_MS) {
       return {
         status: 200,
-        payload: { ...cached, cached: true, stale: false, data_mode: 'cached' },
+          payload: {
+            ...cached,
+            bite_score: biteScore,
+            bite_level: biteLevel,
+            ai_micro_spots: seamcast?.microSpots ?? [],
+            cached: true,
+            stale: false,
+            data_mode: 'cached',
+          },
         cacheControl: 'public, max-age=1800',
       };
     }
@@ -391,6 +409,9 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
       swell_direction_deg: marineData?.wave_direction_deg ?? null,
       tide_height_m: tideData?.tide_height_m ?? null,
       fishing_score: scoreResult.total,
+      bite_score: biteScore,
+      bite_level: biteLevel,
+      ai_micro_spots: seamcast?.microSpots ?? [],
       score_breakdown: scoreResult,
       data_sources: dataSources,
     };

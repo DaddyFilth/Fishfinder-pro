@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase aggregate rows are runtime-shaped. */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 

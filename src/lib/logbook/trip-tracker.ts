@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- offline breadcrumb records are runtime-shaped. */
 import { Geolocation } from '@capacitor/geolocation';
 import { openDB } from 'idb';
 

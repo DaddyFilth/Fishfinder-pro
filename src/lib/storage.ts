@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- IndexedDB records are runtime-shaped. */
 import { openDB, type IDBPDatabase } from 'idb';
 
 const DB_NAME = 'fishfinder-pro-db';

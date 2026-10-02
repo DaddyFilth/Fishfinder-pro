@@ -35,9 +35,10 @@ type DataMode =
   | 'offline-fallback'
   | 'loading';
 
-interface SpotCondition {
-  fishing_score?: number | null;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  interface SpotCondition {
+    fishing_score?: number | null;
+    bite_score?: number | null;
+    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
 }
 
 function resolveSpotDataMode(
@@ -277,7 +278,7 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [selectedSpecies, setSelectedSpecies] = useState<any | null>(null);
+  const [, setSelectedSpecies] = useState<unknown>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -532,10 +533,9 @@ export default function MobilePage() {
     if (!spots.length) return;
 
   const filteredSpotsForConditions = filterSpots(spots, mapFilter);
-  const spotsForConditions = (nearbyMode && coordinates
-    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
-    : filteredSpotsForConditions
-  ).slice(0, 120);
+  // Every catalog spot receives the same current-condition AI pass so Top Spots
+  // ranks the complete 76-spot catalog instead of only nearby pins.
+  const spotsForConditions = filteredSpotsForConditions;
   spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
@@ -561,9 +561,11 @@ export default function MobilePage() {
 
           const data = result.data as unknown as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-          const fishingScore = mode !== 'fallback' && typeof data.fishing_score === 'number'
-            ? data.fishing_score
-            : 0;
+  const fishingScore = mode !== 'fallback'
+    ? (typeof data.bite_score === 'number'
+      ? data.bite_score
+      : (typeof data.fishing_score === 'number' ? data.fishing_score : 0))
+    : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
@@ -722,7 +724,7 @@ export default function MobilePage() {
               <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
               {!sheetOpen && (
                 <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots · provider scores</span>
+                  <span style={{ fontSize:'12px', color:'#64748b' }}>Top Spots · provider scores</span>
                   <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
                 </div>
               )}

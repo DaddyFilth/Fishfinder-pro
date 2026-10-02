@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useBitePredictions, type Prediction } from '@/hooks/useBitePredictions';
+import { useEffect, useRef } from 'react';
+import { useBitePredictions } from '@/hooks/useBitePredictions';
 import { Coordinates } from '@/lib/region';
 
 interface PredictiveAlertsProps {
@@ -7,60 +7,51 @@ interface PredictiveAlertsProps {
   onSpeciesSelect: (speciesId: string) => void;
 }
 
+/**
+ * Area-wide bite alerts are delivered through the browser notification channel,
+ * not rendered as a persistent card on every page.
+ */
 export default function PredictiveAlerts({ coordinates, onSpeciesSelect }: PredictiveAlertsProps) {
   const { predictions, isLoading } = useBitePredictions(coordinates);
+  const notifiedRef = useRef<Set<string>>(new Set());
 
-  if (isLoading) return null; // Avoid layout shift during initial scan
-  if (predictions.length === 0) return null; // Only show if there are active fish
+  useEffect(() => {
+    if (isLoading || typeof window === 'undefined' || !('Notification' in window)) return;
+    const primePredictions = predictions.filter((prediction) => prediction.isPrime);
+    if (primePredictions.length === 0) return;
 
-  return (
-    <div style={{ 
-      background: 'rgba(15, 23, 42, 0.8)', 
-      backdropFilter: 'blur(12px)', 
-      border: '1px solid #1e293b', 
-      borderRadius: '16px', 
-      padding: '12px', 
-      marginBottom: '16px',
-      borderLeft: '4px solid #22d3ee'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-        <span style={{ fontSize: '16px' }}>🔔</span>
-        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Smart Alerts
-        </div>
-      </div>
+    const sendNotifications = async () => {
+      if (Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission();
+        } catch {
+          return;
+        }
+      }
+      if (Notification.permission !== 'granted') return;
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {predictions.slice(0, 2).map(p => (
-          <div 
-            key={p.speciesId}
-            onClick={() => onSpeciesSelect(p.speciesId)}
-            style={{ 
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-              padding: '8px 12px', background: 'rgba(255,255,255,0.05)', 
-              borderRadius: '10px', cursor: 'pointer', transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ 
-                width: '8px', height: '8px', borderRadius: '50%', 
-                background: p.isPrime ? '#4ade80' : '#fbbf24' 
-              }} />
-              <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{p.name}</span>
-            </div>
-            <div style={{ 
-              fontSize: '11px', fontWeight: 'bold', 
-              color: p.isPrime ? '#4ade80' : '#fbbf24',
-              background: p.isPrime ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)',
-              padding: '2px 6px', borderRadius: '4px'
-            }}>
-              {p.reason}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+      const areaKey = coordinates
+        ? `${coordinates.latitude.toFixed(1)}:${coordinates.longitude.toFixed(1)}`
+        : 'area';
+      primePredictions.slice(0, 3).forEach((prediction) => {
+        const notificationKey = `${areaKey}:${prediction.speciesId}`;
+        if (notifiedRef.current.has(notificationKey)) return;
+        notifiedRef.current.add(notificationKey);
+        const notification = new Notification(`${prediction.name} is in prime bite time`, {
+          body: `Current area conditions are favorable for ${prediction.name}. Open FishFinder for the best spot, bait, and timing.`,
+          tag: notificationKey,
+        });
+        notification.onclick = () => {
+          window.focus();
+          onSpeciesSelect(prediction.speciesId);
+          notification.close();
+        };
+      });
+    };
+
+    void sendNotifications();
+  }, [coordinates, isLoading, onSpeciesSelect, predictions]);
+
+  return null;
 }
+

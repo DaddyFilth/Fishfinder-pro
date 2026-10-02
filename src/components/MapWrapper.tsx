@@ -128,6 +128,17 @@ const S = {
 
 interface Cond {
   fishing_score: number;
+  bite_score?: number | null;
+  bite_level?: string | null;
+  ai_micro_spots?: Array<{
+    name?: string;
+    label?: string;
+    description?: string;
+    biteScore?: number;
+    bite_score?: number;
+    depth?: string;
+    structure?: string;
+  }>;
   air_temp_c: number | null;
   water_temp_c: number | null;
   wind_speed_ms: number | null;
@@ -703,6 +714,7 @@ export default function FishingMap({
 
           {spots.map((spot) => {
             const c = conditions[spot.id];
+            const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
 
@@ -791,8 +803,8 @@ export default function FishingMap({
                           <>
                             <div
                               style={{
-                                background: `linear-gradient(135deg,${scoreColor(c.fishing_score)}20,${scoreColor(c.fishing_score)}08)`,
-                                border: `1px solid ${scoreColor(c.fishing_score)}50`,
+                                background: `linear-gradient(135deg,${scoreColor(displayScore)}20,${scoreColor(displayScore)}08)`,
+                                border: `1px solid ${scoreColor(displayScore)}50`,
                                 borderRadius: 12,
                                 padding: 12,
                                 marginBottom: 10,
@@ -800,8 +812,8 @@ export default function FishingMap({
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(c.fishing_score), lineHeight: 1 }}>{c.fishing_score}</div>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(c.fishing_score) }}>{scoreLabel(c.fishing_score)}</div>
+                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(displayScore), lineHeight: 1 }}>{displayScore}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(displayScore) }}>{c.bite_score != null ? 'AI bite score' : scoreLabel(displayScore)}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: 11, color: '#cbd5e1' }}>
                                   <div>{depthLabel(c.water_level_m, c.flow_rate_cfs)}</div>
@@ -809,6 +821,26 @@ export default function FishingMap({
                                 </div>
                               </div>
                             </div>
+
+                            {c.ai_micro_spots && c.ai_micro_spots.length > 0 && (
+                              <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: 'rgba(15,118,110,0.14)', border: '1px solid rgba(45,212,191,0.25)' }}>
+                                <div style={{ fontSize: 11, color: '#99f6e4', fontWeight: 800, marginBottom: 6 }}>AI SPOT ANALYSIS</div>
+                                {c.ai_micro_spots.slice(0, 3).map((microSpot, index) => {
+                                  const microScore = microSpot.biteScore ?? microSpot.bite_score;
+                                  return (
+                                    <div key={`${microSpot.name ?? microSpot.label ?? 'spot'}-${index}`} style={{ padding: '6px 0', borderTop: index ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: '#f0fdfa', fontWeight: 700 }}>
+                                        <span>{microSpot.name ?? microSpot.label ?? `Likely holding area ${index + 1}`}</span>
+                                        {microScore != null && <span style={{ color: '#5eead4' }}>{microScore}/100</span>}
+                                      </div>
+                                      {(microSpot.description ?? microSpot.structure ?? microSpot.depth) && (
+                                        <div style={{ marginTop: 2, fontSize: 10, lineHeight: 1.35, color: '#ccfbf1' }}>{microSpot.description ?? microSpot.structure ?? microSpot.depth}</div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {Object.entries(c.score_breakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
 
