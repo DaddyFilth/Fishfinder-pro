@@ -26,6 +26,8 @@ export interface Spot {
   source?: string;
   notes?: string;
   description?: string;
+  usgs_site_id?: string;
+  noaa_station_id?: string;
 }
 
 function normalized(value: unknown): string {

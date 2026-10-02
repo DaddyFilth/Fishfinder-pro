@@ -6,16 +6,28 @@ export { isHttpUrl, isImageDataUrl } from './urls'
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
 function clientKey(request: Request) {
-  // Prefer platform-set identity headers. Never use the first arbitrary
-  // X-Forwarded-For value as the primary rate-limit identity.
+  // Prefer identity headers set by a trusted edge or proxy. Never use the first
+  // arbitrary X-Forwarded-For entry: it is client supplied. When no platform
+  // header exists, fall back to the proxy-added (last) entry so traffic from a
+  // self-hosted deployment does not collapse into one shared bucket.
   const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
-  const realIp = request.headers.get('x-real-ip')?.trim()
   if (vercelForwarded) return vercelForwarded
-  if (realIp) return realIp
-  if (process.env.NODE_ENV === 'production') return 'unknown'
 
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
-  return forwarded || 'unknown'
+  const cloudflareIp = request.headers.get('cf-connecting-ip')?.trim()
+  if (cloudflareIp) return cloudflareIp
+
+  const realIp = request.headers.get('x-real-ip')?.trim()
+  if (realIp) return realIp
+
+  const forwarded = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .at(-1)
+  if (forwarded) return forwarded
+
+  return 'unknown'
 }
 
 export function enforceRateLimit(

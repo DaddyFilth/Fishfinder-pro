@@ -19,17 +19,20 @@ DROP POLICY IF EXISTS "badges_insert_own" ON public.user_badges;
 -- 3. SECURE COMMUNITY SUBMISSIONS
 -- Ensure users cannot change the status of their own submission to 'approved'.
 DROP POLICY IF EXISTS "community_spot_submissions_owner" ON public.community_spot_submissions;
+DROP POLICY IF EXISTS "community_spot_submissions_view_own" ON public.community_spot_submissions;
 CREATE POLICY "community_spot_submissions_view_own" 
   ON public.community_spot_submissions FOR SELECT 
   TO authenticated 
   USING (auth.uid() = submitted_by);
 
+DROP POLICY IF EXISTS "community_spot_submissions_insert_own" ON public.community_spot_submissions;
 CREATE POLICY "community_spot_submissions_insert_own" 
   ON public.community_spot_submissions FOR INSERT 
   TO authenticated 
   WITH CHECK (auth.uid() = submitted_by AND status = 'pending');
 
 -- Admins can manage submissions
+DROP POLICY IF EXISTS "community_spot_submissions_admin_all" ON public.community_spot_submissions;
 CREATE POLICY "community_spot_submissions_admin_all" 
   ON public.community_spot_submissions FOR ALL 
   TO authenticated 
@@ -43,6 +46,7 @@ CREATE POLICY "alerts_read_public"
   TO authenticated 
   USING (true);
 
+DROP POLICY IF EXISTS "alerts_admin_all" ON public.realtime_alerts;
 CREATE POLICY "alerts_admin_all" 
   ON public.realtime_alerts FOR ALL 
   TO authenticated 

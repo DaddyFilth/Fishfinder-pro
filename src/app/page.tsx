@@ -21,6 +21,7 @@ import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
+import { fetchSpotConditions } from '@/lib/conditionsClient';
 import { parseSpotApiPayload } from '@/lib/spotProvenance';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
@@ -299,7 +300,26 @@ export default function MobilePage() {
   const appBadge = badgeState(isOnline);
 
 
-  useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
+  useEffect(() => {
+    const syncOnline = () => setIsOnline(navigator.onLine);
+    const handleOnline = () => {
+      syncOnline();
+      // Score requests made while offline never reach the network, so drop the
+      // placeholders and let the score effect request them again.
+      setConditionScores({});
+      setConditionModes({});
+      setLoadingScores({});
+      scoreFetchInFlight.current = {};
+    };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    syncOnline();
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
@@ -515,22 +535,31 @@ export default function MobilePage() {
   const spotsForConditions = (nearbyMode && coordinates
     ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
     : filteredSpotsForConditions
-  ).slice(0, 60);
+  ).slice(0, 120);
   spotsForConditions.forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
 
-      fetch(`/api/spots/${spot.id}/conditions`)
-        .then(async (res) => {
-          if (!res.ok) {
+      // Shared with the map popup so the same spot is only requested once and
+      // rate-limited responses back off instead of being re-requested.
+      void fetchSpotConditions({
+        id: spot.id,
+        lat: spot.lat,
+        lng: spot.lng,
+        water_type: spot.water_type,
+        usgs_site_id: spot.usgs_site_id,
+        noaa_station_id: spot.noaa_station_id,
+      })
+        .then((result) => {
+          if (!result.ok) {
             setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
             setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
             return;
           }
 
-          const data = (await res.json()) as SpotCondition;
+          const data = result.data as unknown as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
           const fishingScore = mode !== 'fallback' && typeof data.fishing_score === 'number'
             ? data.fishing_score

@@ -1,6 +1,5 @@
 import { createAdminClient } from '../supabase/admin';
-import { EnvironmentManager } from '../environment/manager';
-import { fetchNwsWeather, fetchUSGSWaterData, fetchMarineConditions } from '../fetchers/environmental';
+import { fetchNwsWeather, fetchMarineConditions, fetchPressureTrend } from '../fetchers/environmental';
 
 export interface ProCatchResult {
   catchId: string;
@@ -29,13 +28,13 @@ export class ProLogger {
 
     if (catchError) throw catchError;
 
-    // 3. GAMIFICATION: Calculate XP and Update Profile
+    // 3. GAMIFICATION: Calculate XP, Level and Update Profile
     const xpEarned = this.calculateXP(catchData.species, catchData.weight_lbs);
+    const totalXp = (await this.getCurrentXP(userId)) + xpEarned;
+    const newLevel = Math.max(1, Math.floor(totalXp / 100) + 1);
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .update({ 
-        xp: (await this.getCurrentXP(userId)) + xpEarned,
-      })
+      .update({ xp: totalXp, level: newLevel })
       .eq('id', userId)
       .select()
       .single();
@@ -48,33 +47,25 @@ export class ProLogger {
     return {
       catchId: catchRecord?.id,
       xpEarned,
-      newLevel: profile?.level || 1,
+      newLevel: profile?.level ?? newLevel,
       achievementsUnlocked: unlocked,
       snapshot,
     };
   }
 
   private static async captureSnapshot(lat: number, lng: number, spotId?: string) {
-    const [nws, marine] = await Promise.all([
+    const [nws, marine, pressure] = await Promise.all([
       fetchNwsWeather(lat, lng),
-      fetchMarineConditions(lat, lng)
+      fetchMarineConditions(lat, lng),
+      fetchPressureTrend(lat, lng),
     ]);
-
-    // Handle water data if spotId is available
-    let waterData = null;
-    if (spotId) {
-      // Note: In a real scenario, we'd look up the site_id from the spots table first
-      // For this implementation, we'll assume a helper exists or use a default
-    }
-
-    const baroTrend = await EnvironmentManager.getBarometricTrend(1013.25); // Default pressure, in real use we'd fetch actual
 
     return {
       air_temp: nws?.air_temp_c,
       wind_speed: nws?.wind_speed_ms,
       water_temp: marine?.sea_surface_temp_c,
-      baro_trend: baroTrend.trend,
-      baro_advice: baroTrend.advice,
+      surface_pressure_mb: pressure?.currentPressure ?? null,
+      baro_trend: pressure?.trend ?? 'unavailable',
       timestamp: new Date().toISOString()
     };
   }
