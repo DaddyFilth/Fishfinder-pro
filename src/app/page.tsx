@@ -278,7 +278,7 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [selectedSpecies, setSelectedSpecies] = useState<any | null>(null);
+  const [, setSelectedSpecies] = useState<unknown>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -724,7 +724,7 @@ export default function MobilePage() {
               <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
               {!sheetOpen && (
                 <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>�� Top Spots · provider scores</span>
+                  <span style={{ fontSize:'12px', color:'#64748b' }}>Top Spots · provider scores</span>
                   <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
                 </div>
               )}

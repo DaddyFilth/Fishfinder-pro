@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles intentionally model partial map state. */
 import { describe, expect, it } from 'vitest';
 import { rankSpots } from './mapFilters';
 import {

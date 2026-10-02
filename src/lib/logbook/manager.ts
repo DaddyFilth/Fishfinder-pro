@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- IndexedDB records are runtime-shaped. */
 import { openDB } from 'idb';
 import { Catch, LOGBOOK_STORE } from './types';
 
