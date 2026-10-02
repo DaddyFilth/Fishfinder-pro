@@ -16,7 +16,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -211,7 +211,6 @@ type SpotLoadResult = {
   }
 
 async function getSpots(): Promise<SpotLoadResult> {
-  const cached = readCachedSpots();
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -237,26 +236,16 @@ async function getSpots(): Promise<SpotLoadResult> {
         throw new Error('No supported Oklahoma spots returned');
       }
 
-      const source =
-        dataMode === 'fallback'
-          ? 'fallback'
-          : dataMode === 'cached' || dataMode === 'stale-cache'
-            ? 'cached'
-            : 'provider';
-
-      const savedAt = source === 'provider' && filtered.length > 0 ? new Date().toISOString() : null;
-      if (savedAt) cacheSpots(filtered, savedAt);
-      return {
-        spots: filtered,
-        source,
-        savedAt,
-      };
+      if (dataMode !== 'provider' || filtered.length === 0) {
+        throw new Error('Live AI spot feed unavailable');
+      }
+      return { spots: filtered, source: 'provider', savedAt: new Date().toISOString() };
     }
   } catch {
-    // Fall through to browser cache or bundled Oklahoma fixtures.
+    return { spots: [], source: 'provider', savedAt: null };
   }
-  if (cached?.spots.length) return { spots: cached.spots, source: 'cached', savedAt: cached.savedAt };
-  return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
+
+  return { spots: [], source: 'provider', savedAt: null };
 }
 
 /**
@@ -530,13 +519,9 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    if (!spots.length) return;
+    if (!selectedSpot) return;
 
-  const filteredSpotsForConditions = filterSpots(spots, mapFilter);
-  // Every catalog spot receives the same current-condition AI pass so Top Spots
-  // ranks the complete 76-spot catalog instead of only nearby pins.
-  const spotsForConditions = filteredSpotsForConditions;
-  spotsForConditions.forEach((spot) => {
+  [selectedSpot].forEach((spot) => {
       if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
@@ -554,8 +539,12 @@ export default function MobilePage() {
       })
         .then((result) => {
           if (!result.ok) {
-            setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
-            setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
+            setConditionScores((prev) => {
+              const next = { ...prev };
+              delete next[spot.id];
+              return next;
+            });
+            setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
             return;
           }
 
@@ -570,15 +559,19 @@ export default function MobilePage() {
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
         .catch(() => {
-          setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
-          setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
+          setConditionScores((prev) => {
+            const next = { ...prev };
+            delete next[spot.id];
+            return next;
+          });
+          setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
         })
         .finally(() => {
           scoreFetchInFlight.current[spot.id] = false;
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
     });
-  }, [authReady, isAuthenticated, spots, mapFilter, nearbyMode, coordinates, conditionScores]);
+  }, [authReady, isAuthenticated, selectedSpot, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
