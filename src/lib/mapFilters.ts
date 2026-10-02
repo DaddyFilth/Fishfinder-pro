@@ -28,6 +28,8 @@ export interface Spot {
   description?: string;
   usgs_site_id?: string;
   noaa_station_id?: string;
+  biteScore?: { score: number; level: string; reasons?: string[] } | null;
+  bestSpecies?: Array<{ species: string; probability?: number | null; notes?: string[] }> | null;
 }
 
 function normalized(value: unknown): string {
@@ -162,7 +164,11 @@ export function rankSpots(
   return spots
     .map((spot) => ({
       spot,
-      score: conditionScores[spot.id],
+      // Prefer the provider's AI catch score when the spot carries it; the
+      // local conditions index only ranks what it measured or estimated.
+      score: spot.biteScore && Number.isFinite(spot.biteScore.score)
+        ? spot.biteScore.score
+        : conditionScores[spot.id],
     }))
     .filter((entry): entry is { spot: Spot; score: number } =>
       typeof entry.score === 'number' && Number.isFinite(entry.score),
