@@ -117,11 +117,13 @@ function isOklahomaCoordinate(lat: number, lng: number) {
 
 function normalize(payload: unknown): AnyRec {
   const root = (payload && typeof payload === 'object' ? payload : {}) as AnyRec;
-  // The upstream feed ships its provider pins in `microSpots` when it has no
-  // full spot rows, so preserve them instead of dropping to the bundled box.
+  // `microSpots` are AI-generated structure suggestions for one queried area,
+  // not the application's statewide spot catalog. Treating them as spot rows
+  // collapses the map to the provider's three suggestions. Full provider spot
+  // rows still win when supplied; otherwise the bundled 76-water catalog is
+  // used and each selected spot gets live conditions from its conditions route.
   const rawList =
     (Array.isArray(root.spots) && root.spots.length > 0 && root.spots) ||
-    (Array.isArray(root.microSpots) && root.microSpots.length > 0 && root.microSpots) ||
     (Array.isArray(payload) ? payload : []);
 
   const spots = (rawList as AnyRec[])
