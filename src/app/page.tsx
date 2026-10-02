@@ -519,10 +519,10 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    if (!selectedSpot) return;
+    const spot = selectedSpot;
+    if (!spot) return;
 
-  [selectedSpot].forEach((spot) => {
-      if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
+    if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
@@ -570,7 +570,6 @@ export default function MobilePage() {
           scoreFetchInFlight.current[spot.id] = false;
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
-    });
   }, [authReady, isAuthenticated, selectedSpot, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);

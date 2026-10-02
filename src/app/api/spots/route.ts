@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -176,6 +177,34 @@ export async function GET(req: NextRequest) {
 
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('spots')
+      .select('id, name, lat, lng, water_type, spot_type, usgs_site_id, noaa_station_id')
+      .order('name', { ascending: true });
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const storedSpots = data
+        .filter((spot) => typeof spot.lat === 'number' && typeof spot.lng === 'number' && isOklahomaCoordinate(spot.lat, spot.lng))
+        .map((spot) => ({
+          ...spot,
+          source: 'supabase-live',
+          live: true,
+          data_mode: 'provider',
+        }));
+      if (storedSpots.length > 0) {
+        return NextResponse.json({
+          spots: storedSpots,
+          source: 'supabase-live',
+          live: true,
+          data_mode: 'provider',
+          observed_at: new Date().toISOString(),
+        }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
+      }
+    }
   }
 
   const key = `${lat}:${lon}`;
