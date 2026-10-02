@@ -10,7 +10,7 @@ import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { enforceRateLimit } from '@/lib/security';
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { z } from 'zod';
 
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
@@ -145,18 +145,6 @@ async function resolveSpot(
         kind: error instanceof Error ? error.name : 'unknown',
       });
     }
-  }
-
-  const bundled = DEFAULT_SPOTS.find((spot) => spot.id === id);
-  if (bundled) {
-    return {
-      id,
-      lat: bundled.lat,
-      lng: bundled.lng,
-      water_type: bundled.water_type,
-      usgs_site_id: null,
-      noaa_station_id: null,
-    };
   }
 
   const url = new URL(request.url);
@@ -342,25 +330,15 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     );
 
     if (!providerData) {
-      if (cached && !cachedIsFallback) {
-        return {
-          status: 200,
-          payload: {
-            ...cached,
-            cached: true,
-            stale: true,
-            data_mode: 'stale-cache',
-            warning:
-              'Live environmental data is temporarily unavailable. Showing the latest cached conditions.',
-          },
-          cacheControl: 'no-store',
-        };
-      }
-
       return {
-        status: 200,
-        payload: unavailablePayload(id),
-        cacheControl: 'public, max-age=120',
+        status: 503,
+        payload: {
+          error: 'Live environmental conditions are unavailable; no score or prediction was generated.',
+          spot_id: id,
+          data_mode: 'unavailable',
+          live: false,
+        },
+        cacheControl: 'no-store',
       };
     }
 

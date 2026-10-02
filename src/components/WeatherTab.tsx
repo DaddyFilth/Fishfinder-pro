@@ -66,13 +66,6 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => validCoordinates(lat, lng));
   const [error, setError] = useState('');
-  const [clock, setClock] = useState(() => Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => setClock(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
   useEffect(() => {
     if (!validCoordinates(lat, lng)) return;
 
@@ -130,9 +123,7 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
     return <p role="alert" style={{ padding: 16, color: '#fca5a5', fontSize: 12 }}>{error || 'NWS forecast unavailable.'}</p>;
   }
 
-  const current = periods.find((period) =>
-    Date.parse(period.startTime) <= clock && clock < Date.parse(period.endTime),
-  ) ?? periods[0];
+  const current = periods[0];
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>

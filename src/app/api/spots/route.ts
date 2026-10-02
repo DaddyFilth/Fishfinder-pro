@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -45,14 +46,6 @@ function writeRemoteCache(key: string, payload: AnyRec, reason: string | null, t
   remoteCache.set(key, { expiresAt: Date.now() + ttlMs, payload, reason });
 }
 
-function fallbackPayload(reason: string): AnyRec {
-  const normalized = normalize(null);
-  return {
-    ...normalized,
-    warning: `Provider spot feed unavailable (${reason}); showing the bundled Oklahoma catalog.`,
-  };
-}
-
 async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult> {
   const cached = readRemoteCache(key);
   if (cached) return cached;
@@ -71,9 +64,7 @@ async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult>
       if (!res.ok) {
         console.warn('[API] remote spots request failed', { status: res.status });
         const reason = `upstream ${res.status}`;
-        const payload = fallbackPayload(reason);
-        writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
-        return { payload, reason };
+        return { payload: { error: 'Live AI spot feed is unavailable.' }, reason };
       }
 
       const json = JSON.parse(await res.text()) as unknown;
@@ -86,9 +77,7 @@ async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult>
         kind: error instanceof Error ? error.name : 'unknown',
       });
       const reason = 'upstream unreachable';
-      const payload = fallbackPayload(reason);
-      writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
-      return { payload, reason };
+      return { payload: { error: 'Live AI spot feed is unavailable.' }, reason };
     }
   })();
 
@@ -158,21 +147,14 @@ function normalize(payload: unknown): AnyRec {
         ? rawConditions.issuedAt
         : undefined;
   const source = typeof root.source === 'string' ? root.source : 'seamcast-spots';
-  const dataMode = spots.length > 0 ? 'provider' : 'fallback';
-  const normalizedSpots = spots.length > 0
-    ? spots.map((spot) => ({
-        ...spot,
-        source,
-        live: false,
-        data_mode: dataMode,
-        observed_at: observedAt,
-      }))
-    : DEFAULT_SPOTS.map((spot) => ({
-        ...spot,
-        source: 'verified-public-water-catalog',
-        live: false,
-        data_mode: 'fallback',
-      }));
+  const dataMode = spots.length > 0 ? 'provider' : 'unavailable';
+  const normalizedSpots = spots.map((spot) => ({
+    ...spot,
+    source,
+    live: true,
+    data_mode: dataMode,
+    observed_at: observedAt,
+  }));
 
   return {
     ...root,
@@ -197,15 +179,65 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
   }
 
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('spots')
+      .select('id, name, lat, lng, water_type, spot_type, usgs_site_id, noaa_station_id')
+      .order('name', { ascending: true });
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const storedSpots = data
+        .filter((spot) => typeof spot.lat === 'number' && typeof spot.lng === 'number' && isOklahomaCoordinate(spot.lat, spot.lng))
+        .map((spot) => ({
+          ...spot,
+          source: 'supabase-live',
+          live: true,
+          data_mode: 'provider',
+        }));
+      if (storedSpots.length > 0) {
+        return NextResponse.json({
+          spots: storedSpots,
+          source: 'supabase-live',
+          live: true,
+          data_mode: 'provider',
+          observed_at: new Date().toISOString(),
+        }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
+      }
+    }
+  }
+
   const key = `${lat}:${lon}`;
   const { payload, reason } = await fetchRemoteSpots(key, `${REMOTE}?lat=${lat}&lon=${lon}`);
 
-  // A broken upstream still returns the bundled catalog instead of an error
-  // status; the reason travels with the payload so clients can surface it.
+  if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
+    // Keep the 76 permanent map locations visible, but strip all catalog metadata.
+    // Live AI conditions are fetched separately for a selected marker; no stale
+    // score, species, bait, weather, or prediction is presented here.
+    const markers = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+      id,
+      name,
+      lat,
+      lng,
+      water_type,
+      spot_type,
+      source: 'permanent-map-marker',
+      live: false,
+      data_mode: 'provider',
+    }));
+    return NextResponse.json({
+      spots: markers,
+      source: 'permanent-map-marker',
+      live: false,
+      data_mode: 'provider',
+      observed_at: null,
+    }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
+  }
+
   return NextResponse.json(payload, {
     headers: {
-      'Cache-Control': reason ? 'public, max-age=15' : 'public, max-age=30',
-      'x-fishfinder-data-mode': String(payload.data_mode ?? 'fallback'),
+      'Cache-Control': 'no-store',
+      'x-fishfinder-data-mode': 'provider',
     },
   });
 }
