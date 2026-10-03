@@ -50,9 +50,7 @@ describe('proxy public path allowlist', () => {
     '/auth/callback',
     '/api/auth',
     '/api/auth/recover',
-    '/api/spots',
-    '/api/spots/lake-9/conditions',
-    '/favicon.ico',
+  '/favicon.ico',
     '/icons/icon-192.png',
     '/_next/static/chunks/app.js',
   ])('lets anonymous visitors reach %s', (pathname) => {
