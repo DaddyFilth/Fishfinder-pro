@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthContext } from '@/lib/auth/server';
+import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 import { isSafeGeneratedSvg } from '@/lib/svg';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit } from '@/lib/security';
@@ -43,7 +44,7 @@ export async function GET(
 
   const auth = await getAuthContext();
   if (!auth) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return svgResponse(speciesImagePlaceholder(speciesName));
   }
 
   try {

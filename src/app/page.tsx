@@ -401,8 +401,9 @@ export default function MobilePage() {
       const signedIn = Boolean(session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; keep condition requests stable across auth changes.
-      if (!signedIn) {
+      if (signedIn) {
+        void loadSpotData(false);
+      } else {
         setSelectedSpot(null);
       }
     });
