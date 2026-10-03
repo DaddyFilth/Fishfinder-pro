@@ -8,12 +8,12 @@ const SpotRecordSchema = z.object({
   water_type: z.string(),
   spot_type: z.string(),
   live: z.boolean().optional(),
-  data_mode: z.enum(['provider', 'cached', 'stale-cache', 'fallback']).optional(),
+  data_mode: z.enum(['provider', 'cached', 'stale-cache', 'fallback', 'unavailable', 'ai-generated']).optional(),
 }).passthrough()
 
 export const SpotApiPayloadSchema = z.object({
   spots: z.array(SpotRecordSchema),
-  data_mode: z.enum(['provider', 'cached', 'stale-cache', 'fallback']).optional(),
+  data_mode: z.enum(['provider', 'cached', 'stale-cache', 'fallback', 'unavailable', 'ai-generated']).optional(),
   source: z.string().optional(),
   live: z.boolean().optional(),
   observed_at: z.string().optional(),

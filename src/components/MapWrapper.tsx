@@ -162,7 +162,7 @@ interface Cond {
   };
   data_sources: string[];
   cached: boolean;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable' | 'ai-generated';
   stale?: boolean;
   warning?: string;
   captured_at: string | null;

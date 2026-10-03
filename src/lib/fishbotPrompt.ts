@@ -70,7 +70,7 @@ export function buildContextMessage(spotsData?: SpotsContext | null): string {
   const topSpecies = spotsData.speciesLikely?.[0]
   const topBait = spotsData.recommendedBaits?.[0]
   const source = spotsData.source ?? spotsData.conditions?.source ?? 'unspecified provider'
-  const mode = spotsData.data_mode ?? 'provider-reported'
+  const mode = spotsData.data_mode ?? 'unavailable'
   const observedAt = spotsData.observed_at ?? spotsData.conditions?.issuedAt
 
   return `DATA CONTEXT (source: ${source}; mode: ${mode}${observedAt ? `; observed: ${observedAt}` : ''}):

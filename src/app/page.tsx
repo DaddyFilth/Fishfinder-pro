@@ -38,7 +38,7 @@ type DataMode =
   interface SpotCondition {
     fishing_score?: number | null;
     bite_score?: number | null;
-    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable' | 'ai-generated';
 }
 
 function resolveSpotDataMode(
