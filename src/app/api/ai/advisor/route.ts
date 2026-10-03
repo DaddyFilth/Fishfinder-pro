@@ -31,7 +31,7 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
     return {
       ...parsed,
       source: parsed.source ?? parsed.conditions?.source ?? 'seamcast-spots',
-      data_mode: parsed.data_mode ?? 'provider',
+      data_mode: parsed.data_mode ?? 'unavailable',
       observed_at: parsed.observed_at ?? parsed.conditions?.issuedAt,
     }
   } catch {
