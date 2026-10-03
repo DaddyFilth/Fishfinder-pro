@@ -24,6 +24,7 @@ const PUBLIC_PATHS = [
 export function isPublicPath(pathname: string) {
   const isPublicSpotRead =
     pathname === '/api/spots' ||
+    pathname === '/api/weather' ||
     /^\/api\/spots\/[^/]+\/conditions$/.test(pathname);
 
   // The species guide lives on the public landing route and falls back to this
