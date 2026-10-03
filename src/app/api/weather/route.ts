@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const point = await pointResponse.json() as { properties?: { forecastHourly?: unknown; relativeLocation?: unknown } }
     if (!isNwsUrl(point.properties?.forecastHourly)) throw new Error('NWS returned an invalid hourly forecast URL')
 
-    const forecastResponse = await fetch(point.properties.forecastHourly, { headers, cache: 'no-store', signal: AbortSignal.timeout(8_000) })
+    const forecastResponse = await fetch(point.properties.forecastHourly, { headers, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(8_000) })
     if (!forecastResponse.ok) throw new Error(`NWS forecast failed: ${forecastResponse.status}`)
     const forecast = await forecastResponse.json() as { properties?: { periods?: unknown[]; updateTime?: string; generatedAt?: string } }
     const periods = Array.isArray(forecast.properties?.periods) ? forecast.properties.periods : []

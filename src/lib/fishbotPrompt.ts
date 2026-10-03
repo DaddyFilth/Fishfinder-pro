@@ -25,6 +25,7 @@ RULES:
 const SpotsContextSchema = z.object({
   source: z.string().optional(),
   data_mode: z.string().optional(),
+  live: z.boolean().optional(),
   observed_at: z.string().optional(),
   conditions: z.object({
     source: z.string().optional(),
