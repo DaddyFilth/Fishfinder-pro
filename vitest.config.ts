@@ -13,6 +13,6 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [...configDefaults.exclude, 'workers/agent-visibility-template/**'],
+    exclude: configDefaults.exclude,
   },
 });
