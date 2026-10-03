@@ -368,8 +368,6 @@ export default function MobilePage() {
   useEffect(() => {
   const supabase = createClient();
   let mounted = true;
-  // Spot discovery is public; start it without waiting for auth initialization.
-  void loadSpotData(false);
   if (!supabase) {
   queueMicrotask(() => {
   if (!mounted) return;
@@ -388,7 +386,8 @@ export default function MobilePage() {
   const signedIn = Boolean(data.session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; authentication is only required for account features.
+      // Spot, weather and condition APIs now require authentication.
+      if (signedIn) void loadSpotData(false);
   } catch {
   if (!mounted) return;
   setIsAuthenticated(false);
