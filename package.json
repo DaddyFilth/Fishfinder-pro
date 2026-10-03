@@ -3,17 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "workers/agent-visibility-template"
-  ],
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:workers": "npm run test --workspace agent-visibility-template",
-    "test:all": "npm run test && npm run test:workers",
+    "test:all": "npm run test",
     "android:sync": "npx cap sync android",
     "android:debug": "npx cap sync android && cd android && ./gradlew assembleDebug",
     "android:apk": "bash scripts/build-android-apk.sh",

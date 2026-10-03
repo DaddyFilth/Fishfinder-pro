@@ -31,6 +31,7 @@ import {
   resolveSpotPopupFrame,
 } from '@/lib/mapViewport';
 import { SPECIES, biteRateFor, spotTargetsFor, deriveFishingCondition, type FishingCondition } from '@/lib/speciesCatalog';
+import { buildSpotPrediction } from '@/lib/spotPrediction';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -717,6 +718,7 @@ export default function FishingMap({
             const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
+            const prediction = buildSpotPrediction(spot, c);
 
             return (
               <Marker
@@ -740,6 +742,10 @@ export default function FishingMap({
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
+                      <div style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>Coordinates: {spot.lat.toFixed(5)}, {spot.lng.toFixed(5)}</div>
+                      {spot.depth_metadata && (
+                        <div style={{ fontSize: 9, color: '#67e8f9', marginTop: 4 }}>Depth source: {spot.depth_metadata.source} · {spot.depth_metadata.unit} · {spot.depth_metadata.note}</div>
+                      )}
                       <button type="button" onClick={() => openDirections(spot)} style={{ ...S.directionsBtn, marginTop: 10 }}>Get directions</button>
                     </div>
 
@@ -753,6 +759,24 @@ export default function FishingMap({
                       )) : <div style={{ fontSize: 10, color: '#94a3b8' }}>Target estimate unavailable until a provider snapshot loads.</div>}
                       <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 7 }}>Catalog/algorithm estimate from spot metadata and available provider values; not a catch report or live reading.</div>
                     </div>
+
+                    {prediction && (
+                      <div style={{ background: 'linear-gradient(135deg,rgba(14,116,144,0.22),rgba(15,23,42,0.9))', border: '1px solid rgba(34,211,238,0.35)', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 7 }}>
+                          <div style={{ fontSize: 10, color: '#67e8f9', fontWeight: 800 }}>LOCATION PREDICTION</div>
+                          <div style={{ fontSize: 10, color: scoreColor(prediction.score ?? 0), fontWeight: 800 }}>{prediction.score ?? '—'}/100</div>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#f0fdfa', fontWeight: 700 }}>{prediction.scoreLabel} · {prediction.sourceLabel}</div>
+                        <div style={{ display: 'grid', gap: 4, marginTop: 8, fontSize: 10, color: '#cbd5e1' }}>
+                          <div><strong>Best species:</strong> {prediction.species}</div>
+                          <div><strong>Bait:</strong> {prediction.bait}</div>
+                          <div><strong>Cast location:</strong> {prediction.location}</div>
+                          <div><strong>Target depth:</strong> {prediction.depth}</div>
+                          <div><strong>Annual outlook:</strong> {prediction.seasonalOutlook}</div>
+                        </div>
+                        <div style={{ marginTop: 7, color: '#94a3b8', fontSize: 9 }}>Inputs: {prediction.inputs.join(' · ')}</div>
+                      </div>
+                    )}
 
                     {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading provider snapshot…</div>}
 

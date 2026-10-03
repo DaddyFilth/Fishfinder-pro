@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { calculateSolunar, hourlyActivityForecast } from '@/lib/scoring/solunar';
 import { getSpeciesAdvice } from '@/lib/scoring/speciesAdvisor';
 import { SPECIES_NAMES } from '@/lib/speciesCatalog';
+import { fetchAiBiteTimes, type AiBiteTimes } from '@/lib/aiBiteTimesClient';
 
 interface Conditions {
   water_temp_c: number | null;
@@ -34,8 +35,10 @@ function moonEmoji(phase: string): string {
   return map[phase] ?? '🌙';
 }
 
-export default function BiteTimePanel({ lat, conditions }: Props) {
+export default function BiteTimePanel({ lat, lng, conditions }: Props) {
   const [selectedSpecies, setSelectedSpecies] = useState('Largemouth Bass');
+  const [aiForecast, setAiForecast] = useState<AiBiteTimes | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const now     = new Date();
   const solunar = calculateSolunar(now, lat);
   const hourly  = hourlyActivityForecast(solunar);
@@ -44,6 +47,30 @@ export default function BiteTimePanel({ lat, conditions }: Props) {
     solunar_score: solunar.solunarScore,
     is_daytime: conditions.is_daytime ?? (now.getHours() > 6 && now.getHours() < 20),
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadAiForecast = async () => {
+      setAiLoading(true);
+      const forecast = await fetchAiBiteTimes({
+        species: selectedSpecies,
+        lat,
+        lng,
+        water_temp_c: conditions.water_temp_c,
+        pressure_hpa: conditions.pressure_hpa,
+        wind_speed_ms: conditions.wind_speed_ms,
+        dissolved_oxygen_mgl: conditions.dissolved_oxygen_mgl,
+        solunar_score: solunar.solunarScore,
+        moon_phase: solunar.moonPhaseName,
+      });
+      if (!cancelled) {
+        setAiForecast(forecast);
+        setAiLoading(false);
+      }
+    };
+    void loadAiForecast();
+    return () => { cancelled = true; };
+  }, [conditions.dissolved_oxygen_mgl, conditions.pressure_hpa, conditions.water_temp_c, conditions.wind_speed_ms, lat, lng, selectedSpecies, solunar.moonPhaseName, solunar.solunarScore]);
 
   return (
     <div style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', color: 'white', fontFamily: 'system-ui, sans-serif' }}>
@@ -147,6 +174,24 @@ export default function BiteTimePanel({ lat, conditions }: Props) {
             <p key={i} style={{ fontSize: '9px', color: '#94a3b8', margin: '1px 0' }}>• {r}</p>
           ))}
         </div>
+      </div>
+
+      <div style={{ marginTop: '10px', background: '#082f49', border: '1px solid #155e75', borderRadius: '8px', padding: '10px' }}>
+        <div style={{ fontSize: '10px', color: '#67e8f9', fontWeight: 800, marginBottom: '6px' }}>AI BITE WINDOWS & BAIT</div>
+        {aiLoading && <div style={{ fontSize: '10px', color: '#94a3b8' }}>FishBot is analyzing today’s conditions…</div>}
+        {!aiLoading && aiForecast && (
+          <>
+            <div style={{ fontSize: '11px', color: '#e0f2fe', fontWeight: 700, marginBottom: '6px' }}>{aiForecast.overall_rating} · {aiForecast.overall_score}/100</div>
+            {aiForecast.windows.map((window) => (
+              <div key={`${window.start}-${window.end}`} style={{ borderTop: '1px solid rgba(103,232,249,0.16)', padding: '6px 0', fontSize: '10px', color: '#cbd5e1' }}>
+                <div style={{ color: '#f8fafc', fontWeight: 700 }}>{window.start}–{window.end} · {window.quality} · {window.score}/100</div>
+                <div><strong>Bait:</strong> {window.recommended_bait} · <strong>Depth:</strong> {window.depth}</div>
+              </div>
+            ))}
+            <div style={{ marginTop: '5px', fontSize: '9px', color: '#94a3b8' }}>AI planning estimate, not a catch guarantee. {aiForecast.pro_tip}</div>
+          </>
+        )}
+        {!aiLoading && !aiForecast && <div style={{ fontSize: '10px', color: '#94a3b8' }}>AI prediction unavailable; the local solunar and species guidance above remains available.</div>}
       </div>
     </div>
   );

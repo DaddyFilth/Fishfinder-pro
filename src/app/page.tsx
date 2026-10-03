@@ -16,7 +16,7 @@ import SpotSuggester from '@/components/ai/SpotSuggester';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, mergeWithDefaultSpots, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -239,15 +239,13 @@ async function getSpots(): Promise<SpotLoadResult> {
       if (dataMode !== 'provider' || filtered.length === 0) {
         throw new Error('Live AI spot feed unavailable');
       }
-      return { spots: filtered, source: 'provider', savedAt: new Date().toISOString() };
+      return { spots: mergeWithDefaultSpots(filtered), source: 'provider', savedAt: new Date().toISOString() };
     }
   } catch {
-  // Permanent coordinates remain available as map anchors; no cataloged
-  // conditions, scores, species, bait, or predictions are attached.
+  // Permanent coordinates remain available as map anchors while each marker
+  // loads its own weather, water, depth, species, bait, and prediction data.
   return {
-  spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
-  })),
+  spots: DEFAULT_SPOTS.map((spot) => ({ ...spot, live: false, data_mode: 'provider' as const })),
   source: 'provider',
   savedAt: null,
   };
@@ -262,9 +260,7 @@ async function getSpots(): Promise<SpotLoadResult> {
  */
 export default function MobilePage() {
   // Coordinates are permanent map anchors; live AI conditions are loaded separately.
-  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
-  })));
+  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map((spot) => ({ ...spot, live: false, data_mode: 'provider' as const })));
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
@@ -288,11 +284,11 @@ export default function MobilePage() {
   const [unitsPreference, setUnitsPreference] = useState<UnitPreference>('imperial');
   const [autoRefreshPreference, setAutoRefreshPreference] = useState<AutoRefreshPreference>('off');
   const [mapLayers, setMapLayers] = useState<MapLayers>({
-    hotspots: true,
+    hotspots: false,
     depth: false,
     waterTemp: false,
-    conditionMarkers: true,
-    waypoints: true,
+    conditionMarkers: false,
+    waypoints: false,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
@@ -529,11 +525,19 @@ export default function MobilePage() {
     );
   };
 
-  useEffect(() => {
-    const spot = selectedSpot;
-    if (!spot) return;
+  const filteredSpots = filterSpots(spots, mapFilter);
+  const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
+  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
+  const rankedSpots = useMemo(
+    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
+    [visibleSpots, conditionModes, conditionScores],
+  );
+  const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
+  const topSpots = rankedSpots.slice(0, 8);
 
-    if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
+  useEffect(() => {
+    visibleSpots.forEach((spot) => {
+      if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
@@ -550,48 +554,27 @@ export default function MobilePage() {
       })
         .then((result) => {
           if (!result.ok) {
-            setConditionScores((prev) => {
-              const next = { ...prev };
-              delete next[spot.id];
-              return next;
-            });
             setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
             return;
           }
 
           const data = result.data as unknown as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-  const fishingScore = mode !== 'fallback'
-    ? (typeof data.bite_score === 'number'
-      ? data.bite_score
-      : (typeof data.fishing_score === 'number' ? data.fishing_score : 0))
-    : 0;
+          const fishingScore = mode !== 'fallback'
+            ? (typeof data.bite_score === 'number'
+              ? data.bite_score
+              : (typeof data.fishing_score === 'number' ? data.fishing_score : 0))
+            : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
-        })
-        .catch(() => {
-          setConditionScores((prev) => {
-            const next = { ...prev };
-            delete next[spot.id];
-            return next;
-          });
-          setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
         })
         .finally(() => {
           scoreFetchInFlight.current[spot.id] = false;
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
-  }, [authReady, isAuthenticated, selectedSpot, conditionScores]);
+    });
+  }, [visibleSpots, conditionScores]);
 
-  const filteredSpots = filterSpots(spots, mapFilter);
-  const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
-  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
-  const rankedSpots = useMemo(
-    () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
-    [visibleSpots, conditionModes, conditionScores],
-  );
-  const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
-  const topSpots = rankedSpots.slice(0, 8);
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };

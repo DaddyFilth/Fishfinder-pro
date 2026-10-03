@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, mergeWithDefaultSpots, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import type { Spot } from '@/lib/mapFilters';
 import { enforceRateLimit } from '@/lib/security';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -15,7 +16,6 @@ type AnyRec = Record<string, unknown>;
 type RemoteResult = { payload: AnyRec; reason: string | null };
 
 /** Shared cache and single-flight guard so a page load cannot stampede the provider. */
-const REMOTE_FAILURE_TTL_MS = 15_000;
 const REMOTE_CACHE_MAX_ENTRIES = 200;
 const remoteCache = new Map<string, { expiresAt: number; payload: AnyRec; reason: string | null }>();
 const remoteInFlight = new Map<string, Promise<RemoteResult>>();
@@ -147,8 +147,9 @@ function normalize(payload: unknown): AnyRec {
         ? rawConditions.issuedAt
         : undefined;
   const source = typeof root.source === 'string' ? root.source : 'seamcast-spots';
-  const dataMode = spots.length > 0 ? 'provider' : 'unavailable';
-  const normalizedSpots = spots.map((spot) => ({
+  const catalogSpots = spots.length > 0 ? mergeWithDefaultSpots(spots as unknown as Spot[]) : [];
+  const dataMode = catalogSpots.length > 0 ? 'provider' : 'unavailable';
+  const normalizedSpots = catalogSpots.map((spot) => ({
     ...spot,
     source,
     live: true,
@@ -196,8 +197,9 @@ export async function GET(req: NextRequest) {
           data_mode: 'provider',
         }));
       if (storedSpots.length > 0) {
+        const catalogSpots = mergeWithDefaultSpots(storedSpots as unknown as Spot[]);
         return NextResponse.json({
-          spots: storedSpots,
+          spots: catalogSpots,
           source: 'supabase-live',
           live: true,
           data_mode: 'provider',
@@ -211,16 +213,10 @@ export async function GET(req: NextRequest) {
   const { payload, reason } = await fetchRemoteSpots(key, `${REMOTE}?lat=${lat}&lon=${lon}`);
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
-    // Keep the 76 permanent map locations visible, but strip all catalog metadata.
-    // Live AI conditions are fetched separately for a selected marker; no stale
-    // score, species, bait, weather, or prediction is presented here.
-    const markers = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-      id,
-      name,
-      lat,
-      lng,
-      water_type,
-      spot_type,
+    // Keep the 76 permanent map locations and their source-labeled metadata
+    // visible. Live conditions remain separate and are fetched per marker.
+    const markers = DEFAULT_SPOTS.map((spot) => ({
+      ...spot,
       source: 'permanent-map-marker',
       live: false,
       data_mode: 'provider',
