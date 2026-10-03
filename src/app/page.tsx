@@ -38,7 +38,7 @@ type DataMode =
   interface SpotCondition {
     fishing_score?: number | null;
     bite_score?: number | null;
-    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable' | 'ai-generated';
 }
 
 function resolveSpotDataMode(
@@ -296,6 +296,7 @@ export default function MobilePage() {
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
+  const signedInRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
   const appBadge = badgeState(isOnline);
@@ -368,8 +369,6 @@ export default function MobilePage() {
   useEffect(() => {
   const supabase = createClient();
   let mounted = true;
-  // Spot discovery is public; start it without waiting for auth initialization.
-  void loadSpotData(false);
   if (!supabase) {
   queueMicrotask(() => {
   if (!mounted) return;
@@ -388,7 +387,8 @@ export default function MobilePage() {
   const signedIn = Boolean(data.session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; authentication is only required for account features.
+      // Spot, weather and condition APIs now require authentication.
+      if (signedIn) void loadSpotData(false);
   } catch {
   if (!mounted) return;
   setIsAuthenticated(false);
@@ -397,13 +397,16 @@ export default function MobilePage() {
   };
 
   void syncSession();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
+      const wasSignedIn = signedInRef.current;
+      signedInRef.current = signedIn;
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; keep condition requests stable across auth changes.
-      if (!signedIn) {
+      if (signedIn && !wasSignedIn && event === 'SIGNED_IN') {
+        void loadSpotData(false);
+      } else if (!signedIn) {
         setSelectedSpot(null);
       }
     });

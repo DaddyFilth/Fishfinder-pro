@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 type ProviderContext = SpotsContext & {
   source: string
   data_mode: string
+  live?: boolean
   observed_at?: string
 }
 
@@ -31,7 +32,8 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
     return {
       ...parsed,
       source: parsed.source ?? parsed.conditions?.source ?? 'seamcast-spots',
-      data_mode: parsed.data_mode ?? 'provider',
+      data_mode: parsed.data_mode ?? 'unavailable',
+      live: parsed.live === true,
       observed_at: parsed.observed_at ?? parsed.conditions?.issuedAt,
     }
   } catch {
@@ -103,7 +105,7 @@ export async function POST(req: NextRequest) {
         advice,
         source: 'ai',
         data_mode: 'ai-generated',
-        live_data: false,
+        live_data: spotsData?.live === true,
         context: spotsData
           ? {
               source: spotsData.source,
