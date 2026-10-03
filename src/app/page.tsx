@@ -296,6 +296,7 @@ export default function MobilePage() {
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
+  const signedInRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
   const appBadge = badgeState(isOnline);
@@ -396,14 +397,16 @@ export default function MobilePage() {
   };
 
   void syncSession();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
+      const wasSignedIn = signedInRef.current;
+      signedInRef.current = signedIn;
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      if (signedIn) {
+      if (signedIn && !wasSignedIn && event === 'SIGNED_IN') {
         void loadSpotData(false);
-      } else {
+      } else if (!signedIn) {
         setSelectedSpot(null);
       }
     });
