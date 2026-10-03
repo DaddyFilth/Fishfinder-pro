@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         advice,
         source: 'ai',
         data_mode: 'ai-generated',
-        live_data: false,
+        live_data: Boolean(spotsData && spotsData.data_mode === 'provider'),
         context: spotsData
           ? {
               source: spotsData.source,
