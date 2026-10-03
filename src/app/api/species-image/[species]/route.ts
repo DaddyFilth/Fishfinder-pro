@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthContext } from '@/lib/auth/server';
-import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 import { isSafeGeneratedSvg } from '@/lib/svg';
+import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit } from '@/lib/security';
 
 export const runtime = 'nodejs';
@@ -41,27 +41,20 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid species name' }, { status: 400 });
   }
 
-  // The species guide renders this feed as an <img> fallback, so a placeholder
-  // keeps the card intact when generated artwork is unavailable. The route is
-  // reachable anonymously, so only signed-in visitors trigger the metered model.
-  if (!process.env.GROQ_API_KEY) {
-    return svgResponse(speciesImagePlaceholder(speciesName));
-  }
-
   const auth = await getAuthContext();
   if (!auth) {
-    return svgResponse(speciesImagePlaceholder(speciesName));
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
   try {
     const response = await fetch(GROQ_ENDPOINT, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${getGroqClient().apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+        model: getAiModel(),
         temperature: 0.2,
         max_tokens: 5000,
         messages: [
