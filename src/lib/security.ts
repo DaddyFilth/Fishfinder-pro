@@ -7,6 +7,18 @@ export { isHttpUrl, isImageDataUrl } from './urls'
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
 let redis: Redis | null = null
+let ready: Promise<void> | null = null
+
+async function ensureReady(client: Redis) {
+  if (client.status === 'ready') return
+  if (!ready) {
+    ready = (client.status === 'wait' ? client.connect() : new Promise<void>((res, rej) => {
+      client.once('ready', () => res()); client.once('error', rej)
+    })).finally(() => { ready = null })
+  }
+  await ready
+}
+
 function getRedis() {
   const url = process.env.REDIS_URL?.trim()
   if (!url) return null
@@ -34,8 +46,6 @@ function clientKey(request: Request) {
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
 
-  if (process.env.NODE_ENV === 'production') return 'unknown'
-
   const forwarded = request.headers
     .get('x-forwarded-for')
     ?.split(',')
@@ -57,9 +67,13 @@ async function enforceDistributedRateLimit(
   const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
 
   try {
-    if (client.status === 'wait') await client.connect()
-    const count = await client.incr(key)
-    if (count === 1) await client.expire(key, windowSeconds)
+    await ensureReady(client)
+    const [[incrErr, count], [expErr]] = (await client
+      .multi()
+      .incr(key)
+      .expire(key, windowSeconds, 'NX')
+      .exec()) as [[Error | null, number], [Error | null, unknown]]
+    if (incrErr || expErr) throw incrErr ?? expErr
     if (count > options.limit) {
       const ttl = await client.ttl(key)
       return NextResponse.json(
