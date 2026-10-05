@@ -42,8 +42,9 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
   const temp = conditions.water_temp_c;
   const isOptimalTemp = temp !== null && temp >= db.optTempMin && temp <= db.optTempMax;
   const isWarm = temp !== null && temp >= (db.optTempMin + db.optTempMax) / 2;
-  const pressureAvailable = conditions.pressure_hpa !== null;
-  const pressureAboveThreshold = pressureAvailable && conditions.pressure_hpa >= 1010;
+  const pressure = conditions.pressure_hpa;
+  const pressureAvailable = pressure !== null;
+  const pressureAboveThreshold = pressure !== null && pressure >= 1010;
 
   let activityScore = 50;
   const reasoning: string[] = [];
