@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Skip when Contrast configuration is missing
         if: env.CONTRAST_API_KEY == '' || env.CONTRAST_ORGANIZATION_ID == '' || env.CONTRAST_AUTH_HEADER == '' || env.CONTRAST_ARTIFACT_PATH == ''
