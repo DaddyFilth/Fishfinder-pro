@@ -33,6 +33,16 @@ function createNonce() {
   return crypto.randomUUID().replace(/-/g, '');
 }
 
+function normalizeProxyUrl(value: string | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 function applySecurityHeaders(response: NextResponse, protocol: string, nonce: string) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -84,8 +94,15 @@ export async function proxy(request: NextRequest) {
     return applySecurityHeaders(NextResponse.next({ request: requestWithNonce }), request.nextUrl.protocol, nonce);
   }
 
-  const url = getSupabaseProjectUrl();
-  const key = getSupabasePublishableKey();
+  const url = getSupabaseProjectUrl() ?? normalizeProxyUrl(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL,
+  );
+  const key = getSupabasePublishableKey() ?? (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
   if (!url || !key) {
     return applySecurityHeaders(NextResponse.json(
@@ -105,11 +122,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claims } = await supabase.auth.getClaims()
 
-  if (user) {
+  if (claims?.claims) {
     return response;
   }
 
