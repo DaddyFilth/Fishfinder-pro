@@ -15,12 +15,14 @@ export function getSeamcastSpotsUrls(): string[] {
 }
 
 /** Fetches the spots feed from each endpoint in order, returning the first OK response (or null). */
-export async function fetchSeamcastResponse(params: URLSearchParams, init?: RequestInit): Promise<Response | null> {
+export async function fetchSeamcastResponse(params: URLSearchParams, init?: RequestInit, perAttemptTimeoutMs = 8_000): Promise<Response | null> {
   for (const base of getSeamcastSpotsUrls()) {
     try {
       const url = new URL(base);
       params.forEach((v, k) => url.searchParams.set(k, v));
-      const res = await fetch(url.toString(), init);
+      const timeout = AbortSignal.timeout(perAttemptTimeoutMs);
+      const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+      const res = await fetch(url.toString(), { ...init, signal });
       if (res.ok) return res;
     } catch {
       // try next endpoint

@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     const res = await fetchSeamcastResponse(new URLSearchParams({ lat: String(lat), lon: String(lon) }), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
-      signal: AbortSignal.timeout(8_000),
     });
 
     if (!res) {

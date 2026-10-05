@@ -7,7 +7,6 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const REMOTE_TIMEOUT_MS = 8_000;
 const REMOTE_CACHE_TTL_MS = 60_000;
 
 type AnyRec = Record<string, unknown>;
@@ -58,7 +57,6 @@ async function fetchRemoteSpots(key: string, params: URLSearchParams): Promise<R
       const res = await fetchSeamcastResponse(params, {
         headers: { Accept: 'application/json' },
         cache: 'no-store',
-        signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
       });
 
       if (!res) {
