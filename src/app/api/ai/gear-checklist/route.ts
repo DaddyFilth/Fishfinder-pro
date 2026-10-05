@@ -5,7 +5,7 @@ const RequestSchema = z.object({
   lat: z.number().finite().min(-90).max(90),
   lon: z.number().finite().min(-180).max(180),
 }).strict();
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getGroqClient } from '@/lib/ollama';
 import { getAiModel } from '@/lib/ollama';
@@ -33,11 +33,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const envUrl = new URL(getSeamcastSpotsUrl());
-    envUrl.searchParams.set('lat', lat.toString());
-    envUrl.searchParams.set('lon', lon.toString());
-    const envRes = await fetch(envUrl, { cache: 'no-store' });
-    const envData = envRes.ok ? await envRes.json() : null;
+    const envParams = new URLSearchParams({ lat: lat.toString(), lon: lon.toString() });
+    const envRes = await fetchSeamcastResponse(envParams, { cache: 'no-store' });
+    const envData = envRes ? await envRes.json() : null;
     const conditionContext = hasVerifiedCurrentConditions(envData)
       ? JSON.stringify(envData, null, 2)
       : 'Unavailable as a verified recent live observation. Recommend general species-specific gear only; do not claim it is needed for current conditions.';

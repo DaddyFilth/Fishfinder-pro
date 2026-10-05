@@ -1,4 +1,4 @@
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
@@ -17,16 +17,14 @@ type ProviderContext = SpotsContext & {
 
 async function fetchSpotsContext(lat: number, lon: number, species?: string): Promise<ProviderContext | null> {
   try {
-    const url = new URL(getSeamcastSpotsUrl())
-    url.searchParams.set('lat', lat.toString())
-    url.searchParams.set('lon', lon.toString())
-    if (species) url.searchParams.set('species', species)
+    const params = new URLSearchParams({ lat: lat.toString(), lon: lon.toString() })
+    if (species) params.set('species', species)
 
-    const res = await fetch(url, {
+    const res = await fetchSeamcastResponse(params, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!res.ok) return null
+    if (!res) return null
 
     const parsed = parseSpotsContext(await res.json())
     if (!parsed) return null

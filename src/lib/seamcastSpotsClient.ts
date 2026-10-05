@@ -14,6 +14,21 @@ export function getSeamcastSpotsUrls(): string[] {
   return Array.from(new Set([getSeamcastSpotsUrl(), SECONDARY_SEAMCAST_SPOTS_URL]));
 }
 
+/** Fetches the spots feed from each endpoint in order, returning the first OK response (or null). */
+export async function fetchSeamcastResponse(params: URLSearchParams, init?: RequestInit): Promise<Response | null> {
+  for (const base of getSeamcastSpotsUrls()) {
+    try {
+      const url = new URL(base);
+      params.forEach((v, k) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), init);
+      if (res.ok) return res;
+    } catch {
+      // try next endpoint
+    }
+  }
+  return null;
+}
+
 export async function fetchSeamcastAiSpots(lat: number, lon: number) {
   let lastError: unknown = new Error('Spots API failed');
   for (const base of getSeamcastSpotsUrls()) {

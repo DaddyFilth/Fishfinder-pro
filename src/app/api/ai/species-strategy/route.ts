@@ -5,7 +5,7 @@ const RequestSchema = z.object({
   lat: z.number().finite().min(-90).max(90),
   lon: z.number().finite().min(-180).max(180),
 }).strict();
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -33,11 +33,9 @@ export async function POST(req: NextRequest) {
 
   try {
     // Fetch environmental context for the coordinates
-    const envUrl = new URL(getSeamcastSpotsUrl());
-    envUrl.searchParams.set('lat', lat.toString());
-    envUrl.searchParams.set('lon', lon.toString());
-    const envRes = await fetch(envUrl, { cache: 'no-store' });
-    const envData = envRes.ok ? await envRes.json() : null;
+    const envParams = new URLSearchParams({ lat: lat.toString(), lon: lon.toString() });
+    const envRes = await fetchSeamcastResponse(envParams, { cache: 'no-store' });
+    const envData = envRes ? await envRes.json() : null;
     const conditionsAreCurrent = hasVerifiedCurrentConditions(envData);
     const conditionContext = conditionsAreCurrent
       ? JSON.stringify(envData, null, 2)
