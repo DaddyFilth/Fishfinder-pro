@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
+import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 interface Spot {
@@ -168,13 +169,20 @@ export async function POST(req: NextRequest) {
       )
       .join(String.fromCharCode(10));
 
+    const feed = typeof userLat === 'number' && typeof userLng === 'number'
+      ? await fetchSeamcastSpotSuggestions(userLat, userLng)
+      : null;
+    const feedSummary = feed
+      ? `\nSeamcast-spots feed hints for the user's area (AI-derived, not verified observations): overall bite ${feed.overallBite?.level ?? 'unknown'}${typeof feed.overallBite?.score === 'number' ? ` (${feed.overallBite.score})` : ''}; likely species: ${(feed.speciesLikely ?? []).slice(0, 5).map((s) => s.species).join(', ') || 'none listed'}; suggested baits: ${(feed.recommendedBaits ?? []).slice(0, 5).map((b) => b.baitType).filter(Boolean).join(', ') || 'none listed'}.\n`
+      : '';
+
     const prompt = `
 You are an AI fishing-planning assistant.
 
 Give a clearly labeled estimate for ${species ?? 'a plausible sport fish'} at each supplied water. Use only its supplied name, coordinates, water type, and spot type. No current environmental readings, catch reports, water clarity, depth, structure, or access status are provided. Do not claim that any detail is observed, verified, evidence-based, or live, and do not invent spot-specific conditions or features. Keep recommendations general and state in the reason that the supplied metadata is insufficient for site-specific predictions. ${species ? `Include the exact target species "${species}" in primary_species for every spot.` : ''}
 
 ${spotSummary}
-
+${feedSummary}
 Return ONLY a valid JSON array. Return exactly one object for every supplied spot, in the same order. All scores, ratings, species, times, techniques, and lure choices are AI-generated planning estimates, not fishing reports or forecasts.
 
 Each object must contain:
