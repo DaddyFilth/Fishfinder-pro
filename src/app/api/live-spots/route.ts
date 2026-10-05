@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { normalizeProviderSpots } from '@/lib/spotProvenance';
+import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
   }
 
-  const remoteUrl = `https://seamcast-spots.vercel.app/api/spots?lat=${lat}&lon=${lon}`;
+  const remoteUrl = `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`;
 
   try {
     const res = await fetch(remoteUrl, {

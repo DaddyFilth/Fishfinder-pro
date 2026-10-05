@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
+import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const REMOTE = 'https://seamcast-spots.vercel.app/api/spots';
 const REMOTE_TIMEOUT_MS = 8_000;
 const REMOTE_CACHE_TTL_MS = 60_000;
 
@@ -210,7 +210,7 @@ export async function GET(req: NextRequest) {
   }
 
   const key = `${lat}:${lon}`;
-  const { payload, reason } = await fetchRemoteSpots(key, `${REMOTE}?lat=${lat}&lon=${lon}`);
+  const { payload, reason } = await fetchRemoteSpots(key, `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`);
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
     const catalogSpots = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
