@@ -1,7 +1,15 @@
+export const DEFAULT_SEAMCAST_SPOTS_URL = 'https://seamcast-spots.vercel.app/api/spots';
+
+/** Resolves the seamcast-spots API endpoint (SPOTS_API, NEXT_PUBLIC_SPOTS_API_URL base, or default). */
+export function getSeamcastSpotsUrl(): string {
+  const full = process.env.SPOTS_API?.trim();
+  if (full) return full;
+  const base = process.env.NEXT_PUBLIC_SPOTS_API_URL?.trim().replace(/\/+$/, '');
+  return base ? `${base}/api/spots` : DEFAULT_SEAMCAST_SPOTS_URL;
+}
+
 export async function fetchSeamcastAiSpots(lat: number, lon: number) {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SPOTS_API_URL || 'https://seamcast-spots.vercel.app';
-  const url = `${baseUrl}/api/spots?lat=${lat}&lon=${lon}`;
+  const url = `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`;
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -52,8 +60,7 @@ export interface SeamcastSpotsFeed {
 
 /** Raw upstream feed for AI spot predictions; use this for the spot rankings. */
 export async function fetchSeamcastSpotSuggestions(lat: number, lon: number): Promise<SeamcastSpotsFeed | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_SPOTS_API_URL || 'https://seamcast-spots.vercel.app';
-  const url = `${baseUrl}/api/spots?lat=${lat}&lon=${lon}`;
+  const url = `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`;
 
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });

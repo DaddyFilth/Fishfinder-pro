@@ -5,6 +5,7 @@ const RequestSchema = z.object({
   lat: z.number().finite().min(-90).max(90),
   lon: z.number().finite().min(-180).max(180),
 }).strict();
+import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Fetch environmental context for the coordinates
-    const envUrl = new URL(process.env.SPOTS_API || 'https://seamcast-spots.vercel.app/api/spots');
+    const envUrl = new URL(getSeamcastSpotsUrl());
     envUrl.searchParams.set('lat', lat.toString());
     envUrl.searchParams.set('lon', lon.toString());
     const envRes = await fetch(envUrl, { cache: 'no-store' });

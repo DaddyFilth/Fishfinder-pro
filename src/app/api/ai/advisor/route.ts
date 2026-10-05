@@ -1,3 +1,4 @@
+import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
@@ -16,7 +17,7 @@ type ProviderContext = SpotsContext & {
 
 async function fetchSpotsContext(lat: number, lon: number, species?: string): Promise<ProviderContext | null> {
   try {
-    const url = new URL(process.env.SPOTS_API || 'https://seamcast-spots.vercel.app/api/spots')
+    const url = new URL(getSeamcastSpotsUrl())
     url.searchParams.set('lat', lat.toString())
     url.searchParams.set('lon', lon.toString())
     if (species) url.searchParams.set('species', species)

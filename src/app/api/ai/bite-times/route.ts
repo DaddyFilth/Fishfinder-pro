@@ -1,7 +1,16 @@
+import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
+
+
+function summarizeFeed(feed: Awaited<ReturnType<typeof fetchSeamcastSpotSuggestions>>): string {
+  if (!feed) return 'Seamcast-spots feed: unavailable.';
+  const species = (feed.speciesLikely ?? []).slice(0, 5).map((s) => s.species).join(', ') || 'none listed';
+  const baits = (feed.recommendedBaits ?? []).slice(0, 5).map((b) => b.baitType).filter(Boolean).join(', ') || 'none listed';
+  return `Seamcast-spots feed (AI-derived hints, not verified observations): overall bite ${feed.overallBite?.level ?? 'unknown'}; likely species: ${species}; suggested baits: ${baits}.`;
+}
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
@@ -34,6 +43,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Valid coordinates are required.' }, { status: 400 });
   }
 
+  const feedContext = summarizeFeed(await fetchSeamcastSpotSuggestions(latNumber, lngNumber));
+
   const now = new Date();
   const localHour = now.getHours();
   const month = now.toLocaleString('en-US', { month: 'long' });
@@ -52,6 +63,7 @@ Given the supplied conditions for ${species} at coordinates (${latNumber}, ${lng
 - Dissolved oxygen: ${dissolved_oxygen_mgl ?? 'unknown'} mg/L
 - Solunar score: ${solunar_score ?? 'unknown'}/100
 - Moon phase: ${moon_phase ?? 'unknown'}
+- ${feedContext}
 
 Estimate 3 candidate bite time windows for ${species} TODAY. These are optional planning estimates, not guarantees or observed bite activity. Use only the supplied inputs; do not invent current readings or conditions. When environmental inputs are unknown, state that clearly in the summary and explain that the windows are low-confidence estimates.
 

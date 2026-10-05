@@ -1,7 +1,16 @@
+import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/ollama';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
+
+
+function summarizeFeed(feed: Awaited<ReturnType<typeof fetchSeamcastSpotSuggestions>>): string {
+  if (!feed) return 'Seamcast-spots feed: unavailable.';
+  const species = (feed.speciesLikely ?? []).slice(0, 5).map((s) => s.species).join(', ') || 'none listed';
+  const baits = (feed.recommendedBaits ?? []).slice(0, 5).map((b) => b.baitType).filter(Boolean).join(', ') || 'none listed';
+  return `Seamcast-spots feed (AI-derived hints, not verified observations): overall bite ${feed.overallBite?.level ?? 'unknown'}; likely species: ${species}; suggested baits: ${baits}.`;
+}
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'ai-analyze', limit: 12, windowMs: 60_000 });
@@ -21,6 +30,12 @@ export async function POST(req: NextRequest) {
   const observedAt = typeof conditionData.captured_at === 'string' ? conditionData.captured_at : null;
   const waterTempF = conditionData.water_temp_c != null ? Math.round(Number(conditionData.water_temp_c) * 9 / 5 + 32) : 'unknown';
   const airTempF = conditionData.air_temp_c != null ? Math.round(Number(conditionData.air_temp_c) * 9 / 5 + 32) : 'unknown';
+
+  const spotLat = Number(spotData.lat);
+  const spotLng = Number(spotData.lng);
+  const feedContext = Number.isFinite(spotLat) && Number.isFinite(spotLng) && Math.abs(spotLat) <= 90 && Math.abs(spotLng) <= 180
+    ? summarizeFeed(await fetchSeamcastSpotSuggestions(spotLat, spotLng))
+    : 'Seamcast-spots feed: unavailable.';
 
   try {
     const response = await getGroqClient().chat.completions.create({
@@ -44,6 +59,7 @@ Pressure: ${conditionData.pressure_hpa ?? 'unknown'} hPa
 Dissolved oxygen: ${conditionData.dissolved_oxygen_mgl ?? 'unknown'} mg/L
 Flow: ${conditionData.flow_rate_cfs ?? 'unknown'} cfs
 Calculated score: ${conditionData.fishing_score ?? 'unavailable'}/100
+${feedContext}
 
 Respond with ONLY a JSON object: { "summary": "three-sentence interpretation", "emoji_rating": "a short label" }`,
       }],
