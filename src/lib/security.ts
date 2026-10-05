@@ -23,12 +23,25 @@ function getRedis() {
 }
 
 function clientKey(request: Request) {
+  // Prefer identity headers set by a trusted edge or proxy. Never use the first
+  // arbitrary X-Forwarded-For entry: it is client supplied.
   const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
-  const realIp = request.headers.get('x-real-ip')?.trim()
   if (vercelForwarded) return vercelForwarded
+
+  const cloudflareIp = request.headers.get('cf-connecting-ip')?.trim()
+  if (cloudflareIp) return cloudflareIp
+
+  const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
+
   if (process.env.NODE_ENV === 'production') return 'unknown'
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()
+
+  const forwarded = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .at(-1)
   return forwarded || 'unknown'
 }
 

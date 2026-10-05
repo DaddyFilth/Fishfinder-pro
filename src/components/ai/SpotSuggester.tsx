@@ -4,6 +4,7 @@
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { distanceMiles } from '@/lib/nearbySpots';
+import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { useCallback, useState } from 'react';
 
 interface Spot {
@@ -70,61 +71,79 @@ export default function SpotSuggester({ spots }: Props) {
       setError(null);
       setResults([]);
 
+      const feedLat = typeof lat === 'number' && Number.isFinite(lat) ? lat : userLocation?.lat ?? spots[0]?.lat;
+      const feedLng = typeof lng === 'number' && Number.isFinite(lng) ? lng : userLocation?.lng ?? spots[0]?.lng;
+
       try {
-        const response = await fetch('/api/ai/suggest-spots', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            spots: typeof lat === 'number' && typeof lng === 'number'
-              ? spots
-                  .filter((spot) => distanceMiles({ latitude: lat, longitude: lng }, { latitude: spot.lat, longitude: spot.lng }) <= 25)
-                  .sort((a, b) => b.lat - a.lat)
-                  .slice(0, 10)
-              : [],
-            species: selectedSpecies,
-            userLat: lat,
-            userLng: lng,
-          }),
-        });
-
-        const data: unknown = await response.json();
-
-        if (!response.ok) {
-          const message =
-            data &&
-            typeof data === 'object' &&
-            'error' in data &&
-            typeof data.error === 'string'
-              ? data.error
-              : 'Failed to find fishing spots';
-
-          throw new Error(message);
+        if (feedLat === undefined || feedLng === undefined) {
+          throw new Error('No location available for spot predictions.');
         }
 
-        const responseData = data as {
-          results?: RankedSpot[];
-          total_nearby?: number;
-        };
+        const feed = await fetchSeamcastSpotSuggestions(feedLat, feedLng);
+        if (!feed) {
+          throw new Error('The upstream AI spot prediction service is unavailable.');
+        }
 
-        setResults(Array.isArray(responseData.results) ? responseData.results : []);
-        setTotalNearby(
-          typeof responseData.total_nearby === 'number'
-            ? responseData.total_nearby
-            : null,
+        const predictedSpots = Array.isArray(feed.microSpots) ? feed.microSpots : [];
+        const caughtSpecies = selectedSpecies.trim().toLowerCase();
+        const scoped = caughtSpecies
+          ? predictedSpots.filter((spot) =>
+              (spot.bestSpecies ?? []).some((candidate) => candidate.species?.toLowerCase() === caughtSpecies),
+            )
+          : predictedSpots;
+
+        const list = scoped.length > 0 ? scoped : predictedSpots;
+
+        setResults(
+          list.map((spot) => {
+            const biteScore = spot.biteScore ?? feed.overallBite;
+            const primary = (spot.bestSpecies ?? feed.speciesLikely ?? [])
+              .map((candidate) => candidate.species)
+              .filter(Boolean)
+              .slice(0, 4);
+
+            const spotLat = typeof spot.lat === 'number' && Number.isFinite(spot.lat) ? spot.lat : feedLat;
+            const spotLng = typeof spot.lon === 'number' && Number.isFinite(spot.lon) ? spot.lon : feedLng;
+
+            return {
+              spot_id: spot.id ?? null,
+              spot_name: spot.label ?? 'Provider AI spot',
+              spot_lat: spotLat,
+              spot_lng: spotLng,
+              miles_away: distanceMiles({ latitude: feedLat, longitude: feedLng }, { latitude: spotLat, longitude: spotLng }),
+              fishing_score: typeof biteScore?.score === 'number' && Number.isFinite(biteScore.score) ? biteScore.score : 0,
+              rating:
+                biteScore?.level === 'hot'
+                  ? 'Hot'
+                  : biteScore?.level === 'good'
+                    ? 'Good'
+                    : 'Fair',
+              primary_species: primary,
+              best_technique:
+                spot.bestSpecies?.[0]?.notes?.[0] ??
+                'Follow the current conditions and target the predicted species window.',
+              best_time_today:
+                typeof biteScore?.level === 'string' && biteScore.level
+                  ? `${biteScore.level} (AI prediction)`
+                  : 'AI predicted window',
+              recommended_lure:
+                spot.bestBaits?.[0]?.baitType ?? feed.recommendedBaits?.[0]?.baitType ?? 'Provider bait guidance unavailable',
+              reason: biteScore?.reasons?.[0] ?? 'Upstream AI catch prediction from the current conditions.',
+            };
+          }),
         );
+        setTotalNearby(predictedSpots.length);
       } catch (requestError: unknown) {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : 'AI spot recommendations are unavailable',
+            : 'AI spot recommendations are unavailable.',
         );
       } finally {
         setLoading(false);
       }
     },
-    [selectedSpecies, spots],
+    [selectedSpecies, spots, userLocation?.lat, userLocation?.lng],
   );
 
   const saveLocation = (lat: number, lng: number): UserLocation => {

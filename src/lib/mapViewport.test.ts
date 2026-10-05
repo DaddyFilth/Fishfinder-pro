@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles intentionally model partial map state. */
 import { describe, expect, it } from 'vitest';
+import { rankSpots } from './mapFilters';
 import {
   MAP_MAX_ZOOM,
   MAP_MIN_ZOOM,
@@ -290,3 +292,18 @@ describe('resolveZoomControlButtons', () => {
     ]);
   });
 });
+describe('rankSpots', () => {
+  it('prefers the provider AI bite score when available', () => {
+    const spots = [
+      { id: '1', name: 'A', lat: 35, lng: -97, water_type: 'freshwater', spot_type: 'lake', biteScore: { score: 88, level: 'good' } },
+      { id: '2', name: 'B', lat: 35, lng: -97, water_type: 'freshwater', spot_type: 'lake' },
+    ] as any
+    const ranked = rankSpots(spots, { '1': 40, '2': 95 })
+    // Without the AI preference, spot 1 would be ranked by 40. With it,
+    // spot 1's score is 88 (upstream AI), placing it second behind spot 2's 95.
+    expect(ranked[0].spot.id).toBe('2')
+    expect(ranked[0].score).toBe(95)
+    expect(ranked[1].spot.id).toBe('1')
+    expect(ranked[1].score).toBe(88)
+  })
+})

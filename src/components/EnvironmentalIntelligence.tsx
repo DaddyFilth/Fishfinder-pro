@@ -3,30 +3,34 @@ import { motion } from 'framer-motion';
 import { EnvironmentManager } from '@/lib/environment/manager';
 import { BarometricTrend, SolunarData } from '@/lib/environment/types';
 
-export default function EnvironmentalIntelligence() {
+export default function EnvironmentalIntelligence({ lat = 35, lng = -97.366 }: { lat?: number; lng?: number }) {
   const [baro, setBaro] = useState<BarometricTrend | null>(null);
   const [solunar, setSolunar] = useState<SolunarData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchEnvData() {
       setLoading(true);
       try {
-        // In a real app, this pressure comes from a weather API
-        const currentPressure = 1012.5; 
-        const trend = await EnvironmentManager.getBarometricTrend(currentPressure);
-        const sol = await EnvironmentManager.getSolunarData(new Date().toISOString().split('T')[0]);
-        
-        setBaro(trend);
-        setSolunar(sol);
+        const [trend, sol] = await Promise.all([
+          EnvironmentManager.getBarometricTrend(lat, lng),
+          EnvironmentManager.getSolunarData(new Date().toISOString().split('T')[0], lat),
+        ]);
+
+        if (!cancelled) {
+          setBaro(trend);
+          setSolunar(sol);
+        }
       } catch (e) {
         console.error('Env Error:', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchEnvData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [lat, lng]);
 
   if (loading) return <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>Analyzing Atmospheric Trends...</div>;
 

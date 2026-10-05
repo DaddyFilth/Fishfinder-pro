@@ -7,7 +7,6 @@ const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
-  '/',
   '/robots.txt',
   '/sitemap.xml',
   '/auth/login',
@@ -22,18 +21,8 @@ const PUBLIC_PATHS = [
 ];
 
 export function isPublicPath(pathname: string) {
-  const isPublicSpotRead =
-    pathname === '/api/spots' ||
-    /^\/api\/spots\/[^/]+\/conditions$/.test(pathname);
-
-  // The species guide lives on the public landing route and falls back to this
-  // endpoint when a catalog image fails, so anonymous visitors need it too.
-  const isPublicSpeciesImage = pathname.startsWith('/api/species-image/');
-
   return (
     PUBLIC_PATHS.includes(pathname) ||
-    isPublicSpotRead ||
-    isPublicSpeciesImage ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'
