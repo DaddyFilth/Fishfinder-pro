@@ -36,8 +36,8 @@ export class EnvironmentManager {
 
     if (!trendData || trendData.currentPressure === null) {
       return {
-        currentPressure: 0,
-        trend: 'stable',
+        currentPressure: null,
+        trend: 'unavailable',
         impact: 'neutral',
         advice: 'Pressure data is unavailable at this location right now.',
       };

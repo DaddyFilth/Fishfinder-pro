@@ -4,7 +4,6 @@
 import { getSpeciesImage } from '@/lib/scoring/speciesAdvisor';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { distanceMiles } from '@/lib/nearbySpots';
-import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { useCallback, useState } from 'react';
 
 interface Spot {
@@ -63,6 +62,7 @@ export default function SpotSuggester({ spots }: Props) {
   const [totalNearby, setTotalNearby] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [usingCatalogCenter, setUsingCatalogCenter] = useState(false);
   const [selectedSpecies, setSelectedSpecies] = useState(SPECIES[0]?.name ?? '');
 
   const runSuggestion = useCallback(
@@ -71,6 +71,7 @@ export default function SpotSuggester({ spots }: Props) {
       setError(null);
       setResults([]);
 
+      const hasDeviceLocation = typeof lat === 'number' && Number.isFinite(lat) || userLocation !== null;
       const feedLat = typeof lat === 'number' && Number.isFinite(lat) ? lat : userLocation?.lat ?? spots[0]?.lat;
       const feedLng = typeof lng === 'number' && Number.isFinite(lng) ? lng : userLocation?.lng ?? spots[0]?.lng;
 
@@ -79,60 +80,53 @@ export default function SpotSuggester({ spots }: Props) {
           throw new Error('No location available for spot predictions.');
         }
 
-        const feed = await fetchSeamcastSpotSuggestions(feedLat, feedLng);
-        if (!feed) {
-          throw new Error('The upstream AI spot prediction service is unavailable.');
+        setUsingCatalogCenter(!hasDeviceLocation);
+        const candidates = spots
+          .map((spot) => ({
+            spot,
+            milesAway: distanceMiles(
+              { latitude: feedLat, longitude: feedLng },
+              { latitude: spot.lat, longitude: spot.lng },
+            ),
+          }))
+          .filter(({ milesAway }) => milesAway <= 25)
+          .sort((a, b) => a.milesAway - b.milesAway)
+          .slice(0, 10);
+
+        if (candidates.length === 0) {
+          throw new Error('No catalog waters are available within 25 miles of the search location.');
         }
 
-        const predictedSpots = Array.isArray(feed.microSpots) ? feed.microSpots : [];
-        const caughtSpecies = selectedSpecies.trim().toLowerCase();
-        const scoped = caughtSpecies
-          ? predictedSpots.filter((spot) =>
-              (spot.bestSpecies ?? []).some((candidate) => candidate.species?.toLowerCase() === caughtSpecies),
-            )
-          : predictedSpots;
-
-        const list = scoped.length > 0 ? scoped : predictedSpots;
-
-        setResults(
-          list.map((spot) => {
-            const biteScore = spot.biteScore ?? feed.overallBite;
-            const primary = (spot.bestSpecies ?? feed.speciesLikely ?? [])
-              .map((candidate) => candidate.species)
-              .filter(Boolean)
-              .slice(0, 4);
-
-            const spotLat = typeof spot.lat === 'number' && Number.isFinite(spot.lat) ? spot.lat : feedLat;
-            const spotLng = typeof spot.lon === 'number' && Number.isFinite(spot.lon) ? spot.lon : feedLng;
-
-            return {
-              spot_id: spot.id ?? null,
-              spot_name: spot.label ?? 'Provider AI spot',
-              spot_lat: spotLat,
-              spot_lng: spotLng,
-              miles_away: distanceMiles({ latitude: feedLat, longitude: feedLng }, { latitude: spotLat, longitude: spotLng }),
-              fishing_score: typeof biteScore?.score === 'number' && Number.isFinite(biteScore.score) ? biteScore.score : 0,
-              rating:
-                biteScore?.level === 'hot'
-                  ? 'Hot'
-                  : biteScore?.level === 'good'
-                    ? 'Good'
-                    : 'Fair',
-              primary_species: primary,
-              best_technique:
-                spot.bestSpecies?.[0]?.notes?.[0] ??
-                'Follow the current conditions and target the predicted species window.',
-              best_time_today:
-                typeof biteScore?.level === 'string' && biteScore.level
-                  ? `${biteScore.level} (AI prediction)`
-                  : 'AI predicted window',
-              recommended_lure:
-                spot.bestBaits?.[0]?.baitType ?? feed.recommendedBaits?.[0]?.baitType ?? 'Provider bait guidance unavailable',
-              reason: biteScore?.reasons?.[0] ?? 'Upstream AI catch prediction from the current conditions.',
-            };
+        const response = await fetch('/api/ai/suggest-spots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            spots: candidates.map(({ spot }) => spot),
+            species: selectedSpecies,
+            userLat: feedLat,
+            userLng: feedLng,
           }),
-        );
-        setTotalNearby(predictedSpots.length);
+        });
+        const payload: unknown = await response.json().catch(() => ({}));
+        const data = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
+        if (!response.ok) {
+          throw new Error(typeof data.error === 'string' ? data.error : 'AI spot predictions are unavailable.');
+        }
+        if (
+          data.source !== 'ai' ||
+          data.data_mode !== 'ai-generated' ||
+          data.live_data !== false ||
+          !Array.isArray(data.results) ||
+          typeof data.total_nearby !== 'number'
+        ) {
+          throw new Error('The AI prediction service returned an invalid response.');
+        }
+        const matchingResults = (data.results as RankedSpot[])
+          .filter((spot) => spot.primary_species.some((species) => species.toLowerCase() === selectedSpecies.toLowerCase()))
+          .sort((a, b) => b.fishing_score - a.fishing_score)
+          .slice(0, 10);
+        setResults(matchingResults);
+        setTotalNearby(data.total_nearby);
       } catch (requestError: unknown) {
         setError(
           requestError instanceof Error
@@ -143,7 +137,7 @@ export default function SpotSuggester({ spots }: Props) {
         setLoading(false);
       }
     },
-    [selectedSpecies, spots, userLocation?.lat, userLocation?.lng],
+    [selectedSpecies, spots, userLocation],
   );
 
   const saveLocation = (lat: number, lng: number): UserLocation => {
@@ -212,7 +206,7 @@ export default function SpotSuggester({ spots }: Props) {
             lineHeight: 1.5,
           }}
         >
-          Find nearby Oklahoma waters with AI-generated trip ideas based on the selected spot metadata. Verify live conditions before traveling.
+          Get AI-generated planning estimates based only on catalog metadata. Verify conditions, access, and regulations with current official sources before traveling.
         </p>
       </div>
 
@@ -226,7 +220,7 @@ export default function SpotSuggester({ spots }: Props) {
         >
           {SPECIES.map((species) => <option key={species.id} value={species.name}>{species.name}</option>)}
         </select>
-        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI results are estimates, not provider conditions or catch reports. Only the top 10 spots within 25 miles of your device will be shown.</span>
+        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI estimates are not conditions or catch reports. Among loaded catalog waters, up to 10 closest spots within 25 miles are evaluated; scores are not a forecast.</span>
       </label>
 
       <button
@@ -263,6 +257,7 @@ export default function SpotSuggester({ spots }: Props) {
           Using location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
         </p>
       ) : null}
+      {usingCatalogCenter && <p style={{ margin: '10px 0 0', color: '#94a3b8', fontSize: '12px' }}>Device location unavailable; using the first catalog spot as the search center.</p>}
 
       {error ? (
         <p
@@ -463,6 +458,9 @@ export default function SpotSuggester({ spots }: Props) {
             </div>
           </article>
         ))}
+        {totalNearby !== null && results.length === 0 && (
+          <p style={{ color: '#94a3b8', fontSize: '13px' }}>The AI returned no validated predictions for {selectedSpecies}.</p>
+        )}
       </div>
     </div>
   );

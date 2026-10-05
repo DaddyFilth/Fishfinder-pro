@@ -10,6 +10,7 @@ import { getGroqClient } from '@/lib/ollama';
 import { getAiModel } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
+import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'gear-checklist', limit: 15, windowMs: 60_000 });
@@ -36,19 +37,22 @@ export async function POST(req: NextRequest) {
     envUrl.searchParams.set('lon', lon.toString());
     const envRes = await fetch(envUrl, { cache: 'no-store' });
     const envData = envRes.ok ? await envRes.json() : null;
+    const conditionContext = hasVerifiedCurrentConditions(envData)
+      ? JSON.stringify(envData, null, 2)
+      : 'Unavailable as a verified recent live observation. Recommend general species-specific gear only; do not claim it is needed for current conditions.';
 
     const client = getGroqClient();
     const prompt = `
       You are a Master Fishing Guide. Generate a precise GEAR CHECKLIST for targeting ${species.name} at coordinates ${lat}, ${lon}.
       
       BIOLOGY: ${species.habitat}, ${species.bestBait.join(', ')}.
-      CURRENT CONDITIONS: ${JSON.stringify(envData, null, 2)}
+      CURRENT CONDITIONS: ${conditionContext}
       
       Provide a JSON array of objects. Each object must have:
       - item: The name of the gear (e.g., "Z lures", "Fluorocarbon Leader").
       - spec: Specific detail (e.g., "Chartreuse/Silver, 3.5 inch", "8lb test").
       - priority: "Essential" or "Recommended".
-      - reason: Why this is needed for current conditions.
+      - reason: Explain whether this is general species guidance or tailored to verified supplied conditions. Never invent readings or claim current-condition necessity when verified readings are unavailable.
 
       Respond ONLY with the JSON array. No markdown formatting, no prose.
     `;

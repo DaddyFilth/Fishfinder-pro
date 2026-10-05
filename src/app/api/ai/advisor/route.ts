@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getGroqClient } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
+import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
       ...parsed,
       source: parsed.source ?? parsed.conditions?.source ?? 'seamcast-spots',
       data_mode: parsed.data_mode ?? 'unavailable',
-      live: parsed.live === true,
+      live: hasVerifiedCurrentConditions(parsed),
       observed_at: parsed.observed_at ?? parsed.conditions?.issuedAt,
     }
   } catch {

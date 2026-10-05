@@ -113,14 +113,32 @@ export function calculateSolunar(date: Date, lat: number): SolunarResult {
   };
 }
 
+function hourFromTime(value: string): number | null {
+  const match = /^(\d{1,2}):\d{2}(?:\s*(AM|PM))?$/i.exec(value.trim());
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const meridiem = match[2]?.toUpperCase();
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    return (hour % 12) + (meridiem === 'PM' ? 12 : 0);
+  }
+  return hour <= 23 ? hour : null;
+}
+
+function isHourInPeriod(hour: number, startTime: string, endTime: string): boolean {
+  const start = hourFromTime(startTime);
+  const end = hourFromTime(endTime);
+  if (start === null || end === null) return false;
+  return start <= end
+    ? hour >= start && hour <= end
+    : hour >= start || hour <= end;
+}
+
 export function hourlyActivityForecast(solunar: SolunarResult): { hour: number; label: string; score: number }[] {
   return Array.from({ length: 24 }, (_, h) => {
-    const isMajor = solunar.majorPeriods.some(p => {
-      const start = parseInt(p.start);
-      const end   = parseInt(p.end);
-      return h >= start && h <= end;
-    });
-    const isMinor  = solunar.minorPeriods.some(p => h >= parseInt(p.start) && h <= parseInt(p.end));
+    const isMajor = solunar.majorPeriods.some((period) => isHourInPeriod(h, period.start, period.end));
+    const isMinor = solunar.minorPeriods.some((period) => isHourInPeriod(h, period.start, period.end));
     const isBest   = solunar.bestHours.includes(h);
     const base     = Math.round(solunar.solunarScore * 0.4);
     const score    = isMajor ? Math.min(100, base + 60) : isMinor ? Math.min(100, base + 30) : isBest ? Math.min(100, base + 20) : base;
