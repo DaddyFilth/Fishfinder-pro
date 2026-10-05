@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { enforceRateLimit } from '@/lib/security';
 
 export async function GET(request: Request) {
-  const limited = enforceRateLimit(request, { name: 'water-heatmap', limit: 30, windowMs: 60_000 });
+  const limited = await enforceRateLimit(request, { name: 'water-heatmap', limit: 30, windowMs: 60_000 });
   if (limited) return limited;
 
   const supabase = getSupabaseAdmin();

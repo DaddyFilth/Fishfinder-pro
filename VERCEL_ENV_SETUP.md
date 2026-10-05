@@ -51,6 +51,13 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Vercel Environment:** Production ONLY (do not expose in preview/dev)
 - **⚠️ SECURITY:** This is a secret - never commit to Git
 
+### REDIS_URL (Required for production API rate limiting)
+- **Value Type:** Secret Redis connection URL
+- **How to Get:** Copy the connection URL from your Redis provider.
+- **Vercel Environment:** Production REQUIRED; Preview recommended when testing protected API routes.
+- **⚠️ SECURITY:** Keep this value secret and never commit it to Git.
+- **Note:** Rate-limited API routes return HTTP 503 if Redis is unavailable or this variable is missing. To intentionally allow weaker, per-instance production limits, set `RATE_LIMIT_ALLOW_LOCAL_FALLBACK=true`.
+
 ### GROQ_API_KEY (Required for AI features)
 - **Value Type:** Secret API Key
 - **Environment:** Production (and Preview if AI is needed there)
@@ -126,7 +133,12 @@ https://vercel.com/dashboard
 - **Environments:** Check Production ONLY
 - **⚠️ Security:** Do NOT check Development/Preview
 
-### 5. Configure production AI
+### 5. Add REDIS_URL
+- **Name:** `REDIS_URL`
+- **Value:** Your Redis provider's connection URL
+- **Environments:** Required in Production; recommended for Preview
+
+### 6. Configure production AI
 Use the Groq variables above for the current deployed application. Do not set `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel; localhost refers to the Vercel runtime, not your personal computer.
 
 If you intentionally run Ollama locally:
@@ -143,7 +155,7 @@ If you intentionally run Ollama locally:
   - **Value:** `llama3.2-vision`
   - **Environments:** Your choice
 
-### 6. Configure OpenAI only for spot discovery
+### 7. Configure OpenAI only for spot discovery
 If `/api/spots/discover` is enabled, add `OPENAI_API_KEY` to Production. Other AI routes currently use Groq.
 
 - **Name:** `OPENAI_API_KEY`

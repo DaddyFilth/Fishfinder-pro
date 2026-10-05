@@ -463,9 +463,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'spot-conditions',
-    limit: 180,
+    limit: 60,
     windowMs: 60_000,
   });
   if (limited) return limited;
