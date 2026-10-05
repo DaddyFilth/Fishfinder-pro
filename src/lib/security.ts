@@ -107,9 +107,21 @@ export async function enforceRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
+  const redisConfigured = Boolean(process.env.REDIS_URL?.trim())
+  if (
+    !redisConfigured &&
+    process.env.NODE_ENV === 'production' &&
+    process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK !== 'true'
+  ) {
+    return NextResponse.json(
+      { error: 'Rate limiting service is temporarily unavailable.' },
+      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+    )
+  }
+
   const distributed = await enforceDistributedRateLimit(request, options)
   if (distributed) return distributed
-  if (process.env.REDIS_URL?.trim()) return null
+  if (redisConfigured) return null
   return localRateLimit(request, options)
 }
 

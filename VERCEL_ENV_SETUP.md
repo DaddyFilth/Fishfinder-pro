@@ -56,7 +56,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **How to Get:** Copy the connection URL from your Redis provider.
 - **Vercel Environment:** Production REQUIRED; Preview recommended when testing protected API routes.
 - **⚠️ SECURITY:** Keep this value secret and never commit it to Git.
-- **Note:** When configured Redis is unavailable, rate-limited API routes return HTTP 503. Without `REDIS_URL`, only per-instance in-memory rate limiting is available.
+- **Note:** Rate-limited API routes return HTTP 503 if Redis is unavailable or this variable is missing. To intentionally allow weaker, per-instance production limits, set `RATE_LIMIT_ALLOW_LOCAL_FALLBACK=true`.
 
 ### GROQ_API_KEY (Required for AI features)
 - **Value Type:** Secret API Key

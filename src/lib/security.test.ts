@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const originalRedisUrl = process.env.REDIS_URL
+const originalLocalFallback = process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
 
 const redisMock = vi.hoisted(() => ({
   status: 'wait',
@@ -71,6 +72,9 @@ beforeEach(() => {
 afterEach(() => {
   if (originalRedisUrl === undefined) delete process.env.REDIS_URL
   else process.env.REDIS_URL = originalRedisUrl
+  if (originalLocalFallback === undefined) delete process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
+  else process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK = originalLocalFallback
+  vi.unstubAllEnvs()
   vi.resetModules()
   vi.restoreAllMocks()
 })
@@ -84,6 +88,31 @@ describe('enforceRateLimit', () => {
     expect(await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })).toBeNull()
     const limited = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
     expect(limited?.status).toBe(429)
+  })
+
+  it('fails closed in production when Redis is not configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    delete process.env.REDIS_URL
+    delete process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'production-test', limit: 1, windowMs: 60_000 })
+
+    expect(response?.status).toBe(503)
+    expect(response?.headers.get('retry-after')).toBe('15')
+  })
+
+  it('uses the local fallback in production only when explicitly enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK = 'true'
+    delete process.env.REDIS_URL
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
+    const options = { name: 'production-fallback-test', limit: 1, windowMs: 60_000 }
+
+    expect(await enforceRateLimit(request, options)).toBeNull()
+    expect((await enforceRateLimit(request, options))?.status).toBe(429)
   })
 
   it('uses Redis transactions for shared counting and initializes expiry', async () => {
