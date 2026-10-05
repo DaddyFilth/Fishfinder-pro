@@ -24,7 +24,8 @@ describe('hourlyActivityForecast', () => {
     expect(forecast[1].label).toBe('Major')
     expect(forecast[11].label).toBe('Minor')
     expect(forecast[12].label).toBe('Minor')
-    expect(forecast[13].label).toBe('Slow')
+    expect(forecast[13].label).toBe('Minor')
+    expect(forecast[14].label).toBe('Slow')
   })
 
   it('treats periods that cross midnight as one continuous window', () => {

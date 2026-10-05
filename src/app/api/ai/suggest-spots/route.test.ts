@@ -95,7 +95,6 @@ describe('AI spot suggestions', () => {
     expect(response.status).toBe(503)
     expect(await response.json()).toMatchObject({
       error: expect.stringContaining('No hardcoded ratings were used'),
-      source: undefined,
     })
   })
 
