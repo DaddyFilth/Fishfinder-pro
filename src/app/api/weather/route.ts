@@ -20,7 +20,7 @@ function isNwsUrl(value: unknown): value is string {
 }
 
 export async function GET(request: NextRequest) {
-  const limited = enforceRateLimit(request, { name: 'weather', limit: 60, windowMs: 60_000 })
+  const limited = await enforceRateLimit(request, { name: 'weather', limit: 60, windowMs: 60_000 })
   if (limited) return limited
 
   const parsed = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))

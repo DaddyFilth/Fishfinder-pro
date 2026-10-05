@@ -55,14 +55,28 @@
 - [ ] DO NOT check Preview or Development
 - [ ] Click Add
 
+**Variable 4: REDIS_URL**
+- [ ] Name: `REDIS_URL`
+- [ ] Value: (Redis provider connection URL)
+- [ ] Add to Production (required for shared API rate limiting)
+- [ ] Click Add
+- [ ] Leave `RATE_LIMIT_ALLOW_LOCAL_FALLBACK` unset unless intentionally opting into weaker per-instance limits
+
 ### Step 3: Optional Variables
 
-**For Ollama Users (not OpenAI):**
+**Current production AI provider: Groq**
+- [ ] Add: `GROQ_API_KEY` — Production secret
+- [ ] Add: `GROQ_MODEL` = `llama-3.3-70b-versatile` (or your selected Groq model)
+- [ ] Add: `GROQ_VISION_MODEL` = your selected vision-capable Groq model
+- [ ] Do **not** use `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel.
+
+**Legacy/local Ollama:**
 - [ ] Add: `OLLAMA_BASE_URL` = `http://localhost:11434/v1`
 - [ ] Add: `OLLAMA_MODEL` = `llama3.1`
 - [ ] Add: `OLLAMA_VISION_MODEL` = `llama3.2-vision`
 
-**For OpenAI Users (not Ollama):**
+**OpenAI is only required for the current spot-discovery route**
+- [ ] Add `OPENAI_API_KEY` in Production if `/api/spots/discover` is enabled.
 - [ ] Add: `OPENAI_API_KEY` = (your OpenAI key starting with sk-)
 - [ ] Check: **Production ONLY** ⚠️
 
@@ -181,10 +195,10 @@ When all items are checked:
 - ✅ Security measures in place
 - ✅ Ready for production use
 
-**Status:** 🚀 LIVE ON VERCEL!
+**Status:** 🚀 LIVE ON VERCEL — current main commit has a successful Vercel deployment.
 
 ---
 
-**Last Updated:** September 2, 2026  
+**Last Updated:** September 30, 2026  
 **Project:** Fishfinder-Pro  
 **Ready:** Yes ✅

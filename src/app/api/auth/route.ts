@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   if (!isAllowedAuthRequestOrigin(origin, requestUrl, request.headers.get('sec-fetch-site'))) {
     return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   }
-  const rateLimited = enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
+  const rateLimited = await enforceRateLimit(request, { limit: 10, windowMs: 60_000, name: 'auth' })
   if (rateLimited) return rateLimited
 
   const bodyResult = await readJsonBody(request, 8_192)

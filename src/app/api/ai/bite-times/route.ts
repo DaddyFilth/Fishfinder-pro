@@ -4,7 +4,7 @@ import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'ai-bite-times', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
   if (!isSameOrigin(req)) {
     return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
@@ -53,7 +53,7 @@ Given the supplied conditions for ${species} at coordinates (${latNumber}, ${lng
 - Solunar score: ${solunar_score ?? 'unknown'}/100
 - Moon phase: ${moon_phase ?? 'unknown'}
 
-Estimate 3 candidate bite time windows for ${species} TODAY. These are optional planning estimates, not guarantees.
+Estimate 3 candidate bite time windows for ${species} TODAY. These are optional planning estimates, not guarantees or observed bite activity. Use only the supplied inputs; do not invent current readings or conditions. When environmental inputs are unknown, state that clearly in the summary and explain that the windows are low-confidence estimates.
 
 Respond with ONLY valid JSON in this exact format:
 {

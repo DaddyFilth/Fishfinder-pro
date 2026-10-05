@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # CodeQL default setup is enabled for this repository. A committed
       # advanced CodeQL workflow would be rejected by GitHub, so the shared

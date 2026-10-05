@@ -1,15 +1,45 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import Redis from 'ioredis'
 
 export { isHttpUrl, isImageDataUrl } from './urls'
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
+let redis: Redis | null = null
+let ready: Promise<void> | null = null
+
+async function ensureReady(client: Redis) {
+  if (client.status === 'ready') return
+  if (!ready) {
+    ready = (client.status === 'wait' ? client.connect() : new Promise<void>((res, rej) => {
+      const onReady = () => { client.off('error', onError); res() }
+      const onError = (e: Error) => { client.off('ready', onReady); rej(e) }
+      client.once('ready', onReady)
+      client.once('error', onError)
+    })).finally(() => { ready = null })
+  }
+  await ready
+}
+
+function getRedis() {
+  const url = process.env.REDIS_URL?.trim()
+  if (!url) return null
+  if (!redis) {
+    redis = new Redis(url, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      connectTimeout: 1500,
+    })
+    redis.on('error', (error) => console.error('[rate-limit] Redis error:', error))
+  }
+  return redis
+}
+
 function clientKey(request: Request) {
   // Prefer identity headers set by a trusted edge or proxy. Never use the first
-  // arbitrary X-Forwarded-For entry: it is client supplied. When no platform
-  // header exists, fall back to the proxy-added (last) entry so traffic from a
-  // self-hosted deployment does not collapse into one shared bucket.
+  // arbitrary X-Forwarded-For entry: it is client supplied.
   const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
   if (vercelForwarded) return vercelForwarded
 
@@ -19,18 +49,83 @@ function clientKey(request: Request) {
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
 
+  if (process.env.NODE_ENV === 'production') return 'unknown'
+
   const forwarded = request.headers
     .get('x-forwarded-for')
     ?.split(',')
     .map((value) => value.trim())
     .filter(Boolean)
     .at(-1)
-  if (forwarded) return forwarded
-
-  return 'unknown'
+  return forwarded || 'unknown'
 }
 
-export function enforceRateLimit(
+async function enforceDistributedRateLimit(
+  request: Request,
+  options: { limit: number; windowMs: number; name: string },
+) {
+  const client = getRedis()
+  if (!client) return null
+
+  const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
+  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
+
+  try {
+    await ensureReady(client)
+    const results = await client
+      .multi()
+      .set(key, '0', 'EX', windowSeconds, 'NX')
+      .incr(key)
+      .exec()
+    if (!results) throw new Error('Redis transaction aborted')
+    const [[setErr], [incrErr, count]] = results as [[Error | null, unknown], [Error | null, number]]
+    if (setErr || incrErr) throw setErr ?? incrErr
+    if (count > options.limit) {
+      const ttl = await client.ttl(key)
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.max(1, ttl)),
+            'Cache-Control': 'no-store',
+          },
+        },
+      )
+    }
+    return null
+  } catch (error) {
+    console.error('[rate-limit] Redis unavailable:', error)
+    return NextResponse.json(
+      { error: 'Rate limiting service is temporarily unavailable.' },
+      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function enforceRateLimit(
+  request: Request,
+  options: { limit: number; windowMs: number; name: string },
+) {
+  const redisConfigured = Boolean(process.env.REDIS_URL?.trim())
+  if (
+    !redisConfigured &&
+    process.env.NODE_ENV === 'production' &&
+    process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK !== 'true'
+  ) {
+    return NextResponse.json(
+      { error: 'Rate limiting service is temporarily unavailable.' },
+      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const distributed = await enforceDistributedRateLimit(request, options)
+  if (distributed) return distributed
+  if (redisConfigured) return null
+  return localRateLimit(request, options)
+}
+
+function localRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
@@ -66,7 +161,6 @@ export function enforceRateLimit(
       },
     )
   }
-
   return null
 }
 

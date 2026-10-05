@@ -325,11 +325,14 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     const marineData = marine.status === 'fulfilled' ? marine.value : null;
     const tideData = tides.status === 'fulfilled' ? tides.value : null;
 
-    const providerData = [nwsData, usgsData, marineData, tideData].some(
-      (value) => value !== null && value !== undefined,
-    );
+    const dataSources = [
+      nwsData?.source,
+      usgsData?.source,
+      marineData?.source,
+      tideData?.source,
+    ].filter((source): source is string => typeof source === 'string' && source.length > 0);
 
-    if (!providerData) {
+    if (dataSources.length === 0) {
       return {
         status: 503,
         payload: {
@@ -341,13 +344,6 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
         cacheControl: 'no-store',
       };
     }
-
-    const dataSources = [
-      nwsData?.source,
-      usgsData?.source,
-      marineData?.source,
-      tideData?.source,
-    ].filter(Boolean);
 
     const water_temp_c =
       (usgsData?.water_temp_c as number | null) ??
@@ -467,9 +463,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     name: 'spot-conditions',
-    limit: 180,
+    limit: 60,
     windowMs: 60_000,
   });
   if (limited) return limited;

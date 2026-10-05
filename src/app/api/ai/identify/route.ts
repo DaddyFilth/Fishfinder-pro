@@ -10,7 +10,7 @@ const CATALOG_SPECIES_CONTEXT = SPECIES.map(({ name, aliases, scientificName }) 
 const SUPPORTED_IMAGE_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 
 export async function POST(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'ai-identify', limit: 8, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'ai-identify', limit: 8, windowMs: 60_000 });
   if (limited) return limited;
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
   const bodyResult = await readJsonBody(req, 3_000_000)
