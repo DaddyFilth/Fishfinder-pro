@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -211,9 +211,27 @@ export async function GET(req: NextRequest) {
   const { payload, reason } = await fetchRemoteSpots(key, `${REMOTE}?lat=${lat}&lon=${lon}`);
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
+    const catalogSpots = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+      id,
+      name,
+      lat,
+      lng,
+      water_type,
+      spot_type,
+      source: 'bundled-public-water-catalog',
+      live: false,
+      data_mode: 'fallback',
+    }));
+
     return NextResponse.json(
-      { error: 'Live fishing spots are unavailable.', source: 'none', data_mode: 'unavailable', live: false },
-      { status: 503, headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'unavailable' } },
+      {
+        spots: catalogSpots,
+        source: 'bundled-public-water-catalog',
+        data_mode: 'fallback',
+        live: false,
+        warning: 'Live spot provider unavailable; showing the bundled public-water catalog.',
+      },
+      { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'fallback' } },
     );
   }
 

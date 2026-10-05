@@ -62,7 +62,6 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
     const controller = new AbortController();
 
     const load = async () => {
-      await Promise.resolve();
       setLoading(true);
       setError('');
       try {
