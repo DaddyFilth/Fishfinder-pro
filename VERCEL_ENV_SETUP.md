@@ -295,3 +295,9 @@ OLLAMA_VISION_MODEL = llama3.2-vision
 **Last Updated:** September 30, 2026  
 **Project:** Fishfinder-Pro  
 **Status:** Ready for Vercel deployment
+
+## Automatic environment sync (no secrets in git)
+
+1. In Vercel: Project → Integrations → add **Supabase** and link this project. The integration injects `SUPABASE_*` / `NEXT_PUBLIC_SUPABASE_*` into Vercel automatically.
+2. Locally: `npx vercel link`, then `npm run env:sync` (optionally `npm run env:sync -- preview`). This writes the git-ignored `.env.local` (mode 600) and never prints values.
+3. `.env.example` lists variable names only. Never commit `.env.local`; never expose service-role keys via `NEXT_PUBLIC_*`.

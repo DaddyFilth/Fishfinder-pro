@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { normalizeProviderSpots } from '@/lib/spotProvenance';
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,19 +17,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
   }
 
-  const remoteUrl = `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`;
-
   try {
-    const res = await fetch(remoteUrl, {
+    const res = await fetchSeamcastResponse(new URLSearchParams({ lat: String(lat), lon: String(lon) }), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
-      signal: AbortSignal.timeout(8_000),
     });
 
-    if (!res.ok) {
+    if (!res) {
       const data = normalizeProviderSpots(null, DEFAULT_SPOTS);
       return NextResponse.json(
-        { ...data, live: false, warning: `Provider spot feed unavailable (upstream ${res.status}).` },
+        { ...data, live: false, warning: 'Provider spot feed unavailable (all upstreams failed).' },
         { headers: { 'Cache-Control': 'public, max-age=60', 'x-fishfinder-data-mode': 'fallback' } },
       );
     }

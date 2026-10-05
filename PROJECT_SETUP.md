@@ -364,3 +364,15 @@ docker run -p 3000:3000 \
 
 **Last Updated:** September 2, 2026  
 **Status:** Ready for Development ✅
+
+## Supabase MCP (GitHub Copilot)
+
+The project-scoped `.mcp.json` registers the Supabase MCP server (no secrets; it authenticates via OAuth).
+Or add it to your user config:
+
+```
+copilot mcp add --transport http supabase "https://mcp.supabase.com/mcp?project_ref=dkafqgapepebzjtoghos&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+```
+
+Authenticate with `copilot -i /mcp` and follow the on-screen instructions.
+Optional agent skills: `npx skills add supabase/agent-skills`.

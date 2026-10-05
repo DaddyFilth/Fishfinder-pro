@@ -1,4 +1,4 @@
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getGroqClient } from '@/lib/ollama'
@@ -36,14 +36,11 @@ function coordinate(value: unknown): number | undefined {
 async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderContext | null> {
   if (lat === undefined || lon === undefined) return null
   try {
-    const apiUrl = new URL(getSeamcastSpotsUrl())
-    apiUrl.searchParams.set('lat', String(lat))
-    apiUrl.searchParams.set('lon', String(lon))
-    const res = await fetch(apiUrl, {
+    const res = await fetchSeamcastResponse(new URLSearchParams({ lat: String(lat), lon: String(lon) }), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!res.ok) return null
+    if (!res) return null
     const parsed = parseSpotsContext(await res.json())
     if (!parsed) return null
     return {

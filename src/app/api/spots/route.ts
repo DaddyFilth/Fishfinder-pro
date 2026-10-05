@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
-import { getSeamcastSpotsUrl } from '@/lib/seamcastSpotsClient';
+import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const REMOTE_TIMEOUT_MS = 8_000;
 const REMOTE_CACHE_TTL_MS = 60_000;
 
 type AnyRec = Record<string, unknown>;
@@ -46,7 +45,7 @@ function writeRemoteCache(key: string, payload: AnyRec, reason: string | null, t
   remoteCache.set(key, { expiresAt: Date.now() + ttlMs, payload, reason });
 }
 
-async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult> {
+async function fetchRemoteSpots(key: string, params: URLSearchParams): Promise<RemoteResult> {
   const cached = readRemoteCache(key);
   if (cached) return cached;
 
@@ -55,15 +54,14 @@ async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult>
 
   const task = (async (): Promise<RemoteResult> => {
     try {
-      const res = await fetch(url, {
+      const res = await fetchSeamcastResponse(params, {
         headers: { Accept: 'application/json' },
         cache: 'no-store',
-        signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
       });
 
-      if (!res.ok) {
-        console.warn('[API] remote spots request failed', { status: res.status });
-        const reason = `upstream ${res.status}`;
+      if (!res) {
+        console.warn('[API] remote spots request failed');
+        const reason = 'upstream unavailable';
         const payload = { error: 'Live AI spot feed is unavailable.' };
         writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
         return { payload, reason };
@@ -210,7 +208,7 @@ export async function GET(req: NextRequest) {
   }
 
   const key = `${lat}:${lon}`;
-  const { payload, reason } = await fetchRemoteSpots(key, `${getSeamcastSpotsUrl()}?lat=${lat}&lon=${lon}`);
+  const { payload, reason } = await fetchRemoteSpots(key, new URLSearchParams({ lat: String(lat), lon: String(lon) }));
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
     const catalogSpots = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
