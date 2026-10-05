@@ -1,6 +1,6 @@
 ## Local setup
 
-Use Node.js 20.12 or newer and npm. From the repository root:
+Use Node.js 22 or newer and npm. From the repository root:
 
 ```bash
 npm ci

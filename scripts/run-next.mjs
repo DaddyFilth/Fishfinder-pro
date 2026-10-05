@@ -9,7 +9,7 @@ if (!['dev', 'start'].includes(command)) {
 }
 
 if (typeof process.loadEnvFile !== 'function') {
-  throw new Error('Fishfinder Pro requires Node.js 20.12 or newer.')
+  throw new Error('Fishfinder Pro requires Node.js 22 or newer.')
 }
 
 process.env.NODE_ENV = command === 'start' ? 'production' : 'development'
