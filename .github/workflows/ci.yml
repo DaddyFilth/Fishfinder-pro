@@ -13,13 +13,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
-      REDIS_URL: redis://localhost:6379
-      NWS_BASE: https://api.weather.gov
-      USGS_BASE: https://api.waterdata.usgs.gov
-      OPEN_METEO_MARINE: https://marine-api.open-meteo.com/v1/marine
 
     steps:
       - name: Check out repository
@@ -34,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -50,7 +43,21 @@ jobs:
         run: npm test
 
       - name: Build app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
+          REDIS_URL: redis://localhost:6379
+          NWS_BASE: https://api.weather.gov
+          USGS_BASE: https://api.waterdata.usgs.gov
+          OPEN_METEO_MARINE: https://marine-api.open-meteo.com/v1/marine
         run: npm run build
 
       - name: Smoke test production app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
+          REDIS_URL: redis://localhost:6379
+          NWS_BASE: https://api.weather.gov
+          USGS_BASE: https://api.waterdata.usgs.gov
+          OPEN_METEO_MARINE: https://marine-api.open-meteo.com/v1/marine
         run: npm run smoke
