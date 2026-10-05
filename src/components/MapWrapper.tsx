@@ -515,9 +515,19 @@ export default function FishingMap({
     load(spot, true);
   };
 
+  const spotLoadKey = useMemo(
+    () => spots.map((spot) => `${spot.id}:${spot.lat}:${spot.lng}`).join('|'),
+    [spots],
+  );
+  const spotsRef = useRef(spots);
+
   useEffect(() => {
-    spots.forEach((spot) => load(spot));
-  }, [load, spots]);
+    spotsRef.current = spots;
+  }, [spots]);
+
+  useEffect(() => {
+    spotsRef.current.forEach((spot) => load(spot));
+  }, [load, spotLoadKey]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>
