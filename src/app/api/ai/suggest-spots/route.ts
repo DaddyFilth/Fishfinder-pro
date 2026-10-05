@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
             Number.isFinite((spot as Spot).lng),
         ),
     )
-    .slice(0, 50)
+    .slice(0, 10)
     .map((spot) => ({
       ...spot,
       id: spot.id.slice(0, 128),
@@ -162,7 +162,6 @@ export async function POST(req: NextRequest) {
     const ollama = getGroqClient();
 
     const spotSummary = spots
-      .slice(0, 10)
       .map(
         (spot) =>
           `- ${spot.name} | ID: ${spot.id} | ${spot.lat}, ${spot.lng} | ${spot.water_type ?? 'freshwater'} | ${spot.spot_type ?? 'fishing spot'}`,
@@ -185,8 +184,8 @@ Each object must contain:
 - primary_species: array containing one to three AI-selected fish species for this specific water
 - best_time_today: a broad, explicitly estimated window, not a conditions-based forecast
 - best_technique: a general technique suitable for the supplied water type and species, without claiming unprovided local structure
-- recommended_lure: a specific lure or bait chosen for this water and target species
-- reason: one short explanation referencing what makes this water's prediction distinct
+- recommended_lure: a general lure or bait suggestion suitable for the supplied water type and target species
+- reason: one short explanation noting that supplied metadata is insufficient for a site-specific prediction
 
 Every field is required and must be generated for every spot. Always use Fahrenheit only. Never use Celsius or °C. Do not return Markdown, code fences, commentary, or spots not included in the supplied list.
 `.trim();
@@ -209,7 +208,7 @@ Every field is required and must be generated for every spot. Always use Fahrenh
       species,
     );
 
-    if (normalizedResults.length === Math.min(spots.length, 10)) {
+    if (normalizedResults.length === spots.length) {
       return NextResponse.json({
         results: normalizedResults,
         total_nearby: spots.length,

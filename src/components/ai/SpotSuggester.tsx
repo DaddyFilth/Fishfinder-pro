@@ -220,7 +220,7 @@ export default function SpotSuggester({ spots }: Props) {
         >
           {SPECIES.map((species) => <option key={species.id} value={species.name}>{species.name}</option>)}
         </select>
-        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI estimates are not conditions or catch reports. The 10 closest catalog spots within 25 miles of the search location are evaluated; scores are estimates, not a forecast.</span>
+        <span style={{ display: 'block', marginTop: '5px', color: '#78909c', fontSize: '11px', fontWeight: 400 }}>AI estimates are not conditions or catch reports. Among loaded catalog waters, up to 10 closest spots within 25 miles are evaluated; scores are not a forecast.</span>
       </label>
 
       <button

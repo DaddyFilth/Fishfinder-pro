@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiModel, getGroqClient } from '@/lib/ollama';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
+import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'species-strategy', limit: 15, windowMs: 60_000 });
@@ -36,6 +37,10 @@ export async function POST(req: NextRequest) {
     envUrl.searchParams.set('lon', lon.toString());
     const envRes = await fetch(envUrl, { cache: 'no-store' });
     const envData = envRes.ok ? await envRes.json() : null;
+    const conditionsAreCurrent = hasVerifiedCurrentConditions(envData);
+    const conditionContext = conditionsAreCurrent
+      ? JSON.stringify(envData, null, 2)
+      : 'Unavailable as a verified recent live observation. Do not infer or invent current environmental readings.';
 
     const client = getGroqClient();
     const prompt = `
@@ -48,15 +53,15 @@ export async function POST(req: NextRequest) {
       - General Tips: ${species.tips}
       
       CURRENT LOCAL CONDITIONS:
-      ${JSON.stringify(envData, null, 2)}
+      ${conditionContext}
       
       TASK:
-      Synthesize the biological requirements of the ${species.name} with the actual current conditions at this location. 
+      Use supplied environmental conditions as current only when the context is explicitly verified as recent live provider data. Otherwise explain that current conditions are unavailable and keep advice general.
       Provide a "Tactical Blueprint" including:
-      1. CURRENT VIABILITY: Is this species likely active right now given the temperature and weather?
-      2. TAILORED GEAR: Which of the best baits should be used specifically for these conditions? (Specify color and weight).
-      3. PRECISION LOCATION: Where in this specific environment should the user cast?
-      4. THE "SECRET SAUCE": One expert tip for this species in this exact scenario.
+      1. CURRENT VIABILITY: Assess current activity only if verified recent live conditions are supplied; otherwise say it cannot be determined from available data.
+      2. GEAR: Offer general species-specific gear, and tailor it to conditions only when verified readings are available.
+      3. LOCATION: Give general habitat guidance; do not claim unprovided local structure, access, or depth.
+      4. TIP: Give a species-specific tip without claiming personal experience or unverified local observations.
       
       Response format: Concise, authoritative, and formatted with clear headings.
     `;
