@@ -58,6 +58,7 @@ function normalizeAiResults(
   sourceSpots: Spot[],
   userLat?: number,
   userLng?: number,
+  requestedSpecies?: string,
 ): RankedSpot[] {
   const sourceByName = new Map(
     sourceSpots.map((spot) => [spot.name.toLowerCase().trim(), spot]),
@@ -65,10 +66,14 @@ function normalizeAiResults(
   const usedSpotIds = new Set<string>();
 
   return candidates
-    .map((candidate, index): RankedSpot | null => {
+    .map((candidate): RankedSpot | null => {
       const requestedName = candidate.spot_name.toLowerCase().trim();
-      const sourceSpot = sourceByName.get(requestedName) ?? sourceSpots[index];
+      const sourceSpot = sourceByName.get(requestedName);
       if (!sourceSpot || usedSpotIds.has(sourceSpot.id)) return null;
+      if (
+        requestedSpecies &&
+        !candidate.primary_species.some((species) => species.toLowerCase() === requestedSpecies.toLowerCase())
+      ) return null;
       usedSpotIds.add(sourceSpot.id);
 
       const milesAway = typeof userLat === 'number' && typeof userLng === 'number'
@@ -167,7 +172,7 @@ export async function POST(req: NextRequest) {
     const prompt = `
 You are an AI fishing-planning assistant.
 
-Give a clearly labeled estimate for ${species ?? 'a plausible sport fish'} at each supplied water. Use only its supplied name, coordinates, water type, and spot type. No current environmental readings, catch reports, water clarity, depth, structure, or access status are provided. Do not claim that any detail is observed, verified, evidence-based, or live, and do not invent spot-specific conditions or features. Keep recommendations general when the supplied metadata is insufficient and state that limitation in the reason.
+Give a clearly labeled estimate for ${species ?? 'a plausible sport fish'} at each supplied water. Use only its supplied name, coordinates, water type, and spot type. No current environmental readings, catch reports, water clarity, depth, structure, or access status are provided. Do not claim that any detail is observed, verified, evidence-based, or live, and do not invent spot-specific conditions or features. Keep recommendations general and state in the reason that the supplied metadata is insufficient for site-specific predictions. ${species ? `Include the exact target species "${species}" in primary_species for every spot.` : ''}
 
 ${spotSummary}
 
@@ -179,7 +184,7 @@ Each object must contain:
 - rating: your AI rating, exactly "Hot", "Good", or "Fair"
 - primary_species: array containing one to three AI-selected fish species for this specific water
 - best_time_today: a broad, explicitly estimated window, not a conditions-based forecast
-- best_technique: a specific technique tied to this water's type, location, and likely structure
+- best_technique: a general technique suitable for the supplied water type and species, without claiming unprovided local structure
 - recommended_lure: a specific lure or bait chosen for this water and target species
 - reason: one short explanation referencing what makes this water's prediction distinct
 
@@ -201,6 +206,7 @@ Every field is required and must be generated for every spot. Always use Fahrenh
       spots,
       userLat,
       userLng,
+      species,
     );
 
     if (normalizedResults.length === Math.min(spots.length, 10)) {
@@ -213,7 +219,7 @@ Every field is required and must be generated for every spot. Always use Fahrenh
       });
     }
   } catch {
-    // AI is optional. The algorithmic fallback always returns a complete card shape.
+    // Do not substitute non-AI estimates when the provider fails or returns invalid output.
   }
 
   return NextResponse.json(
