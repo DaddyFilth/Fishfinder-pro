@@ -1,5 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getSupabaseProjectUrl, getSupabasePublicConfig, getSupabasePublishableKey } from './config'
+
+beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+  vi.stubEnv('SUPABASE_URL', undefined)
+  vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', undefined)
+  vi.stubEnv('SUPABASE_ANON_KEY', undefined)
+})
 
 describe('getSupabaseProjectUrl', () => {
   afterEach(() => {

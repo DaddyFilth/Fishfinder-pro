@@ -1,4 +1,3 @@
-import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./lib/supabase/middleware', () => ({
@@ -8,7 +7,8 @@ vi.mock('./lib/supabase/middleware', () => ({
 const { config, isPublicPath } = await import('./proxy')
 
 function doesProxyMatch(url: string) {
-  return unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })
+  const pathname = new URL(url, 'http://localhost').pathname
+  return new RegExp(config.matcher).test(pathname)
 }
 
 describe('proxy matcher', () => {

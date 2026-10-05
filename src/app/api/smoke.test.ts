@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const routes: Array<[string, string, string, Record<string, string>?]> = [
@@ -40,6 +40,11 @@ const routes: Array<[string, string, string, Record<string, string>?]> = [
 describe('API smoke: every endpoint answers invalid/unconfigured calls with a clean JSON/HTTP response', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network disabled')))
+    vi.stubEnv('REDIS_URL', undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   for (const [path, method, mod, params] of routes) {
