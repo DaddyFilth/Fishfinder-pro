@@ -22,7 +22,7 @@ const parse = (text) => {
   const out = new Map();
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (m) out.set(m[1], m[2]);
+    if (m) out.set(m[1], m[2].trim().replace(/^(["'])(.*)\1$/, "$2"));
   }
   return out;
 };
