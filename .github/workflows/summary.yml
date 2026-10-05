@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # GitHub Models is no longer a reliable dependency for this optional
       # notification workflow. Keep the attempt, but do not let an unavailable
