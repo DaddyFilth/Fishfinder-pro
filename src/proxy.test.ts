@@ -8,7 +8,7 @@ const { config, isPublicPath } = await import('./proxy')
 
 function doesProxyMatch(url: string) {
   const pathname = new URL(url, 'http://localhost').pathname
-  return new RegExp(config.matcher).test(pathname)
+  return new RegExp(`^${config.matcher}$`).test(pathname)
 }
 
 describe('proxy matcher', () => {
