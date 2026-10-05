@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizeProviderSpots } from './spotProvenance'
+import { normalizeProviderSpots, parseSpotApiPayload } from './spotProvenance'
 
 const UPSTREAM_FEED = {
   query: { lat: 34.999, lon: -97.366 },
@@ -48,10 +48,21 @@ describe('normalizeProviderSpots', () => {
     expect(result.data_mode).toBe('provider')
   })
 
+  it('does not infer a provider source when an API payload omits provenance', () => {
+    const result = parseSpotApiPayload({
+      spots: [{ id: 'unknown-1', name: 'Unknown Spot', lat: 35.1, lng: -96.9, water_type: 'lake', spot_type: 'lake' }],
+    })
+
+    expect(result?.data_mode).toBe('unavailable')
+    expect(result?.live).toBe(false)
+    expect(result?.spots[0]?.data_mode).toBe('unavailable')
+  })
+
   it('falls back to the bundled catalog when nothing upstream usable', () => {
     const result = normalizeProviderSpots({ spots: [] }, fallback)
     expect(result.data_mode).toBe('fallback')
     expect(result.spots[0].name).toBe('Fallback Lake')
+    expect(result.source).toBe('bundled-public-water-catalog')
   })
 
   it('falls back when the payload is garbage', () => {

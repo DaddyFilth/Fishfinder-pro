@@ -239,21 +239,42 @@ async function getSpots(): Promise<SpotLoadResult> {
       if (dataMode !== 'provider' || filtered.length === 0) {
         throw new Error('Live AI spot feed unavailable');
       }
-      return { spots: filtered, source: 'provider', savedAt: new Date().toISOString() };
+      const savedAt = new Date().toISOString();
+      cacheSpots(filtered, savedAt);
+      return { spots: filtered, source: 'provider', savedAt };
     }
   } catch {
-  // Permanent coordinates remain available as map anchors; no cataloged
-  // conditions, scores, species, bait, or predictions are attached.
-  return {
-  spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
-  })),
-  source: 'provider',
-  savedAt: null,
-  };
+    const cached = readCachedSpots();
+    const cachedSpots = cached?.spots.filter((spot) =>
+      typeof spot?.id === 'string' &&
+      typeof spot.name === 'string' &&
+      Number.isFinite(spot.lat) &&
+      Number.isFinite(spot.lng) &&
+      typeof spot.water_type === 'string' &&
+      typeof spot.spot_type === 'string' &&
+      isOklahomaSpot(spot),
+    ) ?? [];
+
+    if (cached && cachedSpots.length > 0) {
+      return { spots: cachedSpots, source: 'cached', savedAt: cached.savedAt };
+    }
+
+    return {
+      spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+        id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
+      })),
+      source: 'fallback',
+      savedAt: null,
+    };
   }
-  
-  return { spots: [], source: 'provider', savedAt: null };
+
+  return {
+    spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+      id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
+    })),
+    source: 'fallback',
+    savedAt: null,
+  };
 }
 
 /**
@@ -263,7 +284,7 @@ async function getSpots(): Promise<SpotLoadResult> {
 export default function MobilePage() {
   // Coordinates are permanent map anchors; live AI conditions are loaded separately.
   const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
+  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
   })));
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);

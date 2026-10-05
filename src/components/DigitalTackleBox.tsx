@@ -14,7 +14,6 @@ export default function DigitalTackleBox() {
     setInventory(data);
   }
 
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
   useEffect(() => {
     void loadInventory();
   }, []);
