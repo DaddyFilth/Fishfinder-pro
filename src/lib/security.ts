@@ -49,6 +49,8 @@ function clientKey(request: Request) {
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
 
+  if (process.env.NODE_ENV === 'production') return 'unknown'
+
   const forwarded = request.headers
     .get('x-forwarded-for')
     ?.split(',')
@@ -65,7 +67,6 @@ async function enforceDistributedRateLimit(
   const client = getRedis()
   if (!client) return null
 
-  const now = Date.now()
   const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
   const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
 

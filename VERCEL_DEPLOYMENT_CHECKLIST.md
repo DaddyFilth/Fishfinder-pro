@@ -55,6 +55,12 @@
 - [ ] DO NOT check Preview or Development
 - [ ] Click Add
 
+**Variable 4: REDIS_URL**
+- [ ] Name: `REDIS_URL`
+- [ ] Value: (Redis provider connection URL)
+- [ ] Add to Production (required for shared API rate limiting)
+- [ ] Click Add
+
 ### Step 3: Optional Variables
 
 **Current production AI provider: Groq**
