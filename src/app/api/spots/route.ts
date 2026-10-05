@@ -168,7 +168,7 @@ function normalize(payload: unknown): AnyRec {
 }
 
 export async function GET(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'public-spots', limit: 120, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'public-spots', limit: 60, windowMs: 60_000 });
   if (limited) return limited;
 
   const url = new URL(req.url);

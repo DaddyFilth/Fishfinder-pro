@@ -23,7 +23,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const limited = enforceRateLimit(request, { name: 'admin-role-write', limit: 20, windowMs: 60_000 })
+  const limited = await enforceRateLimit(request, { name: 'admin-role-write', limit: 20, windowMs: 60_000 })
   if (limited) return limited
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 })
   const context = await requireRole('admin')

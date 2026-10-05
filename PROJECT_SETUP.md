@@ -102,10 +102,11 @@ OPEN_METEO_MARINE=https://marine-api.open-meteo.com/v1/marine
 OPENAI_API_KEY=sk-... # Get from https://platform.openai.com/api-keys
 ```
 
-### Optional: Redis Cache
+### Redis-backed API rate limiting
 ```env
 REDIS_URL=redis://localhost:6379
 ```
+`REDIS_URL` is required in production for shared API rate limits. Local development can use the in-memory limiter. If production Redis is intentionally unavailable, set `RATE_LIMIT_ALLOW_LOCAL_FALLBACK=true` to opt into per-instance limits; otherwise rate-limited routes return HTTP 503.
 
 ---
 

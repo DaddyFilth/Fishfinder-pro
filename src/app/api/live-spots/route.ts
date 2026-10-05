@@ -6,7 +6,7 @@ import { normalizeProviderSpots } from '@/lib/spotProvenance';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'live-spots', limit: 60, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'live-spots', limit: 60, windowMs: 60_000 });
   if (limited) return limited;
 
   const { searchParams } = new URL(req.url);

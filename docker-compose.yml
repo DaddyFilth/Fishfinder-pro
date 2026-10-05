@@ -1,4 +1,8 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
   ollama:
     image: ollama/ollama:latest
     container_name: fishfinder-ollama
@@ -49,6 +53,8 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_completed_successfully
+      redis:
+        condition: service_started
     ports:
       - "${APP_PORT:-3000}:3000"
     env_file:
@@ -60,6 +66,7 @@ services:
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-example-anon-key}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-example-service-role-key}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434/v1}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-llama3.2-vision}
       NWS_BASE: ${NWS_BASE:-https://api.weather.gov}

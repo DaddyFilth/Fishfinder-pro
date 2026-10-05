@@ -22,7 +22,7 @@ const CatchSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const limited = enforceRateLimit(req, { name: 'catches-write', limit: 20, windowMs: 60_000 });
+  const limited = await enforceRateLimit(req, { name: 'catches-write', limit: 20, windowMs: 60_000 });
   if (limited) return limited;
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
   const context = await getAuthContext();
