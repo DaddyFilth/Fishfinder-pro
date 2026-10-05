@@ -9,7 +9,6 @@ export function validateRuntimeEnvironment(environment: Environment = process.en
   const supabaseUrl = firstDefined(environment, [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL',
-    'SUPABASE_URL',
   ])
   let validSupabaseUrl = false
 
@@ -23,7 +22,7 @@ export function validateRuntimeEnvironment(environment: Environment = process.en
   }
 
   if (!validSupabaseUrl) {
-    missing.push('NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL with an http(s) URL)')
+    missing.push('NEXT_PUBLIC_SUPABASE_URL (an http(s) URL)')
   }
 
   if (!firstDefined(environment, [
@@ -31,8 +30,6 @@ export function validateRuntimeEnvironment(environment: Environment = process.en
     'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_ANON_KEY',
   ])) {
     missing.push('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)')
   }
