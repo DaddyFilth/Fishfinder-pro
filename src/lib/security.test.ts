@@ -7,8 +7,8 @@ const redisMock = vi.hoisted(() => ({
   connect: vi.fn(),
   on: vi.fn(),
   once: vi.fn(),
+  set: vi.fn(),
   incr: vi.fn(),
-  expire: vi.fn(),
   exec: vi.fn(),
   ttl: vi.fn(),
 }))
@@ -35,12 +35,12 @@ vi.mock('ioredis', () => ({
 
     multi() {
       const transaction = {
-        incr: (key: string) => {
-          redisMock.incr(key)
+        set: (...args: unknown[]) => {
+          redisMock.set(...args)
           return transaction
         },
-        expire: (key: string, seconds: number, condition: string) => {
-          redisMock.expire(key, seconds, condition)
+        incr: (key: string) => {
+          redisMock.incr(key)
           return transaction
         },
         exec: () => redisMock.exec(),
@@ -62,9 +62,9 @@ beforeEach(() => {
   })
   redisMock.on.mockReset()
   redisMock.once.mockReset()
+  redisMock.set.mockReset()
   redisMock.incr.mockReset()
-  redisMock.expire.mockReset()
-  redisMock.exec.mockReset().mockResolvedValue([[null, 1], [null, 1]])
+  redisMock.exec.mockReset().mockResolvedValue([[null, 'OK'], [null, 1]])
   redisMock.ttl.mockReset().mockResolvedValue(37)
 })
 
@@ -86,10 +86,10 @@ describe('enforceRateLimit', () => {
     expect(limited?.status).toBe(429)
   })
 
-  it('uses Redis transactions for shared counting and repairs missing expiry', async () => {
+  it('uses Redis transactions for shared counting and initializes expiry', async () => {
     redisMock.exec
-      .mockResolvedValueOnce([[null, 1], [null, 1]])
-      .mockResolvedValueOnce([[null, 2], [null, 0]])
+      .mockResolvedValueOnce([[null, 'OK'], [null, 1]])
+      .mockResolvedValueOnce([[null, null], [null, 2]])
     const { enforceRateLimit } = await import('./security')
     const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
     const options = { name: 'test', limit: 2, windowMs: 60_000 }
@@ -98,8 +98,8 @@ describe('enforceRateLimit', () => {
     expect(await enforceRateLimit(request, options)).toBeNull()
     expect(redisMock.incr).toHaveBeenCalledTimes(2)
     expect(redisMock.incr).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10')
-    expect(redisMock.expire).toHaveBeenCalledTimes(2)
-    expect(redisMock.expire).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10', 60, 'NX')
+    expect(redisMock.set).toHaveBeenCalledTimes(2)
+    expect(redisMock.set).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10', '0', 'EX', 60, 'NX')
   })
 
   it('shares the Redis connection promise during concurrent cold starts', async () => {
@@ -138,7 +138,7 @@ describe('enforceRateLimit', () => {
   })
 
   it('returns 429 with the Redis TTL in Retry-After', async () => {
-    redisMock.exec.mockResolvedValueOnce([[null, 2], [null, 1]])
+    redisMock.exec.mockResolvedValueOnce([[null, null], [null, 2]])
     const { enforceRateLimit } = await import('./security')
     const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
 
