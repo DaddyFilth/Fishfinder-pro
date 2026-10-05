@@ -1,0 +1,37 @@
+name: Deploy seamcast-spots
+
+# Triggers the seamcast-spots Vercel project whenever Fishfinder-pro is launched
+# (pushed to main). Uses a Vercel Deploy Hook: a single curl on the smallest
+# hosted runner, so it is fast, cheap, and visible in the Actions run summary.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-seamcast-spots
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger seamcast-spots deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.SEAMCAST_SPOTS_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::SEAMCAST_SPOTS_DEPLOY_HOOK secret not set; skipping."
+            echo "### seamcast-spots deploy skipped (no deploy hook secret)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          response=$(curl -fsS --retry 3 --max-time 30 -X POST "$DEPLOY_HOOK")
+          echo "### seamcast-spots deploy triggered" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$response" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
