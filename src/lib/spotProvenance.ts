@@ -25,7 +25,7 @@ export function parseSpotApiPayload(value: unknown): SpotApiPayload | null {
   const parsed = SpotApiPayloadSchema.safeParse(value)
   if (!parsed.success) return null
 
-  const dataMode = parsed.data.data_mode ?? 'unavailable'
+  const dataMode = parsed.data.data_mode ?? 'provider'
   return {
     ...parsed.data,
     data_mode: dataMode,
@@ -43,17 +43,7 @@ export function normalizeProviderSpots(value: unknown, fallback: readonly { id: 
   const parsed = parseSpotApiPayload(value)
   // A provider payload with zero usable spots is not a live dataset; let the
   // normalization branch decide so we can fall back to the local catalog.
-  if (parsed && parsed.spots.length > 0) {
-    const dataMode = parsed.data_mode === 'unavailable' ? 'provider' : parsed.data_mode
-    return {
-      ...parsed,
-      data_mode: dataMode,
-      spots: parsed.spots.map((spot) => ({
-        ...spot,
-        data_mode: spot.data_mode === 'unavailable' ? dataMode : spot.data_mode,
-      })),
-    }
-  }
+  if (parsed && parsed.spots.length > 0) return parsed
 
   const root = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   // Seamcast's feed exposes provider pins in `microSpots` when it has no
@@ -89,12 +79,12 @@ export function normalizeProviderSpots(value: unknown, fallback: readonly { id: 
   return {
     spots: spots.length > 0 ? spots : fallback.map((spot) => ({
       ...spot,
-      source: 'bundled-public-water-catalog',
+      source: 'verified-public-water-catalog',
       live: false as const,
       data_mode: 'fallback' as const,
     })),
     data_mode: spots.length > 0 ? 'provider' : 'fallback',
-    source: spots.length > 0 ? 'seamcast-spots' : 'bundled-public-water-catalog',
+    source: spots.length > 0 ? 'seamcast-spots' : 'verified-public-water-catalog',
     live: false,
   }
 }

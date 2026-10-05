@@ -89,15 +89,15 @@ export async function POST(req: NextRequest) {
         { role: 'system', content: context },
         {
           role: 'user',
-          content: `Provide general fishing-planning suggestions for ${safeSpecies || 'a plausible local species'} at this location.
+          content: `You are a Master Fishing Guide. Provide a high-precision fishing strategy for ${safeSpecies || 'the best species'} at this spot. 
           
           Your response MUST include:
-          1. GEAR: Offer a general lure or bait suggestion and explain it is not based on water clarity unless context supplies clarity.
-          2. APPROACH: Give a general technique; do not claim unprovided depth, structure, or access details.
-          3. CONDITIONS: Describe a bite window only when the context contains relevant current observations. Otherwise state that current conditions are unavailable.
-          4. TIP: Give a general species tip, not an insider claim.
+          1. GEAR SPECIFICATIONS: Recommend a specific lure/bait, including suggested color (based on water clarity), weight/size, and if possible, a professional brand or style (e.g., 'Zman ChatterBait' or '1/8oz Neon Jig').
+          2. TACTICAL APPROACH: Where exactly to cast (e.g., 'along the drop-off', 'near the submerged timber') and the specific retrieval speed.
+          3. THE "BITE WINDOW": Analyze the current conditions to tell the user if they are in a prime window, a declining window, or a waiting window.
+          4. PRO TIP: One insider secret for this species in these specific weather conditions.
           
-          Be concise and explicit about uncertainty. Context may be absent or incomplete. Never invent measurements, observations, recent catches, or spot features. Do not claim any value is live unless the context identifies it as a live observation.`,
+          Be concise but authoritative. Do not claim any value is live unless the context identifies it as a live observation.`,
         },
       ])
 

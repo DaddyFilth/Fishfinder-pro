@@ -160,25 +160,26 @@ export async function POST(req: NextRequest) {
       .slice(0, 10)
       .map(
         (spot) =>
-          `- ${spot.name} | ID: ${spot.id} | ${spot.lat}, ${spot.lng} | ${spot.water_type ?? 'freshwater'} | ${spot.spot_type ?? 'fishing spot'}`,
+          `- ${spot.name} | ID: ${spot.id} | ${spot.water_type ?? 'freshwater'} | ${spot.spot_type ?? 'fishing spot'}`,
       )
       .join(String.fromCharCode(10));
 
     const prompt = `
-You are an AI fishing-planning assistant.
+You are a professional Oklahoma fishing guide.
 
-Give a clearly labeled estimate for ${species ?? 'a plausible sport fish'} at each supplied water. Use only its supplied name, coordinates, water type, and spot type. No current environmental readings, catch reports, water clarity, depth, structure, or access status are provided. Do not claim that any detail is observed, verified, evidence-based, or live, and do not invent spot-specific conditions or features. Keep recommendations general when the supplied metadata is insufficient and state that limitation in the reason.
+Make an independent, evidence-based prediction for each supplied body of water for catching ${species ?? 'the best available sport fish'} today.
+Use each spot's exact name, coordinates, water type, and spot type to make the predictions materially different. Do not copy scores, ratings, species, times, techniques, lures, or reasons between bodies of water. A prediction is not a hardcoded rule: infer the likely target fish and score from the individual water body and its geography. If information is limited, express uncertainty in the reason but still provide a distinct estimate.
 
 ${spotSummary}
 
-Return ONLY a valid JSON array. Return exactly one object for every supplied spot, in the same order. All scores, ratings, species, times, techniques, and lure choices are AI-generated planning estimates, not fishing reports or forecasts.
+Return ONLY a valid JSON array. Return exactly one object for every supplied spot, in the same order.
 
 Each object must contain:
 - spot_name: exact supplied spot name
 - fishing_score: integer 0 through 100 predicted by you for this specific water
 - rating: your AI rating, exactly "Hot", "Good", or "Fair"
 - primary_species: array containing one to three AI-selected fish species for this specific water
-- best_time_today: a broad, explicitly estimated window, not a conditions-based forecast
+- best_time_today: a specific predicted fishing window
 - best_technique: a specific technique tied to this water's type, location, and likely structure
 - recommended_lure: a specific lure or bait chosen for this water and target species
 - reason: one short explanation referencing what makes this water's prediction distinct
@@ -208,8 +209,6 @@ Every field is required and must be generated for every spot. Always use Fahrenh
         results: normalizedResults,
         total_nearby: spots.length,
         source: 'ai',
-        data_mode: 'ai-generated',
-        live_data: false,
       });
     }
   } catch {

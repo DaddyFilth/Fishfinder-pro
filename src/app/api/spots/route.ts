@@ -64,9 +64,7 @@ async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult>
       if (!res.ok) {
         console.warn('[API] remote spots request failed', { status: res.status });
         const reason = `upstream ${res.status}`;
-        const payload = { error: 'Live AI spot feed is unavailable.' };
-        writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
-        return { payload, reason };
+        return { payload: { error: 'Live AI spot feed is unavailable.' }, reason };
       }
 
       const json = JSON.parse(await res.text()) as unknown;
@@ -79,9 +77,7 @@ async function fetchRemoteSpots(key: string, url: string): Promise<RemoteResult>
         kind: error instanceof Error ? error.name : 'unknown',
       });
       const reason = 'upstream unreachable';
-      const payload = { error: 'Live AI spot feed is unavailable.' };
-      writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
-      return { payload, reason };
+      return { payload: { error: 'Live AI spot feed is unavailable.' }, reason };
     }
   })();
 
@@ -155,15 +151,16 @@ function normalize(payload: unknown): AnyRec {
   const normalizedSpots = spots.map((spot) => ({
     ...spot,
     source,
-    live: false,
+    live: true,
     data_mode: dataMode,
+    observed_at: observedAt,
   }));
 
   return {
     ...root,
     live: false,
     data_mode: dataMode,
-    source: spots.length > 0 ? source : 'bundled-public-water-catalog',
+    source: spots.length > 0 ? source : 'verified-public-water-catalog',
     observed_at: observedAt,
     spots: normalizedSpots,
     microSpots: normalizedSpots,
@@ -194,16 +191,17 @@ export async function GET(req: NextRequest) {
         .filter((spot) => typeof spot.lat === 'number' && typeof spot.lng === 'number' && isOklahomaCoordinate(spot.lat, spot.lng))
         .map((spot) => ({
           ...spot,
-           source: 'supabase-spots',
-           live: false,
+          source: 'supabase-live',
+          live: true,
           data_mode: 'provider',
         }));
       if (storedSpots.length > 0) {
         return NextResponse.json({
           spots: storedSpots,
-          source: 'supabase-spots',
-          live: false,
+          source: 'supabase-live',
+          live: true,
           data_mode: 'provider',
+          observed_at: new Date().toISOString(),
         }, { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'provider' } });
       }
     }

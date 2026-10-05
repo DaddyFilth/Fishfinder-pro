@@ -325,14 +325,11 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     const marineData = marine.status === 'fulfilled' ? marine.value : null;
     const tideData = tides.status === 'fulfilled' ? tides.value : null;
 
-    const dataSources = [
-      nwsData?.source,
-      usgsData?.source,
-      marineData?.source,
-      tideData?.source,
-    ].filter((source): source is string => typeof source === 'string' && source.length > 0);
+    const providerData = [nwsData, usgsData, marineData, tideData].some(
+      (value) => value !== null && value !== undefined,
+    );
 
-    if (dataSources.length === 0) {
+    if (!providerData) {
       return {
         status: 503,
         payload: {
@@ -344,6 +341,13 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
         cacheControl: 'no-store',
       };
     }
+
+    const dataSources = [
+      nwsData?.source,
+      usgsData?.source,
+      marineData?.source,
+      tideData?.source,
+    ].filter(Boolean);
 
     const water_temp_c =
       (usgsData?.water_temp_c as number | null) ??

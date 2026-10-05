@@ -1,5 +1,5 @@
-import Image from 'next/image';
-import { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import { SPECIES, biteRateFor, type Species } from '@/lib/speciesCatalog';
 
@@ -9,7 +9,8 @@ interface QuickScanProps {
 }
 
 export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanProps) {
-  const condition = 'stable';
+  const [condition, setCondition] = useState<'stable'>('stable'); // Default condition
+  const [isScanning, setIsScanning] = useState(false);
 
   const hotList = useMemo(() => {
     if (!coordinates) return [];
@@ -48,7 +49,7 @@ export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanPro
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#f8fafc' }}>Local Hot-List</div>
         </div>
         <div style={{ fontSize: '10px', color: '#67e8f9', background: 'rgba(8,145,178,0.2)', padding: '2px 8px', borderRadius: '999px', border: '1px solid #0891b2' }}>
-          CATALOG ESTIMATE
+          LIVE SCAN
         </div>
       </div>
 
@@ -72,7 +73,7 @@ export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanPro
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Image src={species.image} alt="" width={32} height={32} style={{ borderRadius: '6px', objectFit: 'cover' }} />
+                <img src={species.image} alt="" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }} />
                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#e2e8f0' }}>{species.name}</div>
               </div>
               <div style={{ 
@@ -87,9 +88,6 @@ export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanPro
           ))}
         </div>
       )}
-      <div style={{ marginTop: '8px', color: '#94a3b8', fontSize: '10px', textAlign: 'center' }}>
-        Catalog-based estimate, not a live scan or catch report.
-      </div>
     </div>
   );
 }

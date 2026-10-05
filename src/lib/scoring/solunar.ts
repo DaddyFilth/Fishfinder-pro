@@ -109,7 +109,7 @@ export function calculateSolunar(date: Date, lat: number): SolunarResult {
     ],
     solunarScore,
     bestHours,
-    peakActivityLabel: solunarScore >= 80 ? 'High Solunar Potential' : solunarScore >= 60 ? 'Moderate Solunar Potential' : 'Lower Solunar Potential',
+    peakActivityLabel: solunarScore >= 80 ? 'Excellent Day' : solunarScore >= 60 ? 'Good Day' : 'Average Day',
   };
 }
 
