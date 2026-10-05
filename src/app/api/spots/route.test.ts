@@ -19,6 +19,32 @@ describe('spots route provenance', () => {
   beforeEach(() => {
     getSupabaseAdmin.mockReturnValue(null)
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('uses the configured Seamcast endpoint and returns its spots', async () => {
+    vi.stubEnv('SPOTS_API', 'https://configured-seamcast.example/api/spots')
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      spots: [{
+        id: 'configured-spot',
+        name: 'Configured Lake',
+        lat: 35.2,
+        lng: -96.8,
+      }],
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await GET(new NextRequest('https://example.com/api/spots?lat=35.2&lon=-96.8'))
+    const payload = await response.json()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://configured-seamcast.example/api/spots?lat=35.2&lon=-96.8',
+      expect.objectContaining({ headers: { Accept: 'application/json' } }),
+    )
+    expect(payload).toMatchObject({
+      data_mode: 'provider',
+      spots: [{ id: 'configured-spot', name: 'Configured Lake', source: 'seamcast-spots' }],
+    })
   })
 
   it('does not label provider spot metadata as a live observation', async () => {
