@@ -13,7 +13,10 @@ async function ensureReady(client: Redis) {
   if (client.status === 'ready') return
   if (!ready) {
     ready = (client.status === 'wait' ? client.connect() : new Promise<void>((res, rej) => {
-      client.once('ready', () => res()); client.once('error', rej)
+      const onReady = () => { client.off('error', onError); res() }
+      const onError = (e: Error) => { client.off('ready', onReady); rej(e) }
+      client.once('ready', onReady)
+      client.once('error', onError)
     })).finally(() => { ready = null })
   }
   await ready
@@ -68,12 +71,14 @@ async function enforceDistributedRateLimit(
 
   try {
     await ensureReady(client)
-    const [[incrErr, count], [expErr]] = (await client
+    const results = await client
       .multi()
+      .set(key, '0', 'EX', windowSeconds, 'NX')
       .incr(key)
-      .expire(key, windowSeconds, 'NX')
-      .exec()) as [[Error | null, number], [Error | null, unknown]]
-    if (incrErr || expErr) throw incrErr ?? expErr
+      .exec()
+    if (!results) throw new Error('Redis transaction aborted')
+    const [[setErr], [incrErr, count]] = results as [[Error | null, unknown], [Error | null, number]]
+    if (setErr || incrErr) throw setErr ?? incrErr
     if (count > options.limit) {
       const ttl = await client.ttl(key)
       return NextResponse.json(
