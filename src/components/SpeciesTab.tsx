@@ -1,11 +1,13 @@
 'use client';
-/* eslint-disable @next/next/no-img-element -- catalog images are local static field-guide assets. */
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- catalog images and legacy cached strategy data use these compatibility boundaries. */
 import { useMemo, useState, useEffect } from 'react';
 import GearChecklist from '@/components/GearChecklist';
 
 function getFallbackImage(speciesName: string) {
   return `/api/species-image/${encodeURIComponent(speciesName)}`;
 }
+
+const OFFLINE_FISH_IMAGE = '/species/other.jpg';
 
 import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import {
@@ -136,8 +138,12 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
             src={selected.image}
             onError={(event) => {
               const image = event.currentTarget;
-              if (image.src.endsWith(getFallbackImage(selected.name))) return;
-              image.src = getFallbackImage(selected.name);
+              const remoteFallback = getFallbackImage(selected.name);
+              if (image.src.endsWith(remoteFallback)) {
+                image.src = OFFLINE_FISH_IMAGE;
+              } else if (!image.src.endsWith(OFFLINE_FISH_IMAGE)) {
+                image.src = remoteFallback;
+              }
             }}
             alt={selected.imageAlt}
             style={{ width: '100%', height: '152px', display: 'block', objectFit: 'cover', objectPosition: 'center', borderRadius: '12px', marginBottom: '12px', border: '1px solid #1e4080' }}
@@ -321,12 +327,15 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           >
             <img
               src={species.image}
-              onError={(event) => {
-                const image = event.currentTarget;
-                const fallback = getFallbackImage(species.name);
-                if (image.src.endsWith(fallback)) return;
-                image.src = fallback;
-              }}
+onError={(event) => {
+                  const image = event.currentTarget;
+                  const remoteFallback = getFallbackImage(species.name);
+                  if (image.src.endsWith(remoteFallback)) {
+                    image.src = OFFLINE_FISH_IMAGE;
+                  } else if (!image.src.endsWith(OFFLINE_FISH_IMAGE)) {
+                    image.src = remoteFallback;
+                  }
+                }}
               alt={species.imageAlt}
               width={72}
               height={56}

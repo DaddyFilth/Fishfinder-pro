@@ -12,10 +12,17 @@ const CatchSchema = z.object({
   notes: z.string().trim().max(500).optional().default(''),
   spot_id: z.string().trim().min(1).max(128),
   spot_name: z.string().trim().max(200),
-  latitude: z.number().finite().min(-90).max(90),
-  longitude: z.number().finite().min(-180).max(180),
+  lat: z.number().finite().min(-90).max(90).optional(),
+  lng: z.number().finite().min(-180).max(180).optional(),
+  latitude: z.number().finite().min(-90).max(90).optional(),
+  longitude: z.number().finite().min(-180).max(180).optional(),
+  photo_url: z.string().max(10_000_000).optional(),
   caught_at: z.string().datetime().optional(),
-}).strict();
+}).strict().refine(data =>
+  (typeof data.lat === 'number' || typeof data.latitude === 'number') &&
+  (typeof data.lng === 'number' || typeof data.longitude === 'number'),
+  { message: 'lat/lng or latitude/longitude is required.' },
+);
 
 export async function POST(req: NextRequest) {
   const limited = enforceRateLimit(req, { name: 'pro-logger', limit: 20, windowMs: 60_000 });
@@ -38,14 +45,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid catch data.' }, { status: 400 });
     }
 
+    const latitude = parsed.data.latitude ?? parsed.data.lat!;
+    const longitude = parsed.data.longitude ?? parsed.data.lng!;
+
     const result = await ProLogger.logCatchPro(user.id, {
-      ...parsed.data,
+      species: parsed.data.species,
+      weight_lbs: parsed.data.weight_lbs ?? null,
+      length_in: parsed.data.length_in ?? null,
+      bait: parsed.data.bait,
+      notes: parsed.data.notes,
+      spot_id: parsed.data.spot_id,
+      spot_name: parsed.data.spot_name,
+      latitude,
+      longitude,
+      photo_url: parsed.data.photo_url ?? null,
       caught_at: parsed.data.caught_at ?? new Date().toISOString(),
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('ProLogger API Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

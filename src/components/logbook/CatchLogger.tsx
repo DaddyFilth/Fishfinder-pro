@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any -- photo metadata is supplied by browser APIs. */
 import { createClient } from '@/lib/supabase/client';
 import { ProLogger } from '@/lib/logbook/pro-logger';
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */

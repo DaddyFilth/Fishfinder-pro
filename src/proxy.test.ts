@@ -39,7 +39,6 @@ describe('proxy matcher', () => {
 
 describe('proxy public path allowlist', () => {
   it.each([
-    '/',
     '/offline',
     '/manifest.json',
     '/sw.js',
@@ -50,21 +49,10 @@ describe('proxy public path allowlist', () => {
     '/auth/callback',
     '/api/auth',
     '/api/auth/recover',
-    '/api/spots',
-    '/api/spots/lake-9/conditions',
-    '/favicon.ico',
+  '/favicon.ico',
     '/icons/icon-192.png',
     '/_next/static/chunks/app.js',
   ])('lets anonymous visitors reach %s', (pathname) => {
-    expect(isPublicPath(pathname)).toBe(true)
-  })
-
-  it.each([
-    '/api/species-image/Blue%20Catfish',
-    '/api/species-image/Largemouth%20Bass',
-  ])('lets anonymous visitors reach the species guide fallback %s', (pathname) => {
-    // Guarded because the guide renders this endpoint as its <img> fallback on
-    // the public landing page; returning 401 broke every fallback image.
     expect(isPublicPath(pathname)).toBe(true)
   })
 

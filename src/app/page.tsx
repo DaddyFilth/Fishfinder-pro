@@ -21,6 +21,7 @@ import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
+import { fetchSpotConditions } from '@/lib/conditionsClient';
 import { parseSpotApiPayload } from '@/lib/spotProvenance';
 
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
@@ -34,9 +35,10 @@ type DataMode =
   | 'offline-fallback'
   | 'loading';
 
-interface SpotCondition {
-  fishing_score?: number | null;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  interface SpotCondition {
+    fishing_score?: number | null;
+    bite_score?: number | null;
+    data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable' | 'ai-generated';
 }
 
 function resolveSpotDataMode(
@@ -209,7 +211,6 @@ type SpotLoadResult = {
   }
 
 async function getSpots(): Promise<SpotLoadResult> {
-  const cached = readCachedSpots();
   try {
     const res = await fetch('/api/spots', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -235,26 +236,24 @@ async function getSpots(): Promise<SpotLoadResult> {
         throw new Error('No supported Oklahoma spots returned');
       }
 
-      const source =
-        dataMode === 'fallback'
-          ? 'fallback'
-          : dataMode === 'cached' || dataMode === 'stale-cache'
-            ? 'cached'
-            : 'provider';
-
-      const savedAt = source === 'provider' && filtered.length > 0 ? new Date().toISOString() : null;
-      if (savedAt) cacheSpots(filtered, savedAt);
-      return {
-        spots: filtered,
-        source,
-        savedAt,
-      };
+      if (dataMode !== 'provider' || filtered.length === 0) {
+        throw new Error('Live AI spot feed unavailable');
+      }
+      return { spots: filtered, source: 'provider', savedAt: new Date().toISOString() };
     }
   } catch {
-    // Fall through to browser cache or bundled Oklahoma fixtures.
+  // Permanent coordinates remain available as map anchors; no cataloged
+  // conditions, scores, species, bait, or predictions are attached.
+  return {
+  spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
+  })),
+  source: 'provider',
+  savedAt: null,
+  };
   }
-  if (cached?.spots.length) return { spots: cached.spots, source: 'cached', savedAt: cached.savedAt };
-  return { spots: [...DEFAULT_SPOTS], source: 'fallback', savedAt: null };
+  
+  return { spots: [], source: 'provider', savedAt: null };
 }
 
 /**
@@ -262,7 +261,10 @@ async function getSpots(): Promise<SpotLoadResult> {
  * spot data, map navigation, location tracking, and locally stored settings.
  */
 export default function MobilePage() {
-  const [spots, setSpots] = useState<Spot[]>([]);
+  // Coordinates are permanent map anchors; live AI conditions are loaded separately.
+  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
+  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'provider' as const,
+  })));
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
@@ -276,7 +278,7 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [selectedSpecies, setSelectedSpecies] = useState<any | null>(null);
+  const [, setSelectedSpecies] = useState<unknown>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -294,12 +296,32 @@ export default function MobilePage() {
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
+  const signedInRef = useRef(false);
   const locationCleanupRef = useRef<(() => void) | null>(null);
   const spotDataMode = resolveSpotDataMode(cacheSource, isOnline);
   const appBadge = badgeState(isOnline);
 
 
-  useEffect(() => { const up = () => setIsOnline(navigator.onLine); window.addEventListener('online', up); window.addEventListener('offline', up); up(); return () => { window.removeEventListener('online', up); window.removeEventListener('offline', up); }; }, []);
+  useEffect(() => {
+    const syncOnline = () => setIsOnline(navigator.onLine);
+    const handleOnline = () => {
+      syncOnline();
+      // Score requests made while offline never reach the network, so drop the
+      // placeholders and let the score effect request them again.
+      setConditionScores({});
+      setConditionModes({});
+      setLoadingScores({});
+      scoreFetchInFlight.current = {};
+    };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    syncOnline();
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
     const storedMapStyle = readStoredValue(SETTINGS_STORAGE_KEYS.mapStyle, 'explore');
@@ -347,8 +369,6 @@ export default function MobilePage() {
   useEffect(() => {
   const supabase = createClient();
   let mounted = true;
-  // Spot discovery is public; start it without waiting for auth initialization.
-  void loadSpotData(false);
   if (!supabase) {
   queueMicrotask(() => {
   if (!mounted) return;
@@ -367,7 +387,8 @@ export default function MobilePage() {
   const signedIn = Boolean(data.session?.user);
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; authentication is only required for account features.
+      // Spot, weather and condition APIs now require authentication.
+      if (signedIn) void loadSpotData(false);
   } catch {
   if (!mounted) return;
   setIsAuthenticated(false);
@@ -376,13 +397,16 @@ export default function MobilePage() {
   };
 
   void syncSession();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
       const signedIn = Boolean(session?.user);
+      const wasSignedIn = signedInRef.current;
+      signedInRef.current = signedIn;
       setIsAuthenticated(signedIn);
       setAuthReady(true);
-      // Spot discovery is public; keep condition requests stable across auth changes.
-      if (!signedIn) {
+      if (signedIn && !wasSignedIn && event === 'SIGNED_IN') {
+        void loadSpotData(false);
+      } else if (!signedIn) {
         setSelectedSpot(null);
       }
     });
@@ -509,45 +533,58 @@ export default function MobilePage() {
   };
 
   useEffect(() => {
-    if (!spots.length) return;
+    const spot = selectedSpot;
+    if (!spot) return;
 
-  const filteredSpotsForConditions = filterSpots(spots, mapFilter);
-  const spotsForConditions = (nearbyMode && coordinates
-    ? sortSpotsByDistance(filteredSpotsForConditions, coordinates).slice(0, 20)
-    : filteredSpotsForConditions
-  ).slice(0, 60);
-  spotsForConditions.forEach((spot) => {
-      if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
+    if (conditionScores[spot.id] !== undefined || scoreFetchInFlight.current[spot.id]) return;
 
       scoreFetchInFlight.current[spot.id] = true;
       setLoadingScores((prev) => ({ ...prev, [spot.id]: true }));
 
-      fetch(`/api/spots/${spot.id}/conditions`)
-        .then(async (res) => {
-          if (!res.ok) {
-            setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
-            setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
+      // Shared with the map popup so the same spot is only requested once and
+      // rate-limited responses back off instead of being re-requested.
+      void fetchSpotConditions({
+        id: spot.id,
+        lat: spot.lat,
+        lng: spot.lng,
+        water_type: spot.water_type,
+        usgs_site_id: spot.usgs_site_id,
+        noaa_station_id: spot.noaa_station_id,
+      })
+        .then((result) => {
+          if (!result.ok) {
+            setConditionScores((prev) => {
+              const next = { ...prev };
+              delete next[spot.id];
+              return next;
+            });
+            setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
             return;
           }
 
-          const data = (await res.json()) as SpotCondition;
+          const data = result.data as unknown as SpotCondition;
           const mode = data.data_mode ?? 'fallback';
-          const fishingScore = mode !== 'fallback' && typeof data.fishing_score === 'number'
-            ? data.fishing_score
-            : 0;
+  const fishingScore = mode !== 'fallback'
+    ? (typeof data.bite_score === 'number'
+      ? data.bite_score
+      : (typeof data.fishing_score === 'number' ? data.fishing_score : 0))
+    : 0;
           setConditionScores((prev) => ({ ...prev, [spot.id]: fishingScore }));
           setConditionModes((prev) => ({ ...prev, [spot.id]: mode }));
         })
         .catch(() => {
-          setConditionScores((prev) => ({ ...prev, [spot.id]: 0 }));
-          setConditionModes((prev) => ({ ...prev, [spot.id]: 'fallback' }));
+          setConditionScores((prev) => {
+            const next = { ...prev };
+            delete next[spot.id];
+            return next;
+          });
+          setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
         })
         .finally(() => {
           scoreFetchInFlight.current[spot.id] = false;
           setLoadingScores((prev) => ({ ...prev, [spot.id]: false }));
         });
-    });
-  }, [authReady, isAuthenticated, spots, mapFilter, nearbyMode, coordinates, conditionScores]);
+  }, [authReady, isAuthenticated, selectedSpot, conditionScores]);
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
@@ -693,7 +730,7 @@ export default function MobilePage() {
               <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
               {!sheetOpen && (
                 <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>🏆 Top Spots · provider scores</span>
+                  <span style={{ fontSize:'12px', color:'#64748b' }}>Top Spots · provider scores</span>
                   <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
                 </div>
               )}

@@ -39,6 +39,11 @@ export function getSupabaseServiceRoleKey() {
   return firstDefined([
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     process.env.SUPABASE_SECRET_KEY,
+    // Some existing project environments expose these server-only values with
+    // the legacy NEXT_PUBLIC_ prefix. Keep compatibility while preferring the
+    // correctly scoped names above.
+    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY,
   ])
 }
 

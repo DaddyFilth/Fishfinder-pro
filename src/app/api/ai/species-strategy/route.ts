@@ -67,9 +67,18 @@ export async function POST(req: NextRequest) {
       temperature: 0.6,
     });
 
-    const result = { strategy: response.choices[0]?.message?.content || '' }; const validated = StrategySchema.parse(result); return NextResponse.json(validated);
+    const result = { strategy: response.choices[0]?.message?.content || '' };
+    const validated = StrategySchema.parse(result);
+    return NextResponse.json({
+      ...validated,
+      source: 'ai',
+      data_mode: 'ai-generated',
+      live_data: false,
+      provider: 'groq',
+      generated_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('[species-strategy] error:', error);
-    return NextResponse.json({ error: 'Failed to generate strategy.' }, { status: 500 });
+    return NextResponse.json({ error: 'AI strategy is unavailable; no strategy was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
   }
 }

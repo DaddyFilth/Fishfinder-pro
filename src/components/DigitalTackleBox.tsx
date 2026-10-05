@@ -3,18 +3,21 @@ import { motion } from 'framer-motion';
 import { GearManager } from '@/lib/gear/manager';
 import { GearItem } from '@/lib/gear/types';
 
+/* eslint-disable react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
+
 export default function DigitalTackleBox() {
   const [inventory, setInventory] = useState<GearItem[]>([]);
   const userId = 'user_1';
-
-  useEffect(() => {
-    loadInventory();
-  }, []);
 
   async function loadInventory() {
     const data = await GearManager.getInventory(userId);
     setInventory(data);
   }
+
+  /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
+  useEffect(() => {
+    void loadInventory();
+  }, []);
 
   async function addQuickGear() {
     const item: GearItem = {
