@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "node scripts/run-next.mjs dev --webpack",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "node scripts/run-next.mjs start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -84,5 +84,8 @@
     "xcode": {
       "uuid": "^11.1.1"
     }
+  },
+  "engines": {
+    "node": ">=20.12.0"
   }
 }

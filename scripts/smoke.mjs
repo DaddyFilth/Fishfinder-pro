@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
-const nextBin = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url))
+const nextRunner = fileURLToPath(new URL('./run-next.mjs', import.meta.url))
 
 async function getAvailablePort() {
   const server = createServer()
@@ -21,7 +21,7 @@ async function smoke() {
   const port = await getAvailablePort()
   const server = spawn(
     process.execPath,
-    [nextBin, 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+    [nextRunner, 'start', '--hostname', '127.0.0.1', '--port', String(port)],
     { stdio: 'inherit', env: { ...process.env, PORT: String(port) } },
   )
   const exited = new Promise((resolve) => {

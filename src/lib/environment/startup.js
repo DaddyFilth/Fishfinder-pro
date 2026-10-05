@@ -1,11 +1,9 @@
-type Environment = Record<string, string | undefined>
-
-function firstDefined(environment: Environment, names: string[]) {
+function firstDefined(environment, names) {
   return names.map((name) => environment[name]?.trim()).find(Boolean)
 }
 
-export function validateRuntimeEnvironment(environment: Environment = process.env) {
-  const missing: string[] = []
+export function validateRuntimeEnvironment(environment = process.env) {
+  const missing = []
   const supabaseUrl = firstDefined(environment, [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL',

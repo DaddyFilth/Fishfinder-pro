@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateRuntimeEnvironment } from './startup'
+import { validateRuntimeEnvironment } from './startup.js'
 
 const supabaseEnvironment = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
