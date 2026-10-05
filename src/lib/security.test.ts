@@ -8,6 +8,7 @@ const redisMock = vi.hoisted(() => ({
   connect: vi.fn(),
   on: vi.fn(),
   once: vi.fn(),
+  off: vi.fn(),
   set: vi.fn(),
   incr: vi.fn(),
   exec: vi.fn(),
@@ -31,6 +32,11 @@ vi.mock('ioredis', () => ({
 
     once(...args: unknown[]) {
       redisMock.once(...args)
+      return this
+    }
+
+    off(...args: unknown[]) {
+      redisMock.off(...args)
       return this
     }
 
@@ -63,6 +69,7 @@ beforeEach(() => {
   })
   redisMock.on.mockReset()
   redisMock.once.mockReset()
+  redisMock.off.mockReset()
   redisMock.set.mockReset()
   redisMock.incr.mockReset()
   redisMock.exec.mockReset().mockResolvedValue([[null, 'OK'], [null, 1]])
