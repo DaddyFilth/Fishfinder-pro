@@ -42,8 +42,8 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
   const temp = conditions.water_temp_c;
   const isOptimalTemp = temp !== null && temp >= db.optTempMin && temp <= db.optTempMax;
   const isWarm = temp !== null && temp >= (db.optTempMin + db.optTempMax) / 2;
-  const goodPressure = conditions.pressure_hpa !== null && conditions.pressure_hpa >= 1010;
-  const goodOxygen = conditions.dissolved_oxygen_mgl === null || conditions.dissolved_oxygen_mgl >= 5;
+  const pressureAvailable = conditions.pressure_hpa !== null;
+  const pressureAboveThreshold = pressureAvailable && conditions.pressure_hpa >= 1010;
 
   let activityScore = 50;
   const reasoning: string[] = [];
@@ -56,15 +56,18 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
     reasoning.push(`Water temp ${(temp * 9 / 5 + 32).toFixed(1)}°F outside optimal (${Math.round(db.optTempMin * 9 / 5 + 32)}–${Math.round(db.optTempMax * 9 / 5 + 32)}°F)`);
   }
 
-  if (goodPressure) {
+  if (pressureAboveThreshold) {
     activityScore += 10;
-    reasoning.push('Stable high pressure — feeding activity likely');
+    reasoning.push('Pressure is above the advisor threshold; no pressure trend is available.');
+  } else if (pressureAvailable) {
+    reasoning.push('Pressure is below the advisor threshold; no pressure trend is available.');
   } else {
-    activityScore -= 10;
-    reasoning.push('Low or falling pressure — fish may be sluggish');
+    reasoning.push('Pressure unavailable; no pressure adjustment applied.');
   }
 
-  if (!goodOxygen) {
+  if (conditions.dissolved_oxygen_mgl === null) {
+    reasoning.push('Dissolved oxygen unavailable; no oxygen adjustment applied.');
+  } else if (conditions.dissolved_oxygen_mgl < 5) {
     activityScore -= 20;
     reasoning.push('Low dissolved oxygen detected');
   }
@@ -76,7 +79,7 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
 
   activityScore += Math.round((conditions.solunar_score - 50) * 0.2);
   if (conditions.solunar_score >= 75) {
-    reasoning.push('Strong solunar period — peak activity window');
+    reasoning.push('Phase-based solunar estimate indicates potentially favorable activity.');
   }
 
   activityScore = Math.max(0, Math.min(100, activityScore));
@@ -86,9 +89,21 @@ export function getSpeciesAdvice(species: string, conditions: Conditions): Speci
     species: catalogSpecies.name,
     activityLevel,
     activityScore,
-    topBaits: isWarm ? db.baitsWarm : db.baitsCold,
-    technique: isWarm ? db.techniqueWarm : db.techniqueCold,
-    depthAdvice: isWarm ? db.depthWarm : db.depthCold,
+    topBaits: temp === null
+      ? [...new Set([...db.baitsWarm, ...db.baitsCold])]
+      : isWarm
+        ? db.baitsWarm
+        : db.baitsCold,
+    technique: temp === null
+      ? 'Water temperature unavailable; choose a technique based on current local observations.'
+      : isWarm
+        ? db.techniqueWarm
+        : db.techniqueCold,
+    depthAdvice: temp === null
+      ? 'Water temperature unavailable; use local conditions to choose a target depth.'
+      : isWarm
+        ? db.depthWarm
+        : db.depthCold,
     reasoning,
   };
 }
