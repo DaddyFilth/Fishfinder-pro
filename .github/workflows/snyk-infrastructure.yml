@@ -34,7 +34,7 @@ jobs:
     env:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check Snyk token
         if: env.SNYK_TOKEN == ''
         run: echo "::notice::Skipping Snyk scan because SNYK_TOKEN is not configured."
