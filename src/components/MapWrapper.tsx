@@ -21,6 +21,7 @@ import SevenDayForecast from '@/components/SevenDayForecast';
 import WaterTempOverlay from '@/components/WaterTempOverlay';
 import MapDataSourceBadge, { type MapDataSourceMode } from '@/components/MapDataSourceBadge';
 import { type Spot } from '@/lib/mapFilters';
+import { fetchSpotConditions } from '@/lib/conditionsClient';
 import {
   MAP_MAX_ZOOM,
   MAP_MIN_ZOOM,
@@ -29,7 +30,7 @@ import {
   resolveMapInsets,
   resolveSpotPopupFrame,
 } from '@/lib/mapViewport';
-import { SPECIES, biteRateFor, spotTargetsFor, type FishingCondition } from '@/lib/speciesCatalog';
+import { SPECIES, biteRateFor, spotTargetsFor, deriveFishingCondition, type FishingCondition } from '@/lib/speciesCatalog';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -127,6 +128,17 @@ const S = {
 
 interface Cond {
   fishing_score: number;
+  bite_score?: number | null;
+  bite_level?: string | null;
+  ai_micro_spots?: Array<{
+    name?: string;
+    label?: string;
+    description?: string;
+    biteScore?: number;
+    bite_score?: number;
+    depth?: string;
+    structure?: string;
+  }>;
   air_temp_c: number | null;
   water_temp_c: number | null;
   wind_speed_ms: number | null;
@@ -150,7 +162,7 @@ interface Cond {
   };
   data_sources: string[];
   cached: boolean;
-  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback';
+  data_mode?: 'provider' | 'cached' | 'stale-cache' | 'fallback' | 'unavailable' | 'ai-generated';
   stale?: boolean;
   warning?: string;
   captured_at: string | null;
@@ -204,13 +216,8 @@ function depthLabel(level: number | null, flow: number | null) {
 
   // This is a score derived from provider values; it is not an observation or catch report.
   function conditionForSpot(condition: Cond | undefined): FishingCondition | null {
-  if (!condition) return null;
-  if (condition.wind_speed_ms !== null && condition.wind_speed_ms >= 6) return 'windy';
-  if (condition.pressure_hpa !== null && condition.pressure_hpa < 1008) return 'low-light';
-  if (condition.water_temp_c !== null && condition.water_temp_c <= 16) return 'cool';
-  if (condition.water_temp_c !== null && condition.water_temp_c >= 23) return 'warming';
-  return 'stable';
-}
+    return deriveFishingCondition(condition);
+  }
 
 function stableSpotVariant(id: Spot['id'], variantCount: number) {
   const key = String(id);
@@ -311,13 +318,31 @@ export default function FishingMap({
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<Record<string, Tab>>({});
+  const loadedRef = useRef<Set<string>>(new Set());
+  const inFlightRef = useRef<Set<string>>(new Set());
   const mapShellRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef<SpotMarkerRegistry['current']>({});
   const [mapSize, setMapSize] = useState(() => ({
     width: typeof window === 'undefined' ? 0 : window.innerWidth,
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
   }));
-  const [condition] = useState<FishingCondition>('stable');
+  // The hot-zone overlay is keyed to real provider conditions from the
+  // nearest spot that has a loaded conditions payload. Nothing is assumed.
+  const overlayCondition = useMemo<FishingCondition | null>(() => {
+    if (!userLocation) return null;
+    let bestCond: Cond | undefined;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const spot of spots) {
+      const cond = conditions[spot.id];
+      if (!cond) continue;
+      const distance = Math.hypot(spot.lat - userLocation.latitude, spot.lng - userLocation.longitude);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestCond = cond;
+      }
+    }
+    return bestCond ? deriveFishingCondition(bestCond) : null;
+  }, [conditions, spots, userLocation]);
   const baseLayers: Record<BaseLayer, { url: string; attribution: string; label: string; maxZoom?: number }> = {
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -437,35 +462,72 @@ export default function FishingMap({
     };
   }
 
-  const load = useCallback(async (id: string) => {
-    if (conditions[id] || loading[id]) return;
-    setLoading((p) => ({ ...p, [id]: true }));
-    try {
-      const res = await fetch(`/api/spots/${id}/conditions`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Cond = await res.json();
-      setConditions((p) => ({ ...p, [id]: data }));
-      setTabs((p) => ({ ...p, [id]: 'score' }));
-    } catch (e) {
-      setErrors((p) => ({ ...p, [id]: e instanceof Error ? e.message : 'Failed' }));
-    } finally {
-      setLoading((p) => ({ ...p, [id]: false }));
-    }
-  }, [conditions, loading]);
+  const load = useCallback((spot: Spot, force = false) => {
+    const id = spot.id;
+    if (inFlightRef.current.has(id)) return;
+    if (!force && loadedRef.current.has(id)) return;
 
-  const retry = (id: string) => {
-    setErrors((p) => ({ ...p, [id]: '' }));
-    setConditions((p) => {
+    inFlightRef.current.add(id);
+    setLoading((p) => ({ ...p, [id]: true }));
+
+    void fetchSpotConditions({
+      id,
+      lat: spot.lat,
+      lng: spot.lng,
+      water_type: spot.water_type,
+      usgs_site_id: spot.usgs_site_id,
+      noaa_station_id: spot.noaa_station_id,
+    }, { force })
+      .then((result) => {
+        if (result.ok) {
+          loadedRef.current.add(id);
+          setConditions((p) => ({ ...p, [id]: result.data as unknown as Cond }));
+          setTabs((p) => (p[id] ? p : { ...p, [id]: 'score' }));
+          setErrors((p) => {
+            if (!p[id]) return p;
+            const next = { ...p };
+            delete next[id];
+            return next;
+          });
+          return;
+        }
+
+        setErrors((p) => ({ ...p, [id]: result.message }));
+      })
+      .finally(() => {
+        inFlightRef.current.delete(id);
+        setLoading((p) => ({ ...p, [id]: false }));
+      });
+  }, []);
+
+  const retry = (spot: Spot) => {
+    loadedRef.current.delete(spot.id);
+    setErrors((p) => {
       const next = { ...p };
-      delete next[id];
+      delete next[spot.id];
       return next;
     });
-    load(id);
+    setConditions((p) => {
+      const next = { ...p };
+      delete next[spot.id];
+      return next;
+    });
+    load(spot, true);
   };
 
+  const spotLoadKey = useMemo(
+    () => spots.map((spot) => `${spot.id}:${spot.lat}:${spot.lng}`).join('|'),
+    [spots],
+  );
+  const spotsRef = useRef(spots);
+
   useEffect(() => {
-    spots.forEach((spot) => load(spot.id));
-  }, [load, spots]);
+    spotsRef.current = spots;
+  }, [spots]);
+
+  useEffect(() => {
+    spotsRef.current.forEach((spot) => load(spot));
+  }, [load, spotLoadKey]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>
@@ -662,6 +724,7 @@ export default function FishingMap({
 
           {spots.map((spot) => {
             const c = conditions[spot.id];
+            const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
 
@@ -672,7 +735,7 @@ export default function FishingMap({
                 ref={(instance) => {
                   markerRefs.current[spot.id] = instance;
                 }}
-                eventHandlers={{ click: () => { load(spot.id); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}
+                eventHandlers={{ click: () => { load(spot); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}
               >
                 <Popup
                   maxWidth={popupFrame.maxWidth}
@@ -707,7 +770,7 @@ export default function FishingMap({
                       <div style={S.retryBox}>
                         <div style={{ fontSize: 12, marginBottom: 8 }}>Failed to load: {errors[spot.id]}</div>
                         <button
-                          onClick={() => retry(spot.id)}
+                          onClick={() => retry(spot)}
                           style={S.retryBtn}
                         >
                           Retry
@@ -740,12 +803,18 @@ export default function FishingMap({
                           ))}
                         </div>
 
+                        {c.warning && (
+                          <div style={{ background: 'rgba(120,53,15,0.35)', border: '1px solid #92400e', borderRadius: 8, padding: '8px 10px', marginBottom: 10, fontSize: 11, color: '#fde68a', lineHeight: 1.35 }}>
+                            {c.warning}
+                          </div>
+                        )}
+
                         {activeTab === 'score' && (
                           <>
                             <div
                               style={{
-                                background: `linear-gradient(135deg,${scoreColor(c.fishing_score)}20,${scoreColor(c.fishing_score)}08)`,
-                                border: `1px solid ${scoreColor(c.fishing_score)}50`,
+                                background: `linear-gradient(135deg,${scoreColor(displayScore)}20,${scoreColor(displayScore)}08)`,
+                                border: `1px solid ${scoreColor(displayScore)}50`,
                                 borderRadius: 12,
                                 padding: 12,
                                 marginBottom: 10,
@@ -753,8 +822,8 @@ export default function FishingMap({
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(c.fishing_score), lineHeight: 1 }}>{c.fishing_score}</div>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(c.fishing_score) }}>{scoreLabel(c.fishing_score)}</div>
+                                  <div style={{ fontSize: 28, fontWeight: 800, color: scoreColor(displayScore), lineHeight: 1 }}>{displayScore}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: scoreColor(displayScore) }}>{c.bite_score != null ? 'AI bite score' : scoreLabel(displayScore)}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: 11, color: '#cbd5e1' }}>
                                   <div>{depthLabel(c.water_level_m, c.flow_rate_cfs)}</div>
@@ -762,6 +831,26 @@ export default function FishingMap({
                                 </div>
                               </div>
                             </div>
+
+                            {c.ai_micro_spots && c.ai_micro_spots.length > 0 && (
+                              <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: 'rgba(15,118,110,0.14)', border: '1px solid rgba(45,212,191,0.25)' }}>
+                                <div style={{ fontSize: 11, color: '#99f6e4', fontWeight: 800, marginBottom: 6 }}>AI SPOT ANALYSIS</div>
+                                {c.ai_micro_spots.slice(0, 3).map((microSpot, index) => {
+                                  const microScore = microSpot.biteScore ?? microSpot.bite_score;
+                                  return (
+                                    <div key={`${microSpot.name ?? microSpot.label ?? 'spot'}-${index}`} style={{ padding: '6px 0', borderTop: index ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: '#f0fdfa', fontWeight: 700 }}>
+                                        <span>{microSpot.name ?? microSpot.label ?? `Likely holding area ${index + 1}`}</span>
+                                        {microScore != null && <span style={{ color: '#5eead4' }}>{microScore}/100</span>}
+                                      </div>
+                                      {(microSpot.description ?? microSpot.structure ?? microSpot.depth) && (
+                                        <div style={{ marginTop: 2, fontSize: 10, lineHeight: 1.35, color: '#ccfbf1' }}>{microSpot.description ?? microSpot.structure ?? microSpot.depth}</div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {Object.entries(c.score_breakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
 
@@ -838,7 +927,7 @@ export default function FishingMap({
           {userLocation && (
             <HotZoneOverlay 
               center={[userLocation.latitude, userLocation.longitude]}
-              condition={condition} 
+              condition={overlayCondition} 
               visible={showMapOverlays} 
             />
           )}

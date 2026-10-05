@@ -4,6 +4,8 @@ import { z } from 'zod';
 const NWS_BASE = process.env.NWS_BASE ?? 'https://api.weather.gov';
 const USGS_BASE = process.env.USGS_BASE ?? 'https://api.waterdata.usgs.gov';
 const MARINE_BASE = process.env.OPEN_METEO_MARINE ?? 'https://marine-api.open-meteo.com/v1/marine';
+
+const PRESSURE_BASE = process.env.OPEN_METEO_FORECAST ?? 'https://api.open-meteo.com/v1/forecast';
 const TIDES_BASE = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 
 const NWS_HOST = 'api.weather.gov';
@@ -40,6 +42,11 @@ const USGSSchema = z.object({
       })),
     })),
   }),
+});
+
+const PressureSchema = z.object({
+  current: z.object({ surface_pressure: z.number(), time: z.string().optional() }).optional(),
+  hourly: z.object({ time: z.array(z.string()).optional(), surface_pressure: z.array(z.number().nullable()).optional() }).optional(),
 });
 
 const MarineSchema = z.object({
@@ -194,7 +201,7 @@ export async function fetchNwsWeather(lat: number, lng: number) {
         ? ((current.temperature - 32) * 5) / 9
         : current.temperature;
 
-    const windMatch = current.windSpeed.match(/(d+(?:.d+)?)/);
+    const windMatch = current.windSpeed.match(/(\d+(?:\.\d+)?)/);
     const windMs =
       windMatch
         ? (safeNum(windMatch[1]) ?? 0) * 0.44704
@@ -282,6 +289,48 @@ export async function fetchMarineConditions(lat: number, lng: number) {
     return null;
   }
 }
+
+export async function fetchPressureTrend(lat: number, lng: number) {
+  try {
+    const res = await axios.get(PRESSURE_BASE, {
+      params: {
+        latitude: lat,
+        longitude: lng,
+        current: 'surface_pressure',
+        hourly: 'surface_pressure',
+        past_hours: 3,
+        forecast_days: 1,
+        timezone: 'auto',
+      },
+      timeout: 8000,
+    });
+
+    const data = PressureSchema.parse(res.data);
+    const now = data.current?.surface_pressure ?? null;
+    const times = data.hourly?.time ?? [];
+    const readings = data.hourly?.surface_pressure ?? [];
+    const nowTs = Date.now();
+    const nowIdx = times.findIndex((t) => Math.abs(new Date(t).getTime() - nowTs) < 30 * 60_000);
+    const earlier = nowIdx >= 3 ? readings[nowIdx - 3] ?? null : null;
+
+    let trend: 'rising' | 'falling' | 'stable' = 'stable';
+    if (now !== null && earlier !== null) {
+      const delta = now - earlier;
+      if (delta >= 1) trend = 'rising';
+      else if (delta <= -1) trend = 'falling';
+    }
+
+    return {
+      currentPressure: now,
+      referencePressure: earlier,
+      trend,
+    };
+  } catch (err) {
+    console.error('[Pressure]', err instanceof AxiosError ? err.message : err);
+    return null;
+  }
+}
+
 
 export async function fetchTideData(stationId: string) {
   try {

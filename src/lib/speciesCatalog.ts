@@ -15,6 +15,22 @@ export interface SpeciesAdviceConfig {
 
 export type FishingCondition = 'cool' | 'warming' | 'stable' | 'low-light' | 'windy';
 
+/**
+ * Derives the shared "current conditions" band from a provider conditions payload.
+ * Returns null when there is not enough real data to characterize the water.
+ */
+export function deriveFishingCondition(condition: { wind_speed_ms?: number | null; pressure_hpa?: number | null; water_temp_c?: number | null } | null | undefined): FishingCondition | null {
+  if (!condition) return null;
+  const { wind_speed_ms, pressure_hpa, water_temp_c } = condition;
+  if (typeof wind_speed_ms === 'number' && Number.isFinite(wind_speed_ms) && wind_speed_ms >= 6) return 'windy';
+  if (typeof pressure_hpa === 'number' && Number.isFinite(pressure_hpa) && pressure_hpa < 1008) return 'low-light';
+  if (typeof water_temp_c === 'number' && Number.isFinite(water_temp_c)) {
+    if (water_temp_c <= 16) return 'cool';
+    if (water_temp_c >= 23) return 'warming';
+  }
+  return 'stable';
+}
+
 export interface Species {
   id: string;
   name: string;

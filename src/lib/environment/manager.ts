@@ -1,68 +1,78 @@
-import { openDB } from 'idb';
-import { SolunarData, BarometricTrend, SOLUNAR_STORE, BARO_STORE } from './types';
+import { SolunarData, BarometricTrend } from './types';
+import { calculateSolunar } from '../scoring/solunar';
+import { fetchPressureTrend } from '../fetchers/environmental';
+
+const DEFAULT_CENTER = { lat: 35, lng: -97.366 };
 
 export class EnvironmentManager {
-  private static dbPromise = typeof window === 'undefined' ? Promise.reject(new Error('IndexedDB is only available in the browser')) : openDB('fishfinder-env', 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(SOLUNAR_STORE)) {
-        db.createObjectStore(SOLUNAR_STORE, { keyPath: 'date' });
-      }
-      if (!db.objectStoreNames.contains(BARO_STORE)) {
-        db.createObjectStore(BARO_STORE, { keyPath: 'timestamp' });
-      }
-    },
-  });
+  private static cache = new Map<string, { expiresAt: number; value: unknown }>();
+  private static readonly TTL_MS = 10 * 60 * 1000;
 
-  static async getSolunarData(date: string): Promise<SolunarData> {
-    const db = await this.dbPromise;
-    const cached = await db.get(SOLUNAR_STORE, date);
-    
-    if (cached) return cached as SolunarData;
+  static async getSolunarData(date: string, lat: number = DEFAULT_CENTER.lat): Promise<SolunarData> {
+    const key = `solunar:${date}:${lat}`;
+    const cached = this.read<SolunarData>(key);
+    if (cached) return cached;
 
-    // Simulated solunar calculation (In production, this would call a specialized API)
+    const solunar = calculateSolunar(new Date(date), lat);
     const data: SolunarData = {
       date,
-      majorPeriod: { start: '08:00', end: '11:00' },
-      minorPeriod: { start: '16:00', end: '18:00' },
-      moonPhase: 'Waxing Gibbous',
-      moonIllumination: 75,
-      isPrimeWindow: true,
+      majorPeriod: solunar.majorPeriods[0],
+      minorPeriod: solunar.minorPeriods[0],
+      moonPhase: solunar.moonPhaseName,
+      moonIllumination: solunar.moonIllumination,
+      isPrimeWindow: solunar.solunarScore >= 60,
     };
 
-    await db.put(SOLUNAR_STORE, data);
+    this.write(key, data);
     return data;
   }
 
-  static async getBarometricTrend(pressure: number): Promise<BarometricTrend> {
-    const db = await this.dbPromise;
-    const history = await db.getAll(BARO_STORE);
-    
-    const lastEntry = history[history.length - 1];
-    let trend: 'rising' | 'falling' | 'stable' = 'stable';
-    let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
-    let advice = 'Conditions are steady.';
+  static async getBarometricTrend(lat: number = DEFAULT_CENTER.lat, lng: number = DEFAULT_CENTER.lng): Promise<BarometricTrend> {
+    const key = `baro:${lat}:${lng}`;
+    const cached = this.read<BarometricTrend>(key);
+    if (cached) return cached;
 
-    if (lastEntry) {
-      const diff = pressure - lastEntry.currentPressure;
-      if (diff < -1.0) {
-        trend = 'falling';
-        impact = 'positive';
-        advice = 'Pressure is dropping rapidly! Big bites are likely as fish feed before the storm.';
-      } else if (diff > 1.0) {
-        trend = 'rising';
-        impact = 'negative';
-        advice = 'Pressure is rising. Fish may move deeper and become lethargic.';
-      }
+    const trendData = await fetchPressureTrend(lat, lng);
+
+    if (!trendData || trendData.currentPressure === null) {
+      return {
+        currentPressure: 0,
+        trend: 'stable',
+        impact: 'neutral',
+        advice: 'Pressure data is unavailable at this location right now.',
+      };
     }
 
-    const entry: BarometricTrend = {
-      currentPressure: pressure,
-      trend,
+    const impact =
+      trendData.trend === 'falling' ? 'positive' : trendData.trend === 'rising' ? 'negative' : 'neutral';
+    const advice =
+      trendData.trend === 'falling'
+        ? 'Pressure is dropping. Baitfish activity increases ahead of incoming weather.'
+        : trendData.trend === 'rising'
+          ? 'Pressure is rising. Feeding can tighten as the bite rebuilds after the weather change.'
+          : 'Pressure is steady. Conditions remain typical for the season.';
+
+    const result: BarometricTrend = {
+      currentPressure: Math.round(trendData.currentPressure * 10) / 10,
+      trend: trendData.trend,
       impact,
       advice,
     };
 
-    await db.put(BARO_STORE, entry);
-    return entry;
+    this.write(key, result);
+    return result;
+  }
+
+  private static read<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry || entry.expiresAt <= Date.now()) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.value as T;
+  }
+
+  private static write(key: string, value: unknown) {
+    this.cache.set(key, { expiresAt: Date.now() + this.TTL_MS, value });
   }
 }

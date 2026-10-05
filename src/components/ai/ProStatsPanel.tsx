@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase aggregate rows are runtime-shaped. */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -29,13 +30,13 @@ export default function ProStatsPanel({ userId }: ProStatsProps) {
     loadStats();
 
     async function checkAlerts() {
-      const { data: alerts } = await supabase
+      const { data: alerts, error: alertsError } = await supabase
         .from('realtime_alerts')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
-      
-      if (alerts && alerts.length > 0) {
+
+      if (!alertsError && alerts && alerts.length > 0) {
         setActiveAlert(alerts[0]);
       }
     }
@@ -67,7 +68,7 @@ export default function ProStatsPanel({ userId }: ProStatsProps) {
         </div>
         <div style={{ width: '100%', height: '6px', background: '#334155', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ 
-            width: `${(stats.xp % 1000) / 10}%`, 
+            width: `${stats.xp % 100}%`, 
             height: '100%', 
             background: 'linear-gradient(90deg, #06b6d4, #3b82f6)',
             transition: 'width 0.5s ease-out'

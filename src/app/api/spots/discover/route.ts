@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { enforceRateLimit, isHttpUrl, isSameOrigin, readJsonBody } from '@/lib/security';
 
 const requestSchema = z.object({
@@ -30,6 +31,67 @@ function distanceMiles(aLat: number, aLng: number, bLat: number, bLng: number) {
   return radius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
 }
 
+type Candidate = {
+  name: string;
+  lat: number;
+  lng: number;
+  water_type: 'freshwater' | 'saltwater';
+  spot_type: string;
+  notes: string;
+  source_url?: string;
+  source_title: string;
+  distance_miles?: number;
+};
+
+function withDistance(candidates: Candidate[], input: { lat: number; lng: number; radiusMiles: number }) {
+  return candidates
+    .filter((candidate) => distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng) <= input.radiusMiles * 1.35)
+    .filter((candidate, index, list) =>
+      list.findIndex((other) => other.name.toLowerCase() === candidate.name.toLowerCase()) === index)
+    .map((candidate) => ({
+      ...candidate,
+      source_url: undefined,
+      distance_miles: Math.round(distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng)),
+    }));
+}
+
+/**
+ * Discovery must still return usable spots when the AI provider is unconfigured
+ * or fails: the bundled Oklahoma catalog is searched with the same radius and
+ * clearly labeled as an unverified catalog listing instead of an AI result.
+ */
+function bundledCandidates(input: { lat: number; lng: number; radiusMiles: number }) {
+  const candidates: Candidate[] = DEFAULT_SPOTS.map((spot) => ({
+    name: spot.name,
+    lat: spot.lat,
+    lng: spot.lng,
+    water_type: spot.water_type === 'saltwater' ? 'saltwater' : 'freshwater',
+    spot_type: spot.spot_type,
+    notes: spot.notes ?? '',
+    source_url: undefined,
+    source_title: 'Bundled public catalog',
+  }));
+
+  return withDistance(candidates, input);
+}
+
+function discoveryResponse(
+  candidates: Array<Record<string, unknown>>,
+  source: string,
+  warning?: string,
+) {
+  return NextResponse.json(
+    {
+      candidates,
+      source,
+      verified: false,
+      searched_at: new Date().toISOString(),
+      ...(warning ? { warning } : {}),
+    },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
 export async function POST(request: NextRequest) {
   const limited = enforceRateLimit(request, { name: 'spot-discovery', limit: 6, windowMs: 60_000 });
   if (limited) return limited;
@@ -46,7 +108,11 @@ export async function POST(request: NextRequest) {
   const input = inputResult.data;
 
   if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: 'Spot discovery is not configured.' }, { status: 503 });
+    return discoveryResponse(
+      bundledCandidates(input),
+      'bundled-catalog',
+      'AI discovery is not configured; showing nearby spots from the bundled public catalog.',
+    );
   }
 
   try {
@@ -62,24 +128,43 @@ export async function POST(request: NextRequest) {
     try {
       responseJson = JSON.parse(text) as unknown;
     } catch {
-      return NextResponse.json({ error: 'Spot discovery returned an invalid result.' }, { status: 502 });
+      responseJson = null;
     }
+
     const parsed = responseSchema.safeParse(responseJson);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Spot discovery returned an invalid result.' }, { status: 502 });
+      console.warn('[spot-discovery] provider returned an unusable result; using the bundled catalog.');
+      return discoveryResponse(
+        bundledCandidates(input),
+        'bundled-catalog',
+        'AI discovery returned an unusable result; showing nearby spots from the bundled public catalog.',
+      );
     }
-    const candidates = parsed.data.candidates
-      .filter((candidate) => distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng) <= input.radiusMiles * 1.35)
-      .filter((candidate, index, list) => list.findIndex((other) => other.name.toLowerCase() === candidate.name.toLowerCase()) === index)
-      .map((candidate) => ({ 
-        ...candidate, 
-        source_url: undefined, 
-        source_title: 'AI suggestion (unverified)', 
-        distance_miles: Math.round(distanceMiles(input.lat, input.lng, candidate.lat, candidate.lng)) 
-      }));
-    return NextResponse.json({ candidates, source: 'ai-discovered', verified: false, searched_at: new Date().toISOString() }, { headers: { 'Cache-Control': 'no-store' } });
+
+    const candidates = withDistance(
+      parsed.data.candidates.map((candidate) => ({
+        ...candidate,
+        source_url: undefined,
+        source_title: 'AI suggestion (unverified)',
+      })),
+      input,
+    );
+
+    if (candidates.length === 0) {
+      return discoveryResponse(
+        bundledCandidates(input),
+        'bundled-catalog',
+        'AI discovery found no spots in range; showing nearby spots from the bundled public catalog.',
+      );
+    }
+
+    return discoveryResponse(candidates, 'ai-discovered');
   } catch (error) {
     console.error('[spot-discovery] provider failed:', error);
-    return NextResponse.json({ error: 'Spot discovery is temporarily unavailable.' }, { status: 503 });
+    return discoveryResponse(
+      bundledCandidates(input),
+      'bundled-catalog',
+      'AI discovery is temporarily unavailable; showing nearby spots from the bundled public catalog.',
+    );
   }
 }

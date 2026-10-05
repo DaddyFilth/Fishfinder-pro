@@ -62,9 +62,17 @@ export async function POST(req: NextRequest) {
     const content = response.choices[0]?.message?.content || '[]';
     const parsed = JSON.parse(content.replace(/```json|```/g, ''));
 
-    const validated = ChecklistSchema.parse(parsed); return NextResponse.json({ checklist: validated });
+    const validated = ChecklistSchema.parse(parsed);
+    return NextResponse.json({
+      checklist: validated,
+      source: 'ai',
+      data_mode: 'ai-generated',
+      live_data: false,
+      provider: 'groq',
+      generated_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('[gear-checklist] error:', error);
-    return NextResponse.json({ error: 'Failed to generate checklist.' }, { status: 500 });
+    return NextResponse.json({ error: 'AI gear checklist is unavailable; no checklist was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
   }
 }
