@@ -60,18 +60,21 @@ export default function BiteTimePanel({ lat, conditions }: Props) {
           <div style={{ fontSize: '10px', color: '#64748b' }}>Solunar Score: {solunar.solunarScore}</div>
         </div>
       </div>
+      <div style={{ color: '#64748b', fontSize: '9px', marginBottom: '8px' }}>
+        Phase-based estimates only; local conditions and fish activity are not measured.
+      </div>
 
       {/* Major/Minor periods */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
         {solunar.majorPeriods.map((p, i) => (
           <div key={i} style={{ background: '#1e3a5f', borderRadius: '6px', padding: '6px', borderLeft: '3px solid #0ea5e9' }}>
-            <div style={{ fontSize: '9px', color: '#7dd3fc', fontWeight: 'bold' }}>MAJOR {i + 1}</div>
+            <div style={{ fontSize: '9px', color: '#7dd3fc', fontWeight: 'bold' }}>EST. MAJOR {i + 1}</div>
             <div style={{ fontSize: '11px', color: 'white' }}>{p.start} – {p.end}</div>
           </div>
         ))}
         {solunar.minorPeriods.map((p, i) => (
           <div key={i} style={{ background: '#1c2333', borderRadius: '6px', padding: '6px', borderLeft: '3px solid #475569' }}>
-            <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 'bold' }}>MINOR {i + 1}</div>
+            <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 'bold' }}>EST. MINOR {i + 1}</div>
             <div style={{ fontSize: '11px', color: '#cbd5e1' }}>{p.start} – {p.end}</div>
           </div>
         ))}
@@ -79,7 +82,7 @@ export default function BiteTimePanel({ lat, conditions }: Props) {
 
       {/* 24hr activity chart */}
       <div style={{ marginBottom: '10px' }}>
-        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}>HOURLY BITE FORECAST</div>
+        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}>ESTIMATED ACTIVITY · PHASE-BASED</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '40px' }}>
           {hourly.map(h => {
             const isCurrent = h.hour === now.getHours();
