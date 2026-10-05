@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ProLogger } from '@/lib/logbook/pro-logger';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthContext } from '@/lib/auth/server';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 const CatchSchema = z.object({
@@ -30,12 +30,11 @@ export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
 
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const auth = await getAuthContext();
+    if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const user = auth.user;
 
     const bodyResult = await readJsonBody(req, 32_768);
     if (!bodyResult.ok) return bodyResult.response;
@@ -65,7 +64,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error: unknown) {
     console.error('ProLogger API Error:', error);
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

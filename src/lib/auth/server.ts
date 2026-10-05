@@ -12,12 +12,18 @@ export type AuthContext = {
 }
 
 export async function getAuthContext(): Promise<AuthContext | null> {
-  const supabase = await createClient()
+  let supabase: Awaited<ReturnType<typeof createClient>>
+  try {
+    supabase = await createClient()
+  } catch {
+    // Supabase is not configured or the request context is unavailable; treat as signed out.
+    return null
+  }
   if (!supabase) return null
 
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData.user
-  if (!user) return null
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  const user = userData?.user
+  if (userError || !user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
