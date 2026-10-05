@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   '/api/auth',
   '/api/auth/recover',
   '/api/feed/cloudflare',
+  '/api/health',
   '/offline',
   '/manifest.json',
   '/sw.js',

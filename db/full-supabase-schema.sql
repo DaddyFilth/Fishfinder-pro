@@ -45,6 +45,7 @@ $$;
 DROP POLICY IF EXISTS "profiles_select_admin" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_public" ON public.profiles;
+CREATE POLICY "profiles_select_own"
   ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 CREATE POLICY "profiles_select_admin"

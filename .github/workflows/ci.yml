@@ -16,10 +16,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
-      SUPABASE_SERVICE_ROLE_KEY: example-service-role-key
-      OLLAMA_BASE_URL: http://localhost:11434/v1
-      OLLAMA_MODEL: llama3.1
-      OLLAMA_VISION_MODEL: llama3.2-vision
+      REDIS_URL: redis://localhost:6379
       NWS_BASE: https://api.weather.gov
       USGS_BASE: https://api.waterdata.usgs.gov
       OPEN_METEO_MARINE: https://marine-api.open-meteo.com/v1/marine
@@ -46,5 +43,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
       - name: Build app
         run: npm run build
+
+      - name: Smoke test production app
+        run: npm run smoke

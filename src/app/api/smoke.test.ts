@@ -22,6 +22,7 @@ const routes: Array<[string, string, string, Record<string, string>?]> = [
   ['community-spots', 'POST', 'community-spots/route'],
   ['feed/cloudflare', 'GET', 'feed/cloudflare/route'],
   ['feed/cloudflare', 'POST', 'feed/cloudflare/route'],
+  ['health', 'GET', 'health/route'],
   ['live-spots', 'GET', 'live-spots/route'],
   ['logbook/trips', 'GET', 'logbook/trips/route'],
   ['logbook/trips', 'POST', 'logbook/trips/route'],

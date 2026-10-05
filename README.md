@@ -1,37 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Local setup
 
-## Getting Started
+Use Node.js 20 or newer and npm. From the repository root:
 
-First, run the development server:
+```bash
+npm ci
+cp .env.example .env.local
+```
+
+Set `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` to real values from your Supabase project. The app validates these values before serving requests. Do not commit `.env.local` or service-role keys.
+
+The database is hosted by Supabase; there is no local PostgreSQL service. For a new project, run `db/full-supabase-schema.sql` in the Supabase SQL editor. For an existing project, apply only the unapplied SQL migrations from `db/migrations/` and `supabase/migrations/` in timestamp order. The **Run Supabase migrations** workflow can apply the legacy environmental snapshot, reservoir seed, profile roles, and runtime schema migrations; set the `SUPABASE_DB_URL` Actions secret in the production environment before running it.
+
+Start development:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`REDIS_URL` is optional in development, where the app uses its in-memory rate limiter. Production requires a reachable `REDIS_URL` (`redis://` or `rediss://`) for distributed rate limiting. `GROQ_API_KEY` enables Groq-backed AI features; `OPENAI_API_KEY` enables spot discovery. These providers are optional for the app shell and are not needed for the smoke test.
+
+## Build and verification
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run smoke
+```
+
+`npm run smoke` starts the built production server on an available local port and verifies `/api/health` and the home page. The production server also validates Supabase and Redis configuration before it begins serving requests.
+
+## Docker
+
+```bash
+cp .env.container.example .env.container
+# Set the Supabase values and optional AI provider keys in .env.container.
+docker compose --env-file .env.container up --build
+```
+
+The compose stack starts the app and Redis. The public Supabase values are passed as build arguments because Next.js embeds `NEXT_PUBLIC_*` values into the browser bundle. AI requests use the configured hosted Groq/OpenAI providers; no local Ollama model download is required.
 
 ## GitHub Codespaces
 
-This repository includes a dev-container configuration. Open it with **Code → Create codespace on main**; dependencies install automatically and port 3000 opens in the Codespaces preview.
-
-Add the required Supabase and optional Ollama variables as [Codespaces secrets](https://github.com/settings/codespaces). In the terminal, run:
-
-```bash
-npm run dev
-```
-
-Before deployment, verify the production build:
-
-```bash
-npm run build
-npm start
-```
+The dev-container installs dependencies automatically and forwards port 3000. Add the required Supabase values as [Codespaces secrets](https://github.com/settings/codespaces), then run `npm run dev`.
 
 ## User accounts
 
@@ -44,13 +56,20 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key
 ```
 
-Run `db/supabase-schema.sql` in the Supabase SQL editor to create the profile table, role constraint, admin policies, and new-user trigger. Existing databases can rerun the script because the role migration is additive and backfills existing profiles as `angler`. The supported roles are `angler`, `moderator`, and `admin`; only administrators can change roles, and the final administrator cannot demote themselves. Profile management is available at `/account`, while `/admin/users` and `/api/admin/users` require the `admin` role. In Supabase **Authentication → URL Configuration**, set the production Site URL, add the deployed callback URL `https://your-domain.example/auth/callback`, and add any preview or staging callback URLs that should be able to complete email confirmation and password-reset flows. For local development, add `http://localhost:3000/auth/callback`. Do not commit `.env.local` or service-role keys.
+The profile role migration is additive and backfills existing profiles as `angler`. The supported roles are `angler`, `moderator`, and `admin`; only administrators can change roles, and the final administrator cannot demote themselves. Profile management is available at `/account`, while `/admin/users` and `/api/admin/users` require the `admin` role. In Supabase **Authentication → URL Configuration**, set the production Site URL, add the deployed callback URL `https://your-domain.example/auth/callback`, and add any preview or staging callback URLs that should be able to complete email confirmation and password-reset flows. For local development, add `http://localhost:3000/auth/callback`.
 
 To deploy from the Codespaces terminal, import the repository into Vercel and configure the same environment variables there. Vercel detects the Next.js build automatically; do not add `.env.local` or any credentials to the repository.
 
-## AI smoke tests
+## API route smoke tests
 
-To manually smoke-test the AI routes in GitHub Actions, add a repository Actions secret named `OLLAMA_BASE_URL` with a network-reachable Ollama server URL (for example, `https://ollama.example.com`). Run **AI route smoke tests** from the Actions tab. It checks the Ollama model endpoint, then exercises the bite-times, spot-suggestion, and fish-identification routes against a local production build.
+The **API route smoke tests** workflow can be run manually from the Actions tab. It exercises every API handler with invalid or unconfigured requests and checks that handlers return valid HTTP/JSON responses rather than server errors. The CI workflow also runs the complete unit suite and a production server smoke test.
+
+## Troubleshooting
+
+- **Startup reports missing Supabase configuration:** set a valid `NEXT_PUBLIC_SUPABASE_URL` and a publishable or anon key. The app intentionally fails early instead of serving protected routes that cannot authenticate.
+- **Production reports missing/invalid `REDIS_URL`:** configure a reachable Redis URL. Development can omit Redis and uses an in-memory limiter.
+- **Rate-limited API calls return 503:** check that Redis is reachable from the app container/deployment; production does not silently fall back to per-process rate limiting.
+- **AI routes report missing provider credentials:** set `GROQ_API_KEY` (and `GROQ_VISION_MODEL` for image requests) or `OPENAI_API_KEY` for spot discovery. These are separate optional integrations.
 
 This project uses local system font stacks and does not load fonts from third-party providers.
 
