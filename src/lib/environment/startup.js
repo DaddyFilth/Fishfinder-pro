@@ -32,22 +32,6 @@ export function validateRuntimeEnvironment(environment = process.env) {
     missing.push('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)')
   }
 
-  if (environment.NODE_ENV === 'production') {
-    const redisUrl = firstDefined(environment, ['REDIS_URL'])
-    let validRedisUrl = false
-
-    if (redisUrl) {
-      try {
-        const url = new URL(redisUrl)
-        validRedisUrl = url.protocol === 'redis:' || url.protocol === 'rediss:'
-      } catch {
-        validRedisUrl = false
-      }
-    }
-
-    if (!validRedisUrl) missing.push('REDIS_URL (a redis:// or rediss:// URL)')
-  }
-
   if (missing.length > 0) {
     throw new Error(`Fishfinder Pro cannot start. Configure: ${missing.join('; ')}.`)
   }
