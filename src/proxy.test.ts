@@ -49,7 +49,11 @@ describe('proxy public path allowlist', () => {
     '/auth/callback',
     '/api/auth',
     '/api/auth/recover',
-  '/favicon.ico',
+    '/locations',
+    '/locations/lake-texoma',
+    '/species',
+    '/species/largemouth-bass',
+    '/favicon.ico',
     '/icons/icon-192.png',
     '/_next/static/chunks/app.js',
   ])('lets anonymous visitors reach %s', (pathname) => {
@@ -64,6 +68,8 @@ describe('proxy public path allowlist', () => {
     '/api/admin/users',
     '/account',
     '/admin/users',
+    '/locationsX',
+    '/speciesX',
     '/api/spots/lake-9/conditions/extra',
   ])('still requires authentication for %s', (pathname) => {
     expect(isPublicPath(pathname)).toBe(false)
