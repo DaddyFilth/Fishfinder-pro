@@ -54,7 +54,7 @@ export default function AuditDashboard() {
         <aside className="audit-sidebar" aria-label="Audit navigation">
           <div className="sidebar-intro"><span className="live-dot" />Evidence-first review<p>Only observed values make it into findings.</p></div>
           <nav className="audit-nav">
-            {([['overview', 'Overview'], ['sources', 'Source coverage'], ['changes', 'Code changes']] as const).map(([id, label]) => <button key={id} className={activeTab === id ? 'nav-item nav-item--active' : 'nav-item'} onClick={() => setActiveTab(id)}>{label}<ArrowUpRight size={14} /></button>)}
+            {([['overview', 'Overview'], ['sources', 'Source coverage'], ['changes', 'Code changes']] as const).map(([id, label]) => <button key={id} className={activeTab === id ? 'nav-item nav-item--active' : 'nav-item'} aria-current={activeTab === id ? 'page' : undefined} onClick={() => setActiveTab(id)}>{label}<ArrowUpRight size={14} /></button>)}
           </nav>
           <div className="sidebar-foot"><Code2 size={15} /><span>Repository evidence<br /><strong>Fishfinder-pro / main</strong></span></div>
         </aside>
@@ -64,7 +64,7 @@ export default function AuditDashboard() {
 
           {activeTab === 'overview' && <>
             <div className="metric-grid">
-              <article className="metric-card"><span>Sources connected</span><strong>{availableCount} <small>/ 4</small></strong><em>1 instrumented, 3 pending</em></article>
+              <article className="metric-card"><span>Sources connected</span><strong>{availableCount} <small>/ 4</small></strong><em>4 pending data sources</em></article>
               <article className="metric-card"><span>Export rows</span><strong>0</strong><em>No source files detected</em></article>
               <article className="metric-card"><span>Routes inventoried</span><strong>{routes.length}</strong><em>Repository route evidence</em></article>
               <article className="metric-card metric-card--accent"><span>Evidence confidence</span><strong>Scoped</strong><em>Acquisition required for scoring</em></article>
