@@ -47,7 +47,7 @@ export default function AuditDashboard() {
     <main className="audit-shell">
       <header className="audit-header">
         <div className="audit-brand"><span className="audit-mark"><FileText size={18} /></span><div><p className="eyebrow">SEAMCAST / SEO & PRODUCT AUDIT</p><h1>Evidence ledger</h1></div></div>
-        <div className="header-actions"><span className="date-chip">Snapshot · 07 Oct 2026</span><button className="icon-button" aria-label="Export audit"><Download size={17} /></button></div>
+        <div className="header-actions"><span className="date-chip">Snapshot · 07 Oct 2026</span><button className="icon-button" type="button" disabled aria-label="Export audit (unavailable)" title="Export is not available yet"><Download size={17} /></button></div>
       </header>
 
       <div className="audit-body">
