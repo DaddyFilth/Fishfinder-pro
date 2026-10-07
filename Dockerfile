@@ -1,10 +1,13 @@
 FROM node:22-bookworm AS base
 WORKDIR /app
 
-COPY package*.json ./
+RUN chown node:node /app
+USER node
+
+COPY --chown=node:node package*.json ./
 RUN npm ci --no-audit --no-fund
 
-COPY . .
+COPY --chown=node:node . .
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
