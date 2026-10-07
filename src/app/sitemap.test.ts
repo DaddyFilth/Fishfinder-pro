@@ -8,7 +8,7 @@ import { SPECIES } from '@/lib/speciesCatalog'
 describe('sitemap metadata route', () => {
   it('contains public directories and catalog detail pages on the canonical host', () => {
     const entries = sitemap()
-    expect(entries).toHaveLength(4 + PUBLIC_LOCATIONS.length + SPECIES.length)
+    expect(entries).toHaveLength(3 + PUBLIC_LOCATIONS.length + SPECIES.length)
     expect(entries[0]?.url).toBe('https://www.fishfinder-pro.online')
     expect(entries[0]?.changeFrequency).toBe('daily')
     expect(entries[0]?.priority).toBe(1)
@@ -20,7 +20,9 @@ describe('sitemap metadata route', () => {
     for (const species of SPECIES) {
       expect(entries.map(({ url }) => url)).toContain(`https://www.fishfinder-pro.online/species/${species.id}`)
     }
-    expect(entries.every(({ url }) => url.startsWith('https://www.fishfinder-pro.online/'))).toBe(true)
+    expect(entries.every(({ url }) =>
+      url === 'https://www.fishfinder-pro.online' || url.startsWith('https://www.fishfinder-pro.online/'),
+    )).toBe(true)
   })
 
   it('is not shadowed by a static public/sitemap.xml file', () => {

@@ -6,11 +6,13 @@ import { SPECIES } from '@/lib/speciesCatalog'
 
 export const dynamicParams = false
 
+type SpeciesPageProps = { params: Promise<{ slug: string }> }
+
 export function generateStaticParams() {
   return SPECIES.map(({ id }) => ({ slug: id }))
 }
 
-export async function generateMetadata({ params }: PageProps<'/species/[slug]'>): Promise<Metadata> {
+export async function generateMetadata({ params }: SpeciesPageProps): Promise<Metadata> {
   const { slug } = await params
   const species = findPublicSpecies(slug)
   if (!species) return { title: 'Species not found', robots: { index: false, follow: false } }
@@ -22,7 +24,7 @@ export async function generateMetadata({ params }: PageProps<'/species/[slug]'>)
   }
 }
 
-export default async function SpeciesDetailPage({ params }: PageProps<'/species/[slug]'>) {
+export default async function SpeciesDetailPage({ params }: SpeciesPageProps) {
   const { slug } = await params
   const species = findPublicSpecies(slug)
   if (!species) notFound()
