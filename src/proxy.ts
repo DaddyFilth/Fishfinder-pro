@@ -16,6 +16,9 @@ const PUBLIC_PATHS = [
   '/api/auth',
   '/api/auth/recover',
   '/api/feed/cloudflare',
+  '/fishing-spots',
+  '/species',
+  '/manus-routes.json',
   '/offline',
   '/manifest.json',
   '/sw.js',
@@ -29,11 +32,17 @@ export function isPublicPath(pathname: string) {
   // The species guide lives on the public landing route and falls back to this
   // endpoint when a catalog image fails, so anonymous visitors need it too.
   const isPublicSpeciesImage = pathname.startsWith('/api/species-image/');
+  const isPublicSeoPage =
+    pathname === '/fishing-spots' ||
+    pathname.startsWith('/fishing-spots/') ||
+    pathname === '/species' ||
+    pathname.startsWith('/species/');
 
   return (
     PUBLIC_PATHS.includes(pathname) ||
     isPublicSpotRead ||
     isPublicSpeciesImage ||
+    isPublicSeoPage ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'

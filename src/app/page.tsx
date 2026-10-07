@@ -24,7 +24,35 @@ import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 import { fetchSpotConditions } from '@/lib/conditionsClient';
 import { parseSpotApiPayload } from '@/lib/spotProvenance';
 
-const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { ssr: false });
+function MapLoadingState() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading Oklahoma public fishing map"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'grid',
+        placeItems: 'center',
+        background: 'linear-gradient(145deg, #07111b, #0d2633)',
+        color: '#c4d7df',
+        textAlign: 'center',
+        padding: '24px',
+      }}
+    >
+      <div>
+        <div aria-hidden="true" style={{ fontSize: 36, marginBottom: 10 }}>🗺️</div>
+        <h2 style={{ margin: 0, color: '#e2f7ff', fontSize: 18 }}>Loading Oklahoma public waters</h2>
+        <p style={{ margin: '8px 0 0', fontSize: 12 }}>Preparing the map and source-labeled spot catalog…</p>
+      </div>
+    </div>
+  );
+}
+
+const MapWrapper = dynamic(() => import('@/components/MapWrapper'), {
+  ssr: false,
+  loading: MapLoadingState,
+});
 
 type DataMode =
   | 'provider'

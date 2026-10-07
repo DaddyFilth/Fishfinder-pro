@@ -111,3 +111,20 @@ Implementation observations: the app uses a dynamic client map, external weather
 - `src/components/QuickScan.tsx`
 - `eslint.config.mjs`
 - `package.json`
+
+## Implementation Update — October 7, 2026
+
+The largest SEO opportunity has been implemented using only the existing catalog data:
+
+- Added `/fishing-spots` directory pages and 76 unique `/fishing-spots/[slug]` pages.
+- Added `/species` directory pages and unique `/species/[slug]` pages for the Oklahoma-filtered species catalog.
+- Added unique metadata, canonical URLs, Open Graph descriptions, server-rendered headings, source labels, conservative planning disclaimers, and JSON-LD for detail pages.
+- Expanded `sitemap.xml` with the directory and detail URLs.
+- Opened only the SEO directory/detail routes and `manus-routes.json` to anonymous visitors; private, API, authentication, development, and offline routes remain protected or noindex/disallowed.
+- Added slug uniqueness, unknown-route, sitemap, and proxy-access regression tests.
+
+### Performance evidence
+
+Local production Lighthouse mobile audits were run against the homepage and a spot detail page. The spot detail page scored **0.99 performance**, with approximately **1.4s FCP**, **1.4s LCP**, **120ms TBT**, and **0 CLS**. The homepage initially measured approximately **9.3s LCP**, with the OpenStreetMap tile as the LCP element and high map/client work. A stable above-the-fold map loading shell reduced the measured homepage LCP to approximately **7.8s** and Speed Index from approximately **7.0s to 6.1s**; the remaining delay is dominated by third-party map-tile load and the interactive 76-marker map. No artificial claims are made about field Core Web Vitals.
+
+CrUX and production RUM data were not available in the connected session. Vercel Analytics and Speed Insights are present in the application, but no live field dataset was accessible. GSC, GA4, and backlink connectors/exports were also not available, so traffic, keyword, country, conversion, and backlink claims remain intentionally unquantified.

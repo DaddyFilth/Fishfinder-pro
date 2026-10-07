@@ -1,5 +1,15 @@
 {
   "routes": [
-    { "path": "/", "title": "Oklahoma SeamCast" }
+    { "path": "/", "title": "Oklahoma SeamCast" },
+    { "path": "/fishing-spots", "title": "Oklahoma Public Fishing Spots" },
+    { "path": "/fishing-spots/:slug", "title": "Public Fishing Spot" },
+    { "path": "/species", "title": "Oklahoma Fish Species Guide" },
+    { "path": "/species/:slug", "title": "Oklahoma Fish Species" },
+    { "path": "/account", "title": "Profile settings" },
+    { "path": "/admin/users", "title": "User management" },
+    { "path": "/auth/login", "title": "Sign in" },
+    { "path": "/auth/reset", "title": "Reset password" },
+    { "path": "/dev/ai-spots", "title": "Provider Feed Development View" },
+    { "path": "/offline", "title": "Offline" }
   ]
 }

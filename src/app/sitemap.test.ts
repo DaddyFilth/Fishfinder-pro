@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest'
 import sitemap from './sitemap'
 
 describe('sitemap metadata route', () => {
-  it('contains only live public routes on canonical host', () => {
+  it('contains the public directory and detail routes on the canonical host', () => {
     const entries = sitemap()
-    expect(entries).toHaveLength(1)
-    expect(entries[0]?.url).toBe('https://www.fishfinder-pro.online')
-    expect(entries[0]?.changeFrequency).toBe('daily')
-    expect(entries[0]?.priority).toBe(1)
+    const urls = entries.map((entry) => entry.url)
+    expect(urls).toContain('https://www.fishfinder-pro.online')
+    expect(urls).toContain('https://www.fishfinder-pro.online/fishing-spots')
+    expect(urls).toContain('https://www.fishfinder-pro.online/species')
+    expect(urls.some((url) => url.includes('/fishing-spots/lake-hefner'))).toBe(true)
+    expect(urls.some((url) => url.includes('/species/largemouth-bass'))).toBe(true)
+    expect(entries.find((entry) => entry.url === 'https://www.fishfinder-pro.online')?.changeFrequency).toBe('daily')
+    expect(entries.find((entry) => entry.url === 'https://www.fishfinder-pro.online')?.priority).toBe(1)
   })
 
   it('is not shadowed by a static public/sitemap.xml file', () => {
