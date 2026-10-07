@@ -25,7 +25,7 @@ The app uses the hosted Supabase database; there is no local PostgreSQL service.
 ## Optional integrations
 
 - `REDIS_URL` enables Redis-backed rate limiting. Development can omit it and uses an in-memory limiter; production requires a reachable `redis://` or `rediss://` URL.
-- `GROQ_API_KEY` enables the chat, advisor, and fish-identification endpoints. `GROQ_MODEL` selects the chat model; image identification also requires `GROQ_VISION_MODEL`.
+- `GROQ_API_KEY` enables all Groq-backed AI features. `GROQ_MODEL` selects the chat model; image identification also requires `GROQ_VISION_MODEL`.
 - `OPENAI_API_KEY` enables AI-powered spot discovery, and `OPENAI_MODEL` selects its model. Without the key, discovery uses the bundled public catalog.
 - `SPOTS_API` overrides the full upstream spots URL. Alternatively, `NEXT_PUBLIC_SPOTS_API_URL` sets its base URL; the app otherwise uses its configured default.
 
