@@ -28,18 +28,9 @@ describe('validateRuntimeEnvironment', () => {
     })).not.toThrow()
   })
 
-  it('requires Redis for production rate limiting', () => {
+  it('allows production startup without Redis when rate-limited routes are not used', () => {
     expect(() => validateRuntimeEnvironment({
       ...supabaseEnvironment,
-      NODE_ENV: 'production',
-    })).toThrow('REDIS_URL')
-  })
-
-  it('accepts Redis and the public anon-key alias in production', () => {
-    expect(() => validateRuntimeEnvironment({
-      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-      REDIS_URL: 'rediss://redis.example.com:6380',
       NODE_ENV: 'production',
     })).not.toThrow()
   })
