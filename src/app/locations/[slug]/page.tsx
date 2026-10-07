@@ -5,11 +5,13 @@ import { findPublicLocation, PUBLIC_LOCATIONS } from '@/lib/publicCatalog'
 
 export const dynamicParams = false
 
+type LocationPageProps = { params: Promise<{ slug: string }> }
+
 export function generateStaticParams() {
   return PUBLIC_LOCATIONS.map(({ slug }) => ({ slug }))
 }
 
-export async function generateMetadata({ params }: PageProps<'/locations/[slug]'>): Promise<Metadata> {
+export async function generateMetadata({ params }: LocationPageProps): Promise<Metadata> {
   const { slug } = await params
   const location = findPublicLocation(slug)
   if (!location) return { title: 'Location not found', robots: { index: false, follow: false } }
@@ -21,7 +23,7 @@ export async function generateMetadata({ params }: PageProps<'/locations/[slug]'
   }
 }
 
-export default async function LocationPage({ params }: PageProps<'/locations/[slug]'>) {
+export default async function LocationPage({ params }: LocationPageProps) {
   const { slug } = await params
   const location = findPublicLocation(slug)
   if (!location) notFound()
