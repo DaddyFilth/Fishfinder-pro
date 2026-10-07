@@ -12,7 +12,7 @@ The app validates Supabase configuration at startup and requires Redis in produc
 
 Optional integrations:
 
-- `GROQ_API_KEY` for chat, advisor, and image identification. Image identification additionally needs `GROQ_VISION_MODEL`; `GROQ_MODEL` configures the text model.
+- `GROQ_API_KEY` enables all Groq-backed AI features. Image identification additionally needs `GROQ_VISION_MODEL`; `GROQ_MODEL` configures the text model.
 - `OPENAI_API_KEY` for AI spot discovery. Without it, discovery uses the bundled public spots catalog. `OPENAI_MODEL` selects the model.
 - `SPOTS_API` or `NEXT_PUBLIC_SPOTS_API_URL` to override the upstream spots service.
 
