@@ -924,17 +924,18 @@ export default function FishingMap({
                     )}
                   </div>
                 </Popup>
-          {userLocation && (
-            <HotZoneOverlay 
-              center={[userLocation.latitude, userLocation.longitude]}
-              condition={overlayCondition} 
-              visible={showMapOverlays} 
-            />
-          )}
 
               </Marker>
             );
           })}
+
+          {userLocation && (
+            <HotZoneOverlay
+              center={[userLocation.latitude, userLocation.longitude]}
+              condition={overlayCondition}
+              visible={showMapOverlays}
+            />
+          )}
 
           <SpotFocusController
             spot={selectedSpot ?? null}
