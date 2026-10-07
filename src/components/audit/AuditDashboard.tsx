@@ -17,7 +17,7 @@ type Source = {
 const sources: Source[] = [
   { name: 'Google Search Console', status: 'Pending', coverage: '0 rows loaded', metrics: 'Queries, pages, clicks, impressions, CTR, position, index coverage', nextStep: 'Upload the GSC performance and index coverage exports.', icon: Search },
   { name: 'GA4', status: 'Pending', coverage: '0 rows loaded', metrics: 'Sessions, engagement and conversions by landing page and channel', nextStep: 'Upload the GA4 landing page × channel export.', icon: BarChart3 },
-  { name: 'Performance field data', status: 'Available', coverage: 'Instrumented; 0 field rows in repo', metrics: 'LCP, INP, CLS by route', nextStep: 'Connect a Speed Insights or PageSpeed/CrUX export before scoring.', icon: Gauge },
+  { name: 'Performance field data', status: 'Pending', coverage: 'Instrumented; 0 field rows in repo', metrics: 'LCP, INP, CLS by route', nextStep: 'Connect a Speed Insights or PageSpeed/CrUX export before scoring.', icon: Gauge },
   { name: 'Backlinks', status: 'Pending', coverage: '0 rows loaded', metrics: 'Referring domains, anchors, new and lost links', nextStep: 'Upload an Ahrefs, Semrush or DataForSEO export.', icon: Link2 },
 ]
 
