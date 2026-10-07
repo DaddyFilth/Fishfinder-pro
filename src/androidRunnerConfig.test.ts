@@ -17,18 +17,12 @@ describe.each(androidWorkflows)('%s runner selection', (workflowPath) => {
 
   it('defaults to a self-hosted runner that billing cannot meter', () => {
     expect(workflow).toContain(
-      "runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || (inputs.runner == 'github-hosted'",
+      "runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON ||",
     );
     expect(workflow).toContain('\'["self-hosted","linux","x64"]\'');
+    expect(workflow).not.toContain('inputs.runner');
     // A GitHub-hosted runner must never be the unconditional default.
     expect(workflow).not.toMatch(/runs-on:\s*ubuntu-latest/);
-  });
-
-  it('offers an explicit runner choice on manual runs', () => {
-    expect(workflow).toContain('type: choice');
-    expect(workflow).toContain('- self-hosted');
-    expect(workflow).toContain('- github-hosted');
-    expect(workflow).toContain('default: self-hosted');
   });
 
   it('documents the repository-variable override', () => {

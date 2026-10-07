@@ -2,18 +2,6 @@ name: Run Supabase migrations
 
 on:
   workflow_dispatch:
-    inputs:
-      migration:
-        description: 'Choose which migration to run'
-        required: true
-        type: choice
-        default: environmental_snapshots
-        options:
-          - environmental_snapshots
-          - reservoir_seed
-          - profile_roles
-          - runtime_schema
-          - both
 
 permissions:
   contents: read
@@ -24,7 +12,7 @@ concurrency:
 
 jobs:
   migrate:
-    name: Apply selected production migration
+    name: Apply production migrations
     runs-on: ubuntu-latest
     environment: production
 
@@ -38,7 +26,6 @@ jobs:
           sudo apt-get install --yes postgresql-client
 
       - name: Apply environmental snapshots migration
-        if: ${{ inputs.migration == 'environmental_snapshots' || inputs.migration == 'both' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
@@ -48,7 +35,6 @@ jobs:
             --file db/migrations/20260910_create_environmental_snapshots.sql
 
       - name: Apply reservoir seed migration
-        if: ${{ inputs.migration == 'reservoir_seed' || inputs.migration == 'both' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
@@ -58,7 +44,6 @@ jobs:
             --file db/migrations/20260910_seed_reservoir_batches_4_5.sql
 
       - name: Apply runtime schema alignment migration
-        if: ${{ inputs.migration == 'runtime_schema' || inputs.migration == 'both' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
@@ -68,7 +53,6 @@ jobs:
             --file supabase/migrations/20260924_align_runtime_schema.sql
 
       - name: Apply profile roles and admin RLS migration
-        if: ${{ inputs.migration == 'profile_roles' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
