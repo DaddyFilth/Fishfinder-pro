@@ -19,7 +19,7 @@ import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/li
 import { DEFAULT_SPOTS, mergeWithDefaultSpots, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
-import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
+import { formatCacheAge } from '@/lib/offlineSpots';
 import { formatDistance, sortSpotsByDistance } from '@/lib/nearbySpots';
 import { fetchSpotConditions } from '@/lib/conditionsClient';
 import { parseSpotApiPayload } from '@/lib/spotProvenance';

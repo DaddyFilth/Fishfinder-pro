@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useMemo } from 'react';
+import Image from 'next/image';
 import { speciesForCoordinates, type Coordinates } from '@/lib/region';
 import { SPECIES, biteRateFor, type Species } from '@/lib/speciesCatalog';
 
@@ -9,8 +9,7 @@ interface QuickScanProps {
 }
 
 export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanProps) {
-  const [condition, setCondition] = useState<'stable'>('stable'); // Default condition
-  const [isScanning, setIsScanning] = useState(false);
+  const condition = 'stable' as const;
 
   const hotList = useMemo(() => {
     if (!coordinates) return [];
@@ -73,7 +72,7 @@ export default function QuickScan({ coordinates, onSpeciesSelect }: QuickScanPro
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src={species.image} alt="" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }} />
+                <Image src={species.image} alt="" width={32} height={32} style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }} />
                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#e2e8f0' }}>{species.name}</div>
               </div>
               <div style={{ 

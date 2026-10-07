@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StorageManager } from '@/lib/storage';
-import { SPECIES, type Species } from '@/lib/speciesCatalog';
+import { SPECIES } from '@/lib/speciesCatalog';
 
 export function useOfflineCatalog() {
   const [isSynced, setIsSynced] = useState(false);

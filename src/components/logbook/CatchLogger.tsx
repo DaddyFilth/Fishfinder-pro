@@ -1,7 +1,4 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any -- photo metadata is supplied by browser APIs. */
-import { createClient } from '@/lib/supabase/client';
-import { ProLogger } from '@/lib/logbook/pro-logger';
 /* eslint-disable @next/next/no-img-element -- user-selected catch photos may be data URLs and cannot use the image optimizer. */
 import { useState, useRef } from 'react';
 import { SPECIES_NAMES } from '@/lib/speciesCatalog';
@@ -82,9 +79,10 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
       if (result.achievementsUnlocked.length > 0) {
         alert(`🏆 Achievement Unlocked: ${result.achievementsUnlocked.join(', ')}`);
       }
-    } catch(e: any) { 
-      console.error(e); 
-      alert(`Error logging catch: ${e.message}. Please try again.`);
+    } catch (error: unknown) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Error logging catch: ${message}. Please try again.`);
     }
     finally { setSaving(false); }
   };

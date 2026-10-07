@@ -13,7 +13,7 @@ export interface ProCatchResult {
 export class ProLogger {
   static async logCatchPro(userId: string, catchData: any) {
     // 1. SENSOR INTEGRATION: Capture Environmental Snapshot
-    const snapshot = await this.captureSnapshot(catchData.latitude, catchData.longitude, catchData.spot_id);
+    const snapshot = await this.captureSnapshot(catchData.latitude, catchData.longitude);
     
     // 2. DATABASE: Save the catch with the snapshot
     const admin = createAdminClient(); const { data: catchRecord, error: catchError } = await admin
@@ -43,7 +43,7 @@ export class ProLogger {
     if (profileError) console.error('XP Update Error:', profileError);
 
     // 4. GAMIFICATION: Check Achievements
-    const unlocked = await this.checkAchievements(userId, catchData.species);
+    const unlocked = await this.checkAchievements(userId);
 
     return {
       catchId: catchRecord?.id,
@@ -54,7 +54,7 @@ export class ProLogger {
     };
   }
 
-  private static async captureSnapshot(lat: number, lng: number, spotId?: string) {
+  private static async captureSnapshot(lat: number, lng: number) {
     const [nws, marine, pressure] = await Promise.all([
       fetchNwsWeather(lat, lng),
       fetchMarineConditions(lat, lng),
@@ -91,7 +91,7 @@ export class ProLogger {
     return data?.xp || 0;
   }
 
-  private static async checkAchievements(userId: string, species: string): Promise<string[]> {
+  private static async checkAchievements(userId: string): Promise<string[]> {
     const unlocked: string[] = [];
     
     // Example: "First Catch" achievement

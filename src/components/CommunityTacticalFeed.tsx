@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { CommunityManager } from '@/lib/community/manager';
 import { CommunitySpot } from '@/lib/community/types';
 
-/* eslint-disable react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
-
 export default function CommunityTacticalFeed() {
   const [spots, setSpots] = useState<CommunitySpot[]>([]);
 
@@ -13,8 +11,8 @@ export default function CommunityTacticalFeed() {
     setSpots(data);
   }
 
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
   useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial async load hydrates external IndexedDB-backed state. */
     void loadSpots();
   }, []);
 
