@@ -24,6 +24,10 @@ const PUBLIC_PATHS = [
 export function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
+    pathname === '/locations' ||
+    pathname.startsWith('/locations/') ||
+    pathname === '/species' ||
+    pathname.startsWith('/species/') ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'
