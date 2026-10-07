@@ -13,6 +13,11 @@ if (typeof process.loadEnvFile !== 'function') {
 }
 
 process.env.NODE_ENV = command === 'start' ? 'production' : 'development'
+// Load managed project variables first. Node's env loader does not overwrite
+// existing keys, so this prevents stale local placeholders from winning.
+const managedEnvFile = '/vercel/share/.env.project'
+if (existsSync(managedEnvFile)) process.loadEnvFile(managedEnvFile)
+
 const envFiles = command === 'dev'
   ? ['.env.development.local', '.env.local', '.env.development', '.env']
   : ['.env.production.local', '.env.local', '.env.production', '.env']
@@ -20,7 +25,25 @@ for (const path of envFiles) {
   if (existsSync(path)) process.loadEnvFile(path)
 }
 
-validateRuntimeEnvironment()
+// Some Vercel project snapshots expose public variables with an extra
+// NEXT_PUBLIC_ prefix. Normalize those aliases before validation and before
+// handing the environment to Next.js.
+for (const name of [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+]) {
+  const aliasedName = `NEXT_PUBLIC_${name}`
+  if (!process.env[name] && process.env[aliasedName]) {
+    process.env[name] = process.env[aliasedName]
+  }
+}
+
+// Production must fail fast when required services are absent. Development and
+// v0 previews can still render public routes that gracefully handle an
+// unavailable Supabase client, so do not turn a missing local secret into a
+// gateway-level 502.
+if (process.env.NODE_ENV === 'production') validateRuntimeEnvironment()
 
 const nextBin = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url))
 const next = spawn(process.execPath, [nextBin, command, ...args], {
