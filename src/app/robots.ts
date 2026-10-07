@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/account', '/admin', '/api/', '/auth/'],
+      disallow: ['/account', '/admin', '/api/', '/auth/', '/dev/', '/offline'],
     },
     sitemap: 'https://www.fishfinder-pro.online/sitemap.xml',
     host: 'https://www.fishfinder-pro.online',

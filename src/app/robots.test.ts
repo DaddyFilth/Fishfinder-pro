@@ -10,7 +10,7 @@ describe('robots metadata route', () => {
 
     expect(rules.userAgent).toBe('*')
     expect(rules.allow).toBe('/')
-    expect(rules.disallow).toEqual(['/account', '/admin', '/api/', '/auth/'])
+    expect(rules.disallow).toEqual(['/account', '/admin', '/api/', '/auth/', '/dev/', '/offline'])
     expect(result.sitemap).toBe('https://www.fishfinder-pro.online/sitemap.xml')
   })
 
