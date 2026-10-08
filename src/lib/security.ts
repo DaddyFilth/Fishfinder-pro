@@ -75,31 +75,30 @@ async function enforceDistributedRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
-  const limiter = getUpstashRateLimiter(options)
-  if (limiter) {
-    let result: Awaited<ReturnType<typeof limiter.limit>>
-    try {
-      result = await limiter.limit(`${options.name}:${clientKey(request)}`)
-    } catch (error) {
-      console.error('[rate-limit] Upstash unavailable:', error)
-      return NextResponse.json(
-        { error: 'Rate limiting service is temporarily unavailable.' },
-        { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
-      )
-    }
-    if (!result.success) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))),
-            'Cache-Control': 'no-store',
+  try {
+    const limiter = getUpstashRateLimiter(options)
+    if (limiter) {
+      const result = await limiter.limit(`${options.name}:${clientKey(request)}`)
+      if (!result.success) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))),
+              'Cache-Control': 'no-store',
+            },
           },
-        },
-      )
+        )
+      }
+      return null
     }
-    return null
+  } catch (error) {
+    console.error('[rate-limit] Upstash unavailable:', error)
+    return NextResponse.json(
+      { error: 'Rate limiting service is temporarily unavailable.' },
+      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+    )
   }
 
   const client = getRedis()
