@@ -209,6 +209,23 @@ describe('enforceRateLimit', () => {
     expect(redisMock.exec).not.toHaveBeenCalled()
   })
 
+  it('fails closed with 503 when Upstash initialization fails', async () => {
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    upstashMock.createRedis.mockImplementationOnce(() => {
+      throw new Error('Invalid Upstash configuration')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
+
+    expect(response?.status).toBe(503)
+    expect(response?.headers.get('retry-after')).toBe('15')
+    expect(redisMock.exec).not.toHaveBeenCalled()
+  })
+
   it('ignores client-supplied forwarded IPs in production', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     const { enforceRateLimit } = await import('./security')
