@@ -8,6 +8,7 @@ import {
 } from '@/lib/fetchers/environmental';
 import { calculateFishingScore } from '@/lib/scoring/fishingScore';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getAuthContext } from '@/lib/auth/server';
 import { enforceRateLimit } from '@/lib/security';
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
@@ -469,6 +470,11 @@ export async function GET(
     windowMs: 60_000,
   });
   if (limited) return limited;
+
+  // Enforced here as well as in the proxy: this handler reads through a service-role client that
+  // bypasses RLS, so it must never rely on proxy config alone for access control.
+  const context = await getAuthContext();
+  if (!context) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
   const parsed = idSchema.safeParse(await params);
 

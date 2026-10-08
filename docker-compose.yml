@@ -2,6 +2,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # /api/health is liveness only; rate limiting needs a reachable Redis, and a silently
+    # unavailable limiter is far worse than waiting for it to come up.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   app:
     build:
@@ -14,7 +21,7 @@ services:
     restart: unless-stopped
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${APP_PORT:-3000}:3000"
     env_file:
@@ -33,5 +40,5 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       NWS_BASE: ${NWS_BASE:-https://api.weather.gov}
       USGS_BASE: ${USGS_BASE:-https://api.waterdata.usgs.gov}
+      OPEN_METEO_FORECAST: ${OPEN_METEO_FORECAST:-https://api.open-meteo.com/v1/forecast}
       OPEN_METEO_MARINE: ${OPEN_METEO_MARINE:-https://marine-api.open-meteo.com/v1/marine}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}

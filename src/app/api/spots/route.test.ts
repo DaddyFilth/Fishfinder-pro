@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { getSupabaseAdmin } = vi.hoisted(() => ({
+const { getSupabaseAdmin, getAuthContext } = vi.hoisted(() => ({
   getSupabaseAdmin: vi.fn(),
+  getAuthContext: vi.fn(),
 }))
 
 vi.mock('@/lib/security', () => ({
@@ -13,13 +14,26 @@ vi.mock('@/lib/supabaseAdmin', () => ({
   getSupabaseAdmin,
 }))
 
+vi.mock('@/lib/auth/server', () => ({
+  getAuthContext: getAuthContext,
+}))
+
 import { GET } from './route'
 
 describe('spots route provenance', () => {
   beforeEach(() => {
     getSupabaseAdmin.mockReturnValue(null)
+    getAuthContext.mockResolvedValue({ user: { id: 'user-1' }, role: 'angler' })
     vi.unstubAllGlobals()
     vi.unstubAllEnvs()
+  })
+
+  it('rejects anonymous callers even though the proxy also guards this route', async () => {
+    getAuthContext.mockResolvedValue(null)
+
+    const response = await GET(new NextRequest('https://example.com/api/spots'))
+
+    expect(response.status).toBe(401)
   })
 
   it('uses the configured Seamcast endpoint and returns its spots', async () => {

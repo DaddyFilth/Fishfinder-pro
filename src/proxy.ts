@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
-import { createServerClient } from '@supabase/ssr';
 import { getSupabaseProjectUrl, getSupabasePublishableKey } from './lib/supabase/config';
 
 const CANONICAL_HOST = 'www.fishfinder-pro.online';
@@ -48,13 +47,8 @@ function normalizeProxyUrl(value: string | undefined) {
   }
 }
 
-function applySecurityHeaders(response: NextResponse, protocol: string, nonce: string) {
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('X-DNS-Prefetch-Control', 'off');
-  response.headers.set('Content-Security-Policy', [
+function buildContentSecurityPolicy(nonce: string) {
+  return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
@@ -66,7 +60,16 @@ function applySecurityHeaders(response: NextResponse, protocol: string, nonce: s
     "form-action 'self'",
     "frame-src 'none'",
     ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
-  ].join('; '));
+  ].join('; ');
+}
+
+function applySecurityHeaders(response: NextResponse, protocol: string, contentSecurityPolicy: string) {
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('X-DNS-Prefetch-Control', 'off');
+  response.headers.set('Content-Security-Policy', contentSecurityPolicy);
 
   if (protocol === 'https:') {
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
@@ -77,8 +80,15 @@ function applySecurityHeaders(response: NextResponse, protocol: string, nonce: s
 
 export async function proxy(request: NextRequest) {
   const nonce = createNonce();
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce);
+
+  // Next.js extracts the nonce from the *request* `Content-Security-Policy` header and stamps it
+  // onto every framework script it renders. Setting it only on the response leaves the nonce
+  // undefined, and because `script-src` carries a nonce source, `'strict-dynamic'` makes browsers
+  // ignore `'self'` — so every script without a nonce is blocked. Both sides must be set.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', contentSecurityPolicy);
   const requestWithNonce = new NextRequest(request, { headers: requestHeaders });
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
@@ -91,64 +101,64 @@ export async function proxy(request: NextRequest) {
       url.protocol = 'https:';
       url.hostname = CANONICAL_HOST;
       url.port = '';
-      return applySecurityHeaders(NextResponse.redirect(url, 308), request.nextUrl.protocol, nonce);
+      return applySecurityHeaders(
+        NextResponse.redirect(url, 308),
+        request.nextUrl.protocol,
+        contentSecurityPolicy,
+      );
     }
   }
 
   if (isPublicPath(request.nextUrl.pathname)) {
-    return applySecurityHeaders(NextResponse.next({ request: requestWithNonce }), request.nextUrl.protocol, nonce);
+    return applySecurityHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      request.nextUrl.protocol,
+      contentSecurityPolicy,
+    );
   }
 
-  const url = getSupabaseProjectUrl() ?? normalizeProxyUrl(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL,
-  );
-  const key = getSupabasePublishableKey() ?? (
+  const url = getSupabaseProjectUrl() ?? normalizeProxyUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key =
+    getSupabasePublishableKey() ??
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    return applySecurityHeaders(NextResponse.json(
-      { error: 'Authentication is unavailable because Supabase is not configured.' },
-      { status: 503 },
-    ), request.nextUrl.protocol, nonce);
+    return applySecurityHeaders(
+      NextResponse.json(
+        { error: 'Authentication is unavailable because Supabase is not configured.' },
+        { status: 503 },
+      ),
+      request.nextUrl.protocol,
+      contentSecurityPolicy,
+    );
   }
 
-  const response = applySecurityHeaders(await updateSession(requestWithNonce), request.nextUrl.protocol, nonce);
+  const { response, user } = await updateSession(requestWithNonce);
+  const secured = applySecurityHeaders(response, request.nextUrl.protocol, contentSecurityPolicy);
 
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return requestWithNonce.cookies.getAll();
-      },
-      setAll() {},
-    },
-  });
-
-  const { data: claims } = await supabase.auth.getClaims()
-
-  if (claims?.claims) {
-    return response;
+  if (user) {
+    return secured;
   }
 
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    return applySecurityHeaders(NextResponse.json(
-      { error: 'Authentication required.' },
-      { status: 401 },
-    ), request.nextUrl.protocol, nonce);
+    return applySecurityHeaders(
+      NextResponse.json({ error: 'Authentication required.' }, { status: 401 }),
+      request.nextUrl.protocol,
+      contentSecurityPolicy,
+    );
   }
 
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = '/auth/login';
   loginUrl.search = '';
-  loginUrl.searchParams.set(
-    'next',
-    `${request.nextUrl.pathname}${request.nextUrl.search}`,
-  );
+  loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
-  return applySecurityHeaders(NextResponse.redirect(loginUrl), request.nextUrl.protocol, nonce);
+  return applySecurityHeaders(
+    NextResponse.redirect(loginUrl),
+    request.nextUrl.protocol,
+    contentSecurityPolicy,
+  );
 }
 
 export const config = {

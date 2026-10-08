@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getAuthContext } from '@/lib/auth/server';
 import { enforceRateLimit } from '@/lib/security';
 
 export async function GET(request: Request) {
   const limited = await enforceRateLimit(request, { name: 'water-heatmap', limit: 30, windowMs: 60_000 });
   if (limited) return limited;
+
+  // Enforced here as well as in the proxy: this handler reads through a service-role client that
+  // bypasses RLS, so it must never rely on proxy config alone for access control.
+  const context = await getAuthContext();
+  if (!context) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
   const supabase = getSupabaseAdmin();
 
@@ -58,7 +64,10 @@ export async function GET(request: Request) {
 
   const spotIds = [...latestBySpot.keys()];
   if (spotIds.length === 0) {
-    return NextResponse.json({ points: [] });
+    return NextResponse.json(
+      { points: [] },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   const { data: spots, error: spotsError } = await supabase

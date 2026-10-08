@@ -59,6 +59,9 @@ android/build/
 android/app/build/
 android/captures/
 
+# Expo dev-server logs
+.expo/
+
 # Editor swap files
 *.swp
 *.bak

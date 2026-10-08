@@ -4,10 +4,7 @@ function firstDefined(environment, names) {
 
 export function validateRuntimeEnvironment(environment = process.env) {
   const missing = []
-  const supabaseUrl = firstDefined(environment, [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL',
-  ])
+  const supabaseUrl = firstDefined(environment, ['NEXT_PUBLIC_SUPABASE_URL'])
   let validSupabaseUrl = false
 
   if (supabaseUrl) {
@@ -25,9 +22,7 @@ export function validateRuntimeEnvironment(environment = process.env) {
 
   if (!firstDefined(environment, [
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_ANON_KEY',
   ])) {
     missing.push('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)')
   }

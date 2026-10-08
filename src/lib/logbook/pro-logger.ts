@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase RPC payloads are runtime-shaped. */
-import { createAdminClient } from '../supabase/admin';
+import { createAdminClient } from '@/lib/supabaseAdmin';
 import { fetchNwsWeather, fetchMarineConditions, fetchPressureTrend } from '../fetchers/environmental';
 
 export interface ProCatchResult {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { timingSafeEqual } from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { enforceRateLimit, readJsonBody } from '@/lib/security'
-import { getSupabaseServiceRoleKey } from '@/lib/supabase/config'
 
 const snapshotSchema = z.object({
   spot_id: z.string().trim().min(1).max(160),
@@ -29,18 +29,33 @@ const payloadSchema = z.union([
 ])
 
 function getWorkerSecret() {
-  return process.env.CLOUDFLARE_WORKER_FEED_SECRET || getSupabaseServiceRoleKey()
+  return process.env.CLOUDFLARE_WORKER_FEED_SECRET?.trim() || null
+}
+
+/** Constant-time comparison so the shared secret cannot be recovered by timing the endpoint. */
+function secretsMatch(supplied: string, expected: string) {
+  const suppliedBuffer = Buffer.from(supplied);
+  const expectedBuffer = Buffer.from(expected);
+  if (suppliedBuffer.length !== expectedBuffer.length) return false;
+  return timingSafeEqual(suppliedBuffer, expectedBuffer);
 }
 
 export async function POST(request: Request) {
-  const expectedSecret = getWorkerSecret()
-  const suppliedSecret = request.headers.get('x-cloudflare-worker-secret')
-  if (!expectedSecret || !suppliedSecret || suppliedSecret !== expectedSecret) {
-    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
-  }
-
+  // Rate limit before the secret check so an unauthenticated caller cannot brute-force the
+  // shared secret without being throttled.
   const limited = await enforceRateLimit(request, { name: 'cloudflare-feed', limit: 120, windowMs: 60_000 })
   if (limited) return limited
+
+  const expectedSecret = getWorkerSecret()
+  const suppliedSecret = request.headers.get('x-cloudflare-worker-secret')
+  // Fail closed: this route is reachable anonymously, so it must never authenticate with the
+  // Supabase service-role key (which bypasses RLS) or fall back to any other ambient secret.
+  if (!expectedSecret) {
+    return NextResponse.json({ error: 'Feed ingestion is not configured.' }, { status: 503 })
+  }
+  if (!suppliedSecret || !secretsMatch(suppliedSecret, expectedSecret)) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+  }
 
   const bodyResult = await readJsonBody(request, 512_000)
   if (!bodyResult.ok) return bodyResult.response

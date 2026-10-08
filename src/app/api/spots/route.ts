@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
+import { getAuthContext } from '@/lib/auth/server';
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -171,6 +172,11 @@ function normalize(payload: unknown): AnyRec {
 export async function GET(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'public-spots', limit: 60, windowMs: 60_000 });
   if (limited) return limited;
+
+  // Enforced here as well as in the proxy: this handler reads through a service-role client that
+  // bypasses RLS, so it must never rely on proxy config alone for access control.
+  const context = await getAuthContext();
+  if (!context) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
   const url = new URL(req.url);
   const lat = num(url.searchParams.get('lat'), 34.999);
