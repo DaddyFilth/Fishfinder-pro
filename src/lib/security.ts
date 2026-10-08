@@ -48,7 +48,7 @@ function clientKey(request: Request) {
   if (cloudflareIp) return cloudflareIp
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean).at(-1)
+  const forwarded = process.env.NODE_ENV === 'production' ? undefined : request.headers.get('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean).at(-1)
   return forwarded || 'unknown'
 }
 
