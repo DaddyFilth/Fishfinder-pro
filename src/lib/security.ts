@@ -82,18 +82,15 @@ async function enforceDistributedRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
+  let upstashFailed = false
   try {
     const limiter = getUpstashRateLimiter(options)
     if (limiter) {
       const result = await limiter.limit(`${options.name}:${clientKey(request)}`)
       if (result.reason === 'timeout') {
         console.error('[rate-limit] Upstash request timed out')
-        return NextResponse.json(
-          { error: 'Rate limiting service is temporarily unavailable.' },
-          { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
-        )
-      }
-      if (!result.success) {
+        upstashFailed = true
+      } else if (!result.success) {
         return NextResponse.json(
           { error: 'Too many requests. Please try again later.' },
           {
@@ -104,23 +101,26 @@ async function enforceDistributedRateLimit(
             },
           },
         )
+      } else {
+        return null
       }
-      return null
     }
   } catch (error) {
     console.error('[rate-limit] Upstash unavailable:', error)
-    return NextResponse.json(
-      { error: 'Rate limiting service is temporarily unavailable.' },
-      { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
-    )
+    upstashFailed = true
   }
 
-  const client = getRedis()
-  if (!client) return null
-  const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
-  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
-
   try {
+    const client = getRedis()
+    if (!client) {
+      if (!upstashFailed) return null
+      return NextResponse.json(
+        { error: 'Rate limiting service is temporarily unavailable.' },
+        { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+      )
+    }
+    const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
+    const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
     await ensureReady(client)
     const results = await client.multi().set(key, '0', 'EX', windowSeconds, 'NX').incr(key).exec()
     if (!results) throw new Error('Redis transaction aborted')
