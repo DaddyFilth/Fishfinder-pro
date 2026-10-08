@@ -57,7 +57,14 @@ function getUpstashRateLimiter(options: { limit: number; windowMs: number; name:
   const token = process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()
   if (!url || !token) return null
 
-  if (!upstash) upstash = new UpstashRedis({ url, token })
+  if (!upstash) {
+    upstash = new UpstashRedis({
+      url,
+      token,
+      retry: false,
+      signal: () => AbortSignal.timeout(2_000),
+    })
+  }
   const key = `${options.name}:${options.limit}:${options.windowMs}`
   const existing = upstashLimiters.get(key)
   if (existing) return existing
@@ -79,6 +86,13 @@ async function enforceDistributedRateLimit(
     const limiter = getUpstashRateLimiter(options)
     if (limiter) {
       const result = await limiter.limit(`${options.name}:${clientKey(request)}`)
+      if (result.reason === 'timeout') {
+        console.error('[rate-limit] Upstash request timed out')
+        return NextResponse.json(
+          { error: 'Rate limiting service is temporarily unavailable.' },
+          { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+        )
+      }
       if (!result.success) {
         return NextResponse.json(
           { error: 'Too many requests. Please try again later.' },
