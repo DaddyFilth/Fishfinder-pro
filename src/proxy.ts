@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   '/api/auth',
   '/api/auth/recover',
   '/api/feed/cloudflare',
+  '/api/rum/vitals',
   '/fishing-spots',
   '/species',
   '/manus-routes.json',

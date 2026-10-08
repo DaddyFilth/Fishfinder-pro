@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import FieldVitals from '@/components/FieldVitals';
 import ServiceWorkerRegistration from "@/components/offline/ServiceWorkerRegistration";
 import "./globals.css";
 
@@ -82,6 +83,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
         {/* Registers /sw.js so the offline app shell and web notifications work. */}
         <ServiceWorkerRegistration />
+        <FieldVitals />
         {children}
         <Analytics />
         <SpeedInsights />
