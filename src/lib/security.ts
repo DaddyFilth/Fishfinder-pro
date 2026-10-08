@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import Redis from 'ioredis'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis as UpstashRedis } from '@upstash/redis'
 
 export { isHttpUrl, isImageDataUrl } from './urls'
 
@@ -8,6 +10,8 @@ const buckets = new Map<string, { count: number; resetAt: number }>()
 
 let redis: Redis | null = null
 let ready: Promise<void> | null = null
+let upstash: UpstashRedis | null = null
+const upstashLimiters = new Map<string, Ratelimit>()
 
 async function ensureReady(client: Redis) {
   if (client.status === 'ready') return
@@ -38,45 +42,65 @@ function getRedis() {
 }
 
 function clientKey(request: Request) {
-  // Prefer identity headers set by a trusted edge or proxy. Never use the first
-  // arbitrary X-Forwarded-For entry: it is client supplied.
   const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
   if (vercelForwarded) return vercelForwarded
-
   const cloudflareIp = request.headers.get('cf-connecting-ip')?.trim()
   if (cloudflareIp) return cloudflareIp
-
   const realIp = request.headers.get('x-real-ip')?.trim()
   if (realIp) return realIp
-
-  if (process.env.NODE_ENV === 'production') return 'unknown'
-
-  const forwarded = request.headers
-    .get('x-forwarded-for')
-    ?.split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .at(-1)
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',').map((value) => value.trim()).filter(Boolean).at(-1)
   return forwarded || 'unknown'
+}
+
+function getUpstashRateLimiter(options: { limit: number; windowMs: number; name: string }) {
+  const url = process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim()
+  const token = process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()
+  if (!url || !token) return null
+
+  if (!upstash) upstash = new UpstashRedis({ url, token })
+  const key = `${options.name}:${options.limit}:${options.windowMs}`
+  const existing = upstashLimiters.get(key)
+  if (existing) return existing
+
+  const limiter = new Ratelimit({
+    redis: upstash,
+    limiter: Ratelimit.slidingWindow(options.limit, `${Math.max(1, Math.ceil(options.windowMs / 1000))} s`),
+    prefix: 'fishfinder:ratelimit',
+  })
+  upstashLimiters.set(key, limiter)
+  return limiter
 }
 
 async function enforceDistributedRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
+  const limiter = getUpstashRateLimiter(options)
+  if (limiter) {
+    const result = await limiter.limit(clientKey(request))
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))),
+            'Cache-Control': 'no-store',
+          },
+        },
+      )
+    }
+    return null
+  }
+
   const client = getRedis()
   if (!client) return null
-
   const key = `fishfinder:ratelimit:${options.name}:${clientKey(request)}`
   const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000))
 
   try {
     await ensureReady(client)
-    const results = await client
-      .multi()
-      .set(key, '0', 'EX', windowSeconds, 'NX')
-      .incr(key)
-      .exec()
+    const results = await client.multi().set(key, '0', 'EX', windowSeconds, 'NX').incr(key).exec()
     if (!results) throw new Error('Redis transaction aborted')
     const [[setErr], [incrErr, count]] = results as [[Error | null, unknown], [Error | null, number]]
     if (setErr || incrErr) throw setErr ?? incrErr
@@ -84,13 +108,7 @@ async function enforceDistributedRateLimit(
       const ttl = await client.ttl(key)
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, ttl)),
-            'Cache-Control': 'no-store',
-          },
-        },
+        { status: 429, headers: { 'Retry-After': String(Math.max(1, ttl)), 'Cache-Control': 'no-store' } },
       )
     }
     return null
@@ -107,7 +125,10 @@ export async function enforceRateLimit(
   request: Request,
   options: { limit: number; windowMs: number; name: string },
 ) {
-  const redisConfigured = Boolean(process.env.REDIS_URL?.trim())
+  const redisConfigured = Boolean(
+    process.env.REDIS_URL?.trim() ||
+    (process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim() && process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()),
+  )
   if (
     !redisConfigured &&
     process.env.NODE_ENV === 'production' &&
