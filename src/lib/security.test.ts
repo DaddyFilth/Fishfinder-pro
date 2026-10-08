@@ -213,22 +213,49 @@ describe('enforceRateLimit', () => {
     }))
   })
 
-  it('fails closed with 503 when Upstash reports a timeout', async () => {
+  it('falls back to Redis when Upstash reports a timeout', async () => {
     process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
     process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
     upstashMock.limit.mockResolvedValueOnce({ success: true, reason: 'timeout', reset: Date.now() + 60_000 })
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
+
+    const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(redisMock.incr).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10')
+  })
+
+  it('falls back to Redis when Upstash is unavailable', async () => {
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    upstashMock.limit.mockRejectedValueOnce(new Error('Upstash unavailable'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
+
+    const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(redisMock.incr).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10')
+  })
+
+  it('keeps Upstash rate-limit rejections at 429 without using Redis', async () => {
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    upstashMock.limit.mockResolvedValueOnce({ success: false, reset: Date.now() + 60_000 })
+    const { enforceRateLimit } = await import('./security')
     const request = new Request('https://example.com/api/test')
 
     const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
 
-    expect(response?.status).toBe(503)
-    expect(response?.headers.get('retry-after')).toBe('15')
+    expect(response?.status).toBe(429)
     expect(redisMock.exec).not.toHaveBeenCalled()
   })
 
-  it('fails closed with 503 when Upstash is unavailable', async () => {
+  it('returns 503 when Upstash fails and Redis is not configured', async () => {
+    delete process.env.REDIS_URL
     process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
     process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
     upstashMock.limit.mockRejectedValueOnce(new Error('Upstash unavailable'))
@@ -243,12 +270,27 @@ describe('enforceRateLimit', () => {
     expect(redisMock.exec).not.toHaveBeenCalled()
   })
 
-  it('fails closed with 503 when Upstash initialization fails', async () => {
+  it('falls back to Redis when Upstash initialization fails', async () => {
     process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
     process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
     upstashMock.createRedis.mockImplementationOnce(() => {
       throw new Error('Invalid Upstash configuration')
     })
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
+
+    const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(redisMock.incr).toHaveBeenCalledWith('fishfinder:ratelimit:test:198.51.100.10')
+  })
+
+  it('returns 503 when both Upstash and Redis are unavailable', async () => {
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    upstashMock.limit.mockRejectedValueOnce(new Error('Upstash unavailable'))
+    redisMock.connect.mockRejectedValueOnce(new Error('Redis unavailable'))
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const { enforceRateLimit } = await import('./security')
     const request = new Request('https://example.com/api/test')
