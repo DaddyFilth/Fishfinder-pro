@@ -77,7 +77,7 @@ async function enforceDistributedRateLimit(
 ) {
   const limiter = getUpstashRateLimiter(options)
   if (limiter) {
-    const result = await limiter.limit(clientKey(request))
+    const result = await limiter.limit(`${options.name}:${clientKey(request)}`)
     if (!result.success) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
