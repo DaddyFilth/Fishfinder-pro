@@ -194,6 +194,40 @@ describe('enforceRateLimit', () => {
     expect(upstashMock.limit).toHaveBeenNthCalledWith(2, 'weather:198.51.100.10')
   })
 
+  it('uses Upstash in production when Redis is not configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    delete process.env.REDIS_URL
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'upstash-only', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(upstashMock.limit).toHaveBeenCalledWith('upstash-only:unknown')
+    expect(redisMock.exec).not.toHaveBeenCalled()
+    expect(upstashMock.createRedis).toHaveBeenCalledWith(expect.objectContaining({
+      retry: false,
+      signal: expect.any(Function),
+    }))
+  })
+
+  it('fails closed with 503 when Upstash reports a timeout', async () => {
+    process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
+    upstashMock.limit.mockResolvedValueOnce({ success: true, reason: 'timeout', reset: Date.now() + 60_000 })
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'test', limit: 1, windowMs: 60_000 })
+
+    expect(response?.status).toBe(503)
+    expect(response?.headers.get('retry-after')).toBe('15')
+    expect(redisMock.exec).not.toHaveBeenCalled()
+  })
+
   it('fails closed with 503 when Upstash is unavailable', async () => {
     process.env.NEXT_PUBLIC_KV_REST_API_URL = 'https://example.upstash.io'
     process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = 'test-token'
