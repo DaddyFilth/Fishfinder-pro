@@ -4,7 +4,7 @@ import { pushToWorker } from './push';
 const URL = 'https://www.wildlifedepartment.com/fishing/wheretofish/access';
 const DEBUG = process.argv.includes('--debug');
 
-async function extract(page: import('playwright').Page): Promise<ScrapeRecord[]> {
+async function extract(page: import('playwright-core').Page): Promise<ScrapeRecord[]> {
   await page.waitForSelector('main h2, main h3, article h2, article h3, h2, h3', { timeout: 20_000 })
     .catch(() => console.warn('no headings matched - check exports/debug dump'));
 

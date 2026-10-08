@@ -1,6 +1,6 @@
 import { withBrowser, gotoPolite, writeOutputs, debugDump, type ScrapeRecord } from './lib';
 import { pushToWorker } from './push';
-import type { Page } from 'playwright';
+import type { Page } from 'playwright-core';
 
 const INDEX = 'https://www.swt.usace.army.mil/Locations/Tulsa-District-Lakes/Oklahoma/';
 const DEBUG = process.argv.includes('--debug');
