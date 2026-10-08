@@ -77,7 +77,16 @@ async function enforceDistributedRateLimit(
 ) {
   const limiter = getUpstashRateLimiter(options)
   if (limiter) {
-    const result = await limiter.limit(`${options.name}:${clientKey(request)}`)
+    let result: Awaited<ReturnType<typeof limiter.limit>>
+    try {
+      result = await limiter.limit(`${options.name}:${clientKey(request)}`)
+    } catch (error) {
+      console.error('[rate-limit] Upstash unavailable:', error)
+      return NextResponse.json(
+        { error: 'Rate limiting service is temporarily unavailable.' },
+        { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+      )
+    }
     if (!result.success) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
