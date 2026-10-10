@@ -687,7 +687,11 @@ export default function FishingMap({
             const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
-            const scoreBreakdown = c?.score_breakdown ?? { components: {}, recommendations: [], warnings: [] };
+            const scoreBreakdown = {
+              components: c?.score_breakdown?.components ?? {},
+              recommendations: c?.score_breakdown?.recommendations ?? [],
+              warnings: c?.score_breakdown?.warnings ?? [],
+            };
 
             return (
               <Marker

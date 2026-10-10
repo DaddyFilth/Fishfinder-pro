@@ -5,7 +5,6 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import SpeciesTab from "@/components/SpeciesTab";
 import QuickScan from '@/components/QuickScan';
 import PredictiveAlerts from '@/components/PredictiveAlerts';
 import BiteTimesTab from "@/components/BiteTimesTab";
@@ -621,7 +620,6 @@ export default function MobilePage() {
 
   const tabs = [
     { id: 'map', icon: '🗺️', label: 'Explore' },
-  { id: 'species', icon: '🐟', label: 'Species' },
   { id: 'log', icon: '📓', label: 'Logbook' },
   { id: 'top', icon: '⭐', label: 'Top spots' },
   { id: 'weather', icon: '🌤️', label: 'Weather' },
@@ -802,12 +800,6 @@ export default function MobilePage() {
           </div>
         )}
 
-        {/* SOCIAL TAB */}
-        {tab === 'species' && (
-  <div style={{ ...PAGE_STYLES.scrollPane, padding: 0 }}>
-  <SpeciesTab coordinates={coordinates} />
-  </div>
-        )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
           <div style={PAGE_STYLES.padPane}>
