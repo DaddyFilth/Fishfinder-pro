@@ -615,7 +615,6 @@ export default function MobilePage() {
     [visibleSpots, conditionModes, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
-  const topSpots = rankedSpots.slice(0, 8);
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };
@@ -743,46 +742,7 @@ export default function MobilePage() {
 
 
 
-            {/* Slide-up sheet handle */}
-            <div
-              onClick={() => setSheetOpen(!sheetOpen)}
-              style={{ position:'absolute', bottom:0, left:0, right:0, background:'#0a0f1e', borderTop:'1px solid #1e293b', borderRadius:'16px 16px 0 0', padding:'8px 0 0', cursor:'pointer', zIndex:20, transition:'transform 0.3s ease' }}
-            >
-              <div style={{ width:'36px', height:'4px', background:'#334155', borderRadius:'2px', margin:'0 auto 10px' }} />
-              {!sheetOpen && (
-                <div style={{ padding:'0 16px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:'12px', color:'#64748b' }}>Top Spots · provider scores</span>
-                  <span style={{ fontSize:'11px', color:'#0ea5e9' }}>Show ↑</span>
-                </div>
-              )}
-              {sheetOpen && (
-                <div style={{ padding:'0 16px 16px', maxHeight:'45dvh', overflowY:'auto' }}>
-                  <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'10px', display:'flex', justifyContent:'space-between', gap:'8px' }}>
-                    <span>{nearbyMode ? '📍 NEAREST OKLAHOMA WATERS' : '🏆 OKLAHOMA TOP WATERS · PROVIDER SCORES'}</span>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); setNearbyMode(false); }} style={{ background:'transparent', border:0, color:'#0ea5e9', fontSize:'10px', cursor:'pointer', padding:0 }}>Show all</button>
-                  </div>
-                  {topSpots.length > 0 ? topSpots.map(({ spot, score }, i) => {
-                    const scoreValue = loadingScores[spot.id] ? '…' : score;
-                    return (
-                      <div key={spot.id} onClick={e => { e.stopPropagation(); setSheetOpen(false); setSelectedSpot(spot); setMapPopupOpen(true); }}
-                        style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:'1px solid #0f172a', cursor:'pointer' }}>
-                        <span style={{ color:'#475569', fontSize:'12px', minWidth:'18px' }}>#{i+1}</span>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:'13px', color:'#e2e8f0', fontWeight:'600' }}>{spot.name}</div>
-                          <div style={{ fontSize:'10px', color:'#475569', marginTop:'2px' }}>{spot.water_type} · {spot.spot_type}{Number.isFinite(distanceById.get(spot.id)) ? ` · ${formatDistance(distanceById.get(spot.id) ?? Number.POSITIVE_INFINITY)}` : ''}</div>
-                        </div>
-                        <div style={{ textAlign:'right' }}>
-                          <div style={{ fontSize:'18px', fontWeight:'bold', color:'#22c55e' }}>{scoreValue}</div>
-                          <div style={{ fontSize:'8px', color:'#475569' }}>SCORE</div>
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <div style={{ color:'#64748b', fontSize:'12px', padding:'12px 0' }}>No provider condition scores are available for this filter.</div>
-                  )}
-                </div>
-              )}
-            </div>
+
           </div>
         )}
 
