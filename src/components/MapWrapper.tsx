@@ -30,7 +30,7 @@ import {
   resolveMapInsets,
   resolveSpotPopupFrame,
 } from '@/lib/mapViewport';
-import { SPECIES, biteRateFor, spotTargetsFor, deriveFishingCondition, type FishingCondition } from '@/lib/speciesCatalog';
+import { deriveFishingCondition, type FishingCondition } from '@/lib/speciesCatalog';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -212,46 +212,6 @@ function depthLabel(level: number | null, flow: number | null) {
     return 'Flood Stage';
   }
   return 'No depth data';
-}
-
-  // This is a score derived from provider values; it is not an observation or catch report.
-  function conditionForSpot(condition: Cond | undefined): FishingCondition | null {
-    return deriveFishingCondition(condition);
-  }
-
-function stableSpotVariant(id: Spot['id'], variantCount: number) {
-  const key = String(id);
-  let hash = 0;
-  for (let index = 0; index < key.length; index += 1) {
-    hash = (hash * 31 + key.charCodeAt(index)) | 0;
-  }
-  return Math.abs(hash) % variantCount;
-}
-
-function spotSpeciesTargets(spot: Spot, condition: Cond | undefined) {
-  const fishingCondition = conditionForSpot(condition);
-  if (!fishingCondition) return [];
-  const type = `${spot.spot_type} ${spot.notes ?? ''}`.toLowerCase();
-  const groupSets = type.includes('trout')
-    ? [['Trout'], ['Trout', 'Bass'], ['Trout', 'Panfish']]
-    : type.includes('river') || type.includes('stream')
-      ? [['Catfish', 'Bass', 'Panfish'], ['Bass', 'Catfish', 'Panfish'], ['Panfish', 'Catfish', 'Bass']]
-      : type.includes('reservoir')
-        ? [['Bass', 'Walleye', 'Catfish'], ['Walleye', 'Bass', 'Catfish'], ['Catfish', 'Bass', 'Walleye']]
-        : [['Bass', 'Panfish', 'Catfish'], ['Panfish', 'Bass', 'Catfish'], ['Catfish', 'Panfish', 'Bass']];
-  const variant = stableSpotVariant(spot.id, groupSets.length);
-  const preferredGroups = groupSets[variant];
-
-  return preferredGroups
-    .flatMap((group) => SPECIES.filter((species) => species.group === group))
-    .filter((species, index, list) => list.findIndex((item) => item.id === species.id) === index)
-    .map((species) => ({
-      species,
-      rate: biteRateFor(species, fishingCondition),
-      structure: spotTargetsFor(species, fishingCondition).slice(0, 2).join(' and '),
-    }))
-    .sort((a, b) => b.rate - a.rate)
-    .slice(0, 3);
 }
 
 function metricRow({ icon, label, value, unit }: { icon: string; label: string; value: string | number | null; unit?: string }) {
@@ -727,6 +687,7 @@ export default function FishingMap({
             const displayScore = c?.bite_score ?? c?.fishing_score ?? 0;
             const activeTab = tabs[spot.id] || 'score';
             const conditionState = c ? describeConditionState(c) : null;
+            const scoreBreakdown = c?.score_breakdown ?? { components: {}, recommendations: [], warnings: [] };
 
             return (
               <Marker
@@ -751,17 +712,6 @@ export default function FishingMap({
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
                       <button type="button" onClick={() => openDirections(spot)} style={{ ...S.directionsBtn, marginTop: 10 }}>Get directions</button>
-                    </div>
-
-                    <div style={{ background: '#082f49', border: '1px solid #155e75', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                      <div style={{ fontSize: '9px', color: '#67e8f9', fontWeight: 800, marginBottom: 7 }}>CATALOG TARGET ESTIMATE</div>
-                      {spotSpeciesTargets(spot, c).length > 0 ? spotSpeciesTargets(spot, c).map(({ species, rate, structure }) => (
-                        <div key={species.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(103,232,249,0.12)' }}>
-                          <div><div style={{ color: '#f8fafc', fontSize: 11, fontWeight: 700 }}>{species.name}</div><div style={{ color: '#94a3b8', fontSize: 9 }}>{structure}</div></div>
-                          <div style={{ color: '#86efac', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>{rate}/100</div>
-                        </div>
-                      )) : <div style={{ fontSize: 10, color: '#94a3b8' }}>Target estimate unavailable until a provider snapshot loads.</div>}
-                      <div style={{ color: '#94a3b8', fontSize: 9, marginTop: 7 }}>Catalog/algorithm estimate from spot metadata and available provider values; not a catch report or live reading.</div>
                     </div>
 
                     {loading[spot.id] && <div style={{ textAlign: 'center', padding: 18, color: '#94a3b8' }}>Loading provider snapshot…</div>}
@@ -852,20 +802,20 @@ export default function FishingMap({
                               </div>
                             )}
 
-                            {Object.entries(c.score_breakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
+                            {Object.entries(scoreBreakdown.components).map(([k, v]) => scoreBar({ label: k.replace(/_/g, ' '), value: v }))}
 
-                            {c.score_breakdown.recommendations.length > 0 && (
+                            {scoreBreakdown.recommendations.length > 0 && (
                               <div style={{ marginTop: 10 }}>
                                 <div style={{ fontSize: 11, color: '#86efac', marginBottom: 4, fontWeight: 700 }}>Recommendations</div>
-                                {c.score_breakdown.recommendations.map((r, i) => (
+                                {scoreBreakdown.recommendations.map((r, i) => (
                                   <div key={i} style={{ fontSize: 11, color: '#d1fae5', marginBottom: 3 }}>• {r}</div>
                                 ))}
                               </div>
                             )}
-                            {c.score_breakdown.warnings.length > 0 && (
+                            {scoreBreakdown.warnings.length > 0 && (
                               <div style={{ marginTop: 10 }}>
                                 <div style={{ fontSize: 11, color: '#fca5a5', marginBottom: 4, fontWeight: 700 }}>Warnings</div>
-                                {c.score_breakdown.warnings.map((w, i) => (
+                                {scoreBreakdown.warnings.map((w, i) => (
                                   <div key={i} style={{ fontSize: 11, color: '#fecaca', marginBottom: 3 }}>• {w}</div>
                                 ))}
                               </div>
