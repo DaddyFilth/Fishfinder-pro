@@ -17,7 +17,7 @@ Start development:
 npm run dev
 ```
 
-`REDIS_URL` is optional in development, where the app uses its in-memory rate limiter. Production requires a reachable `REDIS_URL` (`redis://` or `rediss://`) for distributed rate limiting. `GROQ_API_KEY` enables Groq-backed AI features; `OPENAI_API_KEY` enables spot discovery. These providers are optional for the app shell and are not needed for the smoke test.
+`REDIS_URL` is optional in development, where the app uses its in-memory rate limiter. Production requires a reachable Redis for distributed rate limiting: `REDIS_URL` (`redis://` or `rediss://`), Upstash REST credentials (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` from the Vercel Upstash integration, or the legacy `NEXT_PUBLIC_KV_REST_API_URL` + `NEXT_PUBLIC_KV_REST_API_TOKEN` names). When both are configured, Upstash is tried first and `REDIS_URL` is the fallback. `GROQ_API_KEY` enables Groq-backed AI features; `OPENAI_API_KEY` enables spot discovery. These providers are optional for the app shell and are not needed for the smoke test.
 
 ## Build and verification
 
@@ -67,8 +67,8 @@ The **API route smoke tests** workflow can be run manually from the Actions tab.
 ## Troubleshooting
 
 - **Startup reports missing Supabase configuration:** set a valid `NEXT_PUBLIC_SUPABASE_URL` and a publishable or anon key. The app intentionally fails early instead of serving protected routes that cannot authenticate.
-- **Production reports missing/invalid `REDIS_URL`:** configure a reachable Redis URL. Development can omit Redis and uses an in-memory limiter.
-- **Rate-limited API calls return 503:** check that Redis is reachable from the app container/deployment; production does not silently fall back to per-process rate limiting.
+- **Production reports missing/invalid `REDIS_URL`:** configure a reachable Redis URL, or set `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` for Upstash. Development can omit Redis and uses an in-memory limiter.
+- **Rate-limited API calls return 503:** check that Redis (or Upstash) is reachable from the app container/deployment; production does not silently fall back to per-process rate limiting.
 - **AI routes report missing provider credentials:** set `GROQ_API_KEY` (and `GROQ_VISION_MODEL` for image requests) or `OPENAI_API_KEY` for spot discovery. These are separate optional integrations.
 
 This project uses local system font stacks and does not load fonts from third-party providers.

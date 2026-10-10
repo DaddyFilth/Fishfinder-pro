@@ -41,6 +41,8 @@ describe('API smoke: every endpoint answers invalid/unconfigured calls with a cl
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network disabled')))
     vi.stubEnv('REDIS_URL', undefined)
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', undefined)
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', undefined)
   })
 
   afterEach(() => {

@@ -6,7 +6,7 @@ Configure these values in the hosting environment:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `REDIS_URL` using a reachable `redis://` or `rediss://` endpoint
+- `REDIS_URL` using a reachable `redis://` or `rediss://` endpoint and/or Upstash REST credentials (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` from the Vercel Upstash integration, or the legacy `NEXT_PUBLIC_KV_REST_API_URL` + `NEXT_PUBLIC_KV_REST_API_TOKEN` names). Upstash is tried first and `REDIS_URL` is the fallback.
 
 The app validates Supabase configuration at startup and requires Redis in production for distributed rate limiting. Do not expose or commit service-role keys; configure `SUPABASE_SERVICE_ROLE_KEY` only when using server-side features that need it.
 

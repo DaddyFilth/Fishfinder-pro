@@ -4,6 +4,8 @@ const originalRedisUrl = process.env.REDIS_URL
 const originalLocalFallback = process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
 const originalKvUrl = process.env.NEXT_PUBLIC_KV_REST_API_URL
 const originalKvToken = process.env.NEXT_PUBLIC_KV_REST_API_TOKEN
+const originalUpstashUrl = process.env.UPSTASH_REDIS_REST_URL
+const originalUpstashToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
 const redisMock = vi.hoisted(() => ({
   status: 'wait',
@@ -98,6 +100,8 @@ beforeEach(() => {
   process.env.REDIS_URL = 'redis://localhost:6379'
   delete process.env.NEXT_PUBLIC_KV_REST_API_URL
   delete process.env.NEXT_PUBLIC_KV_REST_API_TOKEN
+  delete process.env.UPSTASH_REDIS_REST_URL
+  delete process.env.UPSTASH_REDIS_REST_TOKEN
   redisMock.status = 'wait'
   redisMock.connect.mockReset().mockImplementation(async () => {
     redisMock.status = 'ready'
@@ -124,6 +128,10 @@ afterEach(() => {
   else process.env.NEXT_PUBLIC_KV_REST_API_URL = originalKvUrl
   if (originalKvToken === undefined) delete process.env.NEXT_PUBLIC_KV_REST_API_TOKEN
   else process.env.NEXT_PUBLIC_KV_REST_API_TOKEN = originalKvToken
+  if (originalUpstashUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL
+  else process.env.UPSTASH_REDIS_REST_URL = originalUpstashUrl
+  if (originalUpstashToken === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN
+  else process.env.UPSTASH_REDIS_REST_TOKEN = originalUpstashToken
   vi.unstubAllEnvs()
   vi.resetModules()
   vi.restoreAllMocks()
@@ -211,6 +219,25 @@ describe('enforceRateLimit', () => {
       retry: false,
       signal: expect.any(Function),
     }))
+  })
+
+  it('accepts the Vercel Upstash integration env var names', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    delete process.env.REDIS_URL
+    process.env.UPSTASH_REDIS_REST_URL = 'https://example.upstash.io'
+    process.env.UPSTASH_REDIS_REST_TOKEN = 'upstash-token'
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'upstash-integration', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(upstashMock.createRedis).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.upstash.io',
+      token: 'upstash-token',
+    }))
+    expect(upstashMock.limit).toHaveBeenCalledWith('upstash-integration:unknown')
+    expect(redisMock.exec).not.toHaveBeenCalled()
   })
 
   it('falls back to Redis when Upstash reports a timeout', async () => {

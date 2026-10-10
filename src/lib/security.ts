@@ -52,15 +52,19 @@ function clientKey(request: Request) {
   return forwarded || 'unknown'
 }
 
+function upstashCredentials() {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim()
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()
+  return url && token ? { url, token } : null
+}
+
 function getUpstashRateLimiter(options: { limit: number; windowMs: number; name: string }) {
-  const url = process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim()
-  const token = process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()
-  if (!url || !token) return null
+  const credentials = upstashCredentials()
+  if (!credentials) return null
 
   if (!upstash) {
     upstash = new UpstashRedis({
-      url,
-      token,
+      ...credentials,
       retry: false,
       signal: () => AbortSignal.timeout(2_000),
     })
@@ -148,8 +152,7 @@ export async function enforceRateLimit(
   options: { limit: number; windowMs: number; name: string },
 ) {
   const redisConfigured = Boolean(
-    process.env.REDIS_URL?.trim() ||
-    (process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim() && process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()),
+    process.env.REDIS_URL?.trim() || upstashCredentials(),
   )
   if (
     !redisConfigured &&
