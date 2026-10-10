@@ -12,6 +12,8 @@
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
     "env:sync": "node scripts/sync-env.mjs",
+    "env:export": "node scripts/inject-env.mjs --export",
+    "env:run": "node scripts/inject-env.mjs --",
     "test:all": "npm run test",
     "android:sync": "npx cap sync android",
     "android:debug": "npx cap sync android && cd android && ./gradlew assembleDebug",

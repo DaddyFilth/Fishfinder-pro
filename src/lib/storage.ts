@@ -13,7 +13,7 @@ export class StorageManager {
   private static dbPromise: Promise<IDBPDatabase> =
     typeof window === 'undefined'
       ? Promise.reject(new Error('IndexedDB is only available in the browser'))
-      : openDB(DB_NAME, 1, {
+      : openDB(DB_NAME, 2, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(STORE_NAMES.CATALOG)) {
         db.createObjectStore(STORE_NAMES.CATALOG);
@@ -23,6 +23,9 @@ export class StorageManager {
       }
       if (!db.objectStoreNames.contains(STORE_NAMES.SITES)) {
         db.createObjectStore(STORE_NAMES.SITES);
+      }
+      if (!db.objectStoreNames.contains(STORE_NAMES.CHECKLISTS)) {
+        db.createObjectStore(STORE_NAMES.CHECKLISTS);
       }
     },
   });

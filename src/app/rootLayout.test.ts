@@ -18,8 +18,9 @@ describe('root layout', () => {
   it('keeps the public metadata description qualified when AI is optional', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/app/layout.tsx'), 'utf8')
 
-    expect(source).toContain('optional AI trip planning')
+    // Description may omit AI entirely or qualify it; never overclaim it.
     expect(source).not.toContain('AI-powered trip planning')
+    expect(source).toMatch(/optional AI trip planning|plan your next fishing trip/)
   })
 
   it('renders the registration inside the document body alongside children', () => {

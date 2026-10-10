@@ -1,6 +1,19 @@
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
+const routeModules = import.meta.glob('./**/route.ts', { eager: false })
+
+type RouteHandler = (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>
+
+async function loadHandler(mod: string, method: string): Promise<RouteHandler> {
+  const loader = routeModules[`./${mod}.ts`]
+  if (!loader) throw new Error(`Missing route module: ${mod}`)
+  const ns = await loader() as Record<string, unknown>
+  const handler = ns[method]
+  if (typeof handler !== 'function') throw new Error(`Missing ${method} export on ${mod}`)
+  return handler as RouteHandler
+}
+
 const routes: Array<[string, string, string, Record<string, string>?]> = [
   ['admin/users', 'GET', 'admin/users/route'],
   ['admin/users', 'PATCH', 'admin/users/route'],
@@ -51,8 +64,7 @@ describe('API smoke: every endpoint answers invalid/unconfigured calls with a cl
 
   for (const [path, method, mod, params] of routes) {
     it(`${method} /api/${path}`, async () => {
-      const handler = (await import(`./${mod}`))[method]
-      expect(typeof handler).toBe('function')
+      const handler = await loadHandler(mod, method)
       const init: { method: string; headers: Record<string, string>; body?: string } = { method, headers: { 'content-type': 'application/json', origin: 'http://localhost', host: 'localhost' } }
       if (method !== 'GET') init.body = '{}'
       const req = new NextRequest(`http://localhost/api/${path}`, init)

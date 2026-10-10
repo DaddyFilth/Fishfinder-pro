@@ -6,14 +6,23 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import ServiceWorkerRegistration from "@/components/offline/ServiceWorkerRegistration";
 import "./globals.css";
 
+const siteUrl = "https://www.fishfinder-pro.online";
 const description =
-  "Oklahoma public fishing access, provider-reported environmental conditions, species information, and optional AI trip planning.";
+  "Find Oklahoma public fishing spots, compare provider-reported conditions, check species information, and plan your next fishing trip.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.fishfinder-pro.online"),
+  metadataBase: new URL(siteUrl),
   applicationName: "Oklahoma SeamCast",
   category: "sports",
-  keywords: ["Oklahoma fishing", "public fishing access", "weather", "solunar", "fish logbook"],
+  keywords: [
+    "Oklahoma fishing",
+    "Oklahoma fishing spots",
+    "public fishing access",
+    "fishing conditions",
+    "fishing forecast",
+    "fish logbook",
+  ],
+  authors: [{ name: "Oklahoma SeamCast" }],
   creator: "Oklahoma SeamCast",
   publisher: "Oklahoma SeamCast",
   verification: { google: "a1XlKud9pKxjKX_l5Qza5Npsxzo9a3li0DucnsXgZ38" },
@@ -67,7 +76,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Oklahoma SeamCast',
-    url: 'https://www.fishfinder-pro.online',
+    url: siteUrl,
     applicationCategory: 'SportsApplication',
     operatingSystem: 'Any',
     description,

@@ -40,7 +40,6 @@ export default function FishBot({ spot, conditions }: Props) {
             lat: spotLat,
             lon: spotLon,
             targetSpecies,
-            conditions,
           }),
         });
 
@@ -75,7 +74,7 @@ export default function FishBot({ spot, conditions }: Props) {
 
     void loadAdvice();
     return () => { cancelled = true; };
-  }, [conditions, spot, spotLat, spotLon, targetSpecies]);
+  }, [spot, spotLat, spotLon, targetSpecies]);
 
   async function sendMessage() {
     const userMsg = input.trim();
