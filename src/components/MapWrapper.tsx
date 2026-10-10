@@ -475,19 +475,13 @@ export default function FishingMap({
     load(spot, true);
   };
 
-  const spotLoadKey = useMemo(
-    () => spots.map((spot) => `${spot.id}:${spot.lat}:${spot.lng}`).join('|'),
-    [spots],
-  );
   const spotsRef = useRef(spots);
 
+  // Conditions are fetched on demand when a spot is selected. Loading every spot
+  // on mount exhausts provider quotas and makes a single marker click look broken.
   useEffect(() => {
     spotsRef.current = spots;
   }, [spots]);
-
-  useEffect(() => {
-    spotsRef.current.forEach((spot) => load(spot));
-  }, [load, spotLoadKey]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#020617' }}>

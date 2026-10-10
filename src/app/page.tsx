@@ -5,7 +5,6 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import QuickScan from '@/components/QuickScan';
 import PredictiveAlerts from '@/components/PredictiveAlerts';
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
@@ -608,7 +607,8 @@ export default function MobilePage() {
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
-  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
+  // GPS changes ordering only; it must never hide catalog spots behind a distance limit.
+  const visibleSpots = filteredSpots;
   const rankedSpots = useMemo(
     () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
     [visibleSpots, conditionModes, conditionScores],
@@ -626,7 +626,7 @@ export default function MobilePage() {
   { id: 'bitetime', icon: '🌙', label: 'Bite times' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
-    { id: 'settings', icon: '⚙️', label: 'Settings' },
+    { id: 'settings', icon: '⚙���', label: 'Settings' },
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>
@@ -637,10 +637,6 @@ export default function MobilePage() {
           <PredictiveAlerts 
             coordinates={coordinates} 
             onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
-          />
-          <QuickScan 
-            coordinates={coordinates} 
-            onSpeciesSelect={(s) => { setTab('species'); setSelectedSpecies(s); }}
           />
         </div>
       </div>
