@@ -127,8 +127,9 @@ function LoginPageContent() {
         return
       }
 
-      router.replace(nextPath)
-      router.refresh()
+      // The auth route sets the Supabase session cookie. A hard navigation lets
+      // the proxy and server components observe that cookie immediately.
+      window.location.replace(nextPath)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed. Please try again.'
       if (/failed to fetch/i.test(message)) {

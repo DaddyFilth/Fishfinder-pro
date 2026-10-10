@@ -2,11 +2,18 @@ function firstDefined(candidates: Array<string | undefined>) {
   return candidates.find((value) => Boolean(value?.trim()))?.trim()
 }
 
+function cleanEnvValue(value: string | undefined) {
+  const cleaned = value?.trim()
+  if (!cleaned) return undefined
+  return cleaned.replace(/^(["'])(.*)\1$/, '$2').trim() || undefined
+}
+
 function normalizeSupabaseUrl(value: string | undefined) {
-  if (!value) return null
+  const cleaned = cleanEnvValue(value)
+  if (!cleaned) return null
 
   try {
-    const parsed = new URL(value)
+    const parsed = new URL(cleaned)
     if (!['http:', 'https:'].includes(parsed.protocol)) return null
     return parsed.origin
   } catch {
@@ -17,6 +24,7 @@ function normalizeSupabaseUrl(value: string | undefined) {
 export function getSupabaseProjectUrl() {
   const explicit = firstDefined([
     process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_URL,
   ])
 
@@ -24,12 +32,14 @@ export function getSupabaseProjectUrl() {
 }
 
 export function getSupabasePublishableKey() {
-  return firstDefined([
+  return [
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_ANON_KEY,
     process.env.SUPABASE_PUBLISHABLE_KEY,
     process.env.SUPABASE_ANON_KEY,
-  ])
+  ].map(cleanEnvValue).find(Boolean)
 }
 
 export function getSupabaseServiceRoleKey() {

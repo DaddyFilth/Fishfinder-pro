@@ -5,9 +5,6 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import SpeciesTab from "@/components/SpeciesTab";
-import QuickScan from '@/components/QuickScan';
-import PredictiveAlerts from '@/components/PredictiveAlerts';
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
@@ -299,7 +296,6 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [, setSelectedSpecies] = useState<unknown>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -609,7 +605,8 @@ export default function MobilePage() {
 
   const filteredSpots = filterSpots(spots, mapFilter);
   const nearbySpots = useMemo(() => sortSpotsByDistance(filteredSpots, coordinates), [filteredSpots, coordinates]);
-  const visibleSpots = nearbyMode && coordinates ? nearbySpots.slice(0, 20) : filteredSpots;
+  // GPS changes ordering only; it must never hide catalog spots behind a distance limit.
+  const visibleSpots = filteredSpots;
   const rankedSpots = useMemo(
     () => rankSpots(visibleSpots, conditionScores).filter(({ spot }) => conditionModes[spot.id] !== 'fallback'),
     [visibleSpots, conditionModes, conditionScores],
@@ -621,31 +618,16 @@ export default function MobilePage() {
 
   const tabs = [
     { id: 'map', icon: '🗺️', label: 'Explore' },
-  { id: 'species', icon: '🐟', label: 'Species' },
   { id: 'log', icon: '📓', label: 'Logbook' },
   { id: 'top', icon: '⭐', label: 'Top spots' },
   { id: 'weather', icon: '🌤️', label: 'Weather' },
   { id: 'bitetime', icon: '🌙', label: 'Bite times' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
-    { id: 'settings', icon: '⚙️', label: 'Settings' },
+    { id: 'settings', icon: '⚙���', label: 'Settings' },
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>
-
-      {/* QUICK SCAN WIDGET */}
-      <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <PredictiveAlerts 
-            coordinates={coordinates} 
-            onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
-          />
-          <QuickScan 
-            coordinates={coordinates} 
-            onSpeciesSelect={(s) => { setTab('species'); setSelectedSpecies(s); }}
-          />
-        </div>
-      </div>
 
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
@@ -709,8 +691,10 @@ export default function MobilePage() {
                 setMapPopupOpen(true);
               }}
               onPopupClose={() => {
+                // Leaflet can emit `remove` while it is repositioning a popup.
+                // Keep the selected spot stable so that lifecycle event cannot
+                // unmount and remount the map during a selection.
                 setMapPopupOpen(false);
-                setSelectedSpot(null);
               }}
             />
 
@@ -802,12 +786,6 @@ export default function MobilePage() {
           </div>
         )}
 
-        {/* SOCIAL TAB */}
-        {tab === 'species' && (
-  <div style={{ ...PAGE_STYLES.scrollPane, padding: 0 }}>
-  <SpeciesTab coordinates={coordinates} />
-  </div>
-        )}
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
           <div style={PAGE_STYLES.padPane}>
