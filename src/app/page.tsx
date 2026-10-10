@@ -5,7 +5,6 @@ import NextBestAction from '@/components/NextBestAction';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
-import PredictiveAlerts from '@/components/PredictiveAlerts';
 import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
@@ -297,7 +296,6 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [, setSelectedSpecies] = useState<unknown>(null);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -631,16 +629,6 @@ export default function MobilePage() {
   return (
     <div style={PAGE_STYLES.root}>
 
-      {/* QUICK SCAN WIDGET */}
-      <div style={{ position: 'absolute', top: '65px', left: '16px', right: '16px', zIndex: 50, pointerEvents: 'none' }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <PredictiveAlerts 
-            coordinates={coordinates} 
-            onSpeciesSelect={(id) => { setTab('species'); setSelectedSpecies(id); }} 
-          />
-        </div>
-      </div>
-
       {/* HEADER */}
       <header style={PAGE_STYLES.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', minWidth:0 }}>
@@ -703,8 +691,10 @@ export default function MobilePage() {
                 setMapPopupOpen(true);
               }}
               onPopupClose={() => {
+                // Leaflet can emit `remove` while it is repositioning a popup.
+                // Keep the selected spot stable so that lifecycle event cannot
+                // unmount and remount the map during a selection.
                 setMapPopupOpen(false);
-                setSelectedSpot(null);
               }}
             />
 

@@ -694,7 +694,13 @@ export default function FishingMap({
                 ref={(instance) => {
                   markerRefs.current[spot.id] = instance;
                 }}
-                eventHandlers={{ click: () => { load(spot); onSpotSelect?.(spot); onPopupOpen?.(spot); } }}
+                eventHandlers={{
+                  click: () => {
+                    onSpotSelect?.(spot);
+                    onPopupOpen?.(spot);
+                    load(spot);
+                  },
+                }}
               >
                 <Popup
                   maxWidth={popupFrame.maxWidth}
