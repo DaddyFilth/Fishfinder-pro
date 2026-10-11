@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- catalog images and legacy cached strategy data use these compatibility boundaries. */
 import { useMemo, useState, useEffect } from 'react';
 import GearChecklist from '@/components/GearChecklist';
+import FishIdentifier from '@/components/ai/FishIdentifier';
 
 function getFallbackImage(speciesName: string) {
   return `/api/species-image/${encodeURIComponent(speciesName)}`;
@@ -253,6 +254,11 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
     <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: '#060d1a', borderRadius: '16px', overflow: 'hidden' }}>
       <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #1e293b', background: 'linear-gradient(180deg, #0b1b2d 0%, #081321 100%)', flexShrink: 0 }}>
         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22d3ee', marginBottom: '8px' }}>Oklahoma Species Guide</div>
+        <div style={{ background: 'linear-gradient(135deg, rgba(8,47,73,0.9), rgba(30,27,75,0.8))', border: '1px solid #155e75', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#a5f3fc', marginBottom: 5 }}>AI CATCH IDENTIFICATION</div>
+          <div style={{ fontSize: 10, color: '#cbd5e1', lineHeight: 1.4, marginBottom: 10 }}>Use your camera to scan a catch and compare it with the species catalog. Identification is an AI estimate—verify regulations and size limits before keeping a fish.</div>
+          <FishIdentifier />
+        </div>
         <input
           aria-label="Search fish species"
           value={search}
