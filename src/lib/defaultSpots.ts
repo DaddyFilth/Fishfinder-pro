@@ -1,4 +1,4 @@
-import type { Spot } from '@/lib/mapFilters';
+import type { Spot, SpotDepthMetadata } from '@/lib/mapFilters';
 
 /**
  * Bundled Oklahoma public-water pins keep the map useful when the optional
@@ -6,6 +6,8 @@ import type { Spot } from '@/lib/mapFilters';
  * permits, closures, and regulations with the managing agency before traveling.
  */
 const source = 'Bundled Oklahoma public-water catalog';
+const OWRB_BATHYMETRY_URL = 'https://oklahoma.gov/owrb/data-and-maps/bathymetric-mapping.html';
+const OWRB_CONTOUR_SERVICE_URL = 'https://owrb-dev.csa.ou.edu/server/rest/services/Surface_Water/LOK_Lakes/MapServer/2';
 
 export const OKLAHOMA_BOUNDS = {
   minLat: 33.615,
@@ -34,7 +36,29 @@ const spot = (
   region,
   source,
   notes,
+  depth_metadata: depthMetadata(spot_type),
 });
+
+function depthMetadata(spotType: Spot['spot_type']): SpotDepthMetadata {
+  const measuredContourType = ['lake', 'reservoir', 'municipal'].includes(spotType);
+  return measuredContourType
+    ? {
+        source: 'Oklahoma Water Resources Board Lakes of Oklahoma bathymetric contours',
+        source_url: OWRB_BATHYMETRY_URL,
+        unit: 'ft',
+        kind: 'measured-contour',
+        status: 'available-on-map',
+        note: 'Survey-derived contour depth; enable measured depth contours and verify survey year and current lake level.',
+      }
+    : {
+        source: 'Provider or field depth reading',
+        source_url: OWRB_CONTOUR_SERVICE_URL,
+        unit: 'ft',
+        kind: 'provider-reading',
+        status: 'dynamic-provider',
+        note: 'No static depth is invented for this river, trout area, or access point; use provider readings and local advisories.',
+      };
+}
 
 export const DEFAULT_SPOTS: readonly Spot[] = [
   // Oklahoma City public waters
@@ -125,3 +149,31 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(49, 'Neosho River — Miami', 36.890, -94.880, 'river', 'Public shore', 'Northeast', 'Public river corridor; verify access at the selected launch or park.'),
   spot(50, 'Red River — Lake Texoma', 33.817, -96.610, 'river', 'Boat ramp', 'Southwest', 'Public river/reservoir access near the Oklahoma-Texas border.'),
 ];
+
+/**
+ * Keep the public map anchored to the complete catalog even when an upstream
+ * provider returns only a regional subset or AI micro-spots. Provider fields
+ * (sensor ids, scores, and provenance) are merged onto the matching catalog
+ * water; the catalog remains the source of truth for the 76 public locations.
+ */
+export function mergeWithDefaultSpots(providerSpots: readonly Spot[]): Spot[] {
+  const byId = new Map(providerSpots.map((spot) => [spot.id, spot]));
+  const byName = new Map(providerSpots.map((spot) => [spot.name.trim().toLowerCase(), spot]));
+  return DEFAULT_SPOTS.map((catalogSpot) => {
+    const providerSpot = byId.get(catalogSpot.id) ?? byName.get(catalogSpot.name.trim().toLowerCase());
+    return {
+      ...catalogSpot,
+      ...(providerSpot ?? {}),
+      id: catalogSpot.id,
+      name: catalogSpot.name,
+      lat: catalogSpot.lat,
+      lng: catalogSpot.lng,
+      water_type: providerSpot?.water_type ?? catalogSpot.water_type,
+      spot_type: providerSpot?.spot_type ?? catalogSpot.spot_type,
+      access_type: providerSpot?.access_type ?? catalogSpot.access_type,
+      region: providerSpot?.region ?? catalogSpot.region,
+      notes: providerSpot?.notes ?? catalogSpot.notes,
+      description: providerSpot?.description ?? catalogSpot.description,
+    };
+  });
+}

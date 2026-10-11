@@ -1,6 +1,6 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
+import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSuppliedContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getGroqClient } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const body = bodyResult.value as RequestBody
 
   try {
-    const { message, lat, lon, spot, history = [] } = body
+    const { message, lat, lon, spot, conditions, history = [] } = body
 
     if (typeof message !== 'string' || !message.trim() || message.length > 4_000) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     const spotLat = lat ?? coordinate(spot?.lat ?? spot?.latitude)
     const spotLon = lon ?? coordinate(spot?.lon ?? spot?.lng ?? spot?.longitude)
     const spotsData = await fetchSpotsContext(spotLat, spotLon)
-    const context = buildContextMessage(spotsData)
+    const context = `${buildContextMessage(spotsData)}\n\n${buildSuppliedContextMessage(spot, conditions)}`
     const messages: ChatMessage[] = [
       { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
       { role: 'system', content: context },

@@ -1,7 +1,7 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
+import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSuppliedContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
 import { getAiModel, getGroqClient } from '@/lib/ollama'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
@@ -75,13 +75,14 @@ export async function POST(req: NextRequest) {
     lat: z.number().finite().min(-90).max(90),
     lon: z.number().finite().min(-180).max(180),
     targetSpecies: z.string().trim().max(80).optional(),
+    conditions: z.record(z.string(), z.unknown()).optional(),
   }).strict().safeParse(bodyResult.value)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid coordinates or species.' }, { status: 400 })
 
-  const { lat, lon, targetSpecies } = parsed.data
+  const { lat, lon, targetSpecies, conditions } = parsed.data
   const safeSpecies = targetSpecies ?? ''
     const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
-    const context = buildContextMessage(spotsData)
+    const context = `${buildContextMessage(spotsData)}\n\n${buildSuppliedContextMessage(undefined, conditions)}`
 
     try {
       const advice = await callAi([

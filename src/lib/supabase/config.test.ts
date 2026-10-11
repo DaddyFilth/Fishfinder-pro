@@ -16,6 +16,9 @@ describe('getSupabaseProjectUrl', () => {
   })
 
   it('returns null when the Supabase URL is missing', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
+    vi.stubEnv('NEXT_PUBLIC_NEXT_PUBLIC_SUPABASE_URL', undefined)
+    vi.stubEnv('SUPABASE_URL', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
     vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', undefined)

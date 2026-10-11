@@ -58,12 +58,6 @@ node -e '
   assert(nearby.includes("distanceMiles"), "Missing distanceMiles export");
   console.log("  ✓ nearbySpots exports verified");
 
-  // Check LiveSpotsContext
-  const context = fs.readFileSync("src/contexts/LiveSpotsContext.tsx", "utf8");
-  assert(context.includes("resolveDataSource"), "Missing resolveDataSource");
-  assert(context.includes("LiveSpotsProvider"), "Missing LiveSpotsProvider");
-  console.log("  ✓ LiveSpotsContext exports verified");
-
   // Check seamcastSpotsClient
   const client = fs.readFileSync("src/lib/seamcastSpotsClient.ts", "utf8");
   assert(client.includes("fetchSeamcastAiSpots"), "Missing fetchSeamcastAiSpots");

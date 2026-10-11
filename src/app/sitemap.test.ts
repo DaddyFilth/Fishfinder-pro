@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import sitemap from './sitemap'
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 import { PUBLIC_LOCATIONS } from '@/lib/publicCatalog'
 import { SPECIES } from '@/lib/speciesCatalog'
 
 describe('sitemap metadata route', () => {
   it('contains public directories and catalog detail pages on the canonical host', () => {
     const entries = sitemap()
-    expect(entries).toHaveLength(3 + PUBLIC_LOCATIONS.length + SPECIES.length)
+    expect(entries).toHaveLength(4 + PUBLIC_LOCATIONS.length + SPECIES.length + DEFAULT_SPOTS.length)
     expect(entries[0]?.url).toBe('https://www.fishfinder-pro.online')
     expect(entries[0]?.changeFrequency).toBe('daily')
     expect(entries[0]?.priority).toBe(1)

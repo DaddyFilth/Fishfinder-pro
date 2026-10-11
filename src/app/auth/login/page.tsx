@@ -2,7 +2,7 @@
 
 import { FormEvent, Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   getAuthCallbackUrl,
   getSafeNextPath,
@@ -61,7 +61,6 @@ export default function LoginPage() {
 }
 
 function LoginPageContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')

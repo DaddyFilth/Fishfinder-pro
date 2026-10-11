@@ -14,6 +14,15 @@ export type SpotFilter =
   | 'walk-in'
   | 'state-park';
 
+export interface SpotDepthMetadata {
+  source: string;
+  source_url: string;
+  unit: 'ft';
+  kind: 'measured-contour' | 'provider-reading';
+  status: 'available-on-map' | 'dynamic-provider';
+  note: string;
+}
+
 export interface Spot {
   id: string;
   name: string;
@@ -26,6 +35,7 @@ export interface Spot {
   source?: string;
   notes?: string;
   description?: string;
+  depth_metadata?: SpotDepthMetadata;
   usgs_site_id?: string;
   noaa_station_id?: string;
   biteScore?: { score: number; level: string; reasons?: string[] } | null;

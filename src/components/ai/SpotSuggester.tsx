@@ -39,6 +39,12 @@ interface UserLocation {
   lng: number;
 }
 
+interface RegionalAnswer {
+  score: number | null;
+  species: string[];
+  bait: string | null;
+}
+
 const ratingColor = (rating: string) =>
   rating === 'Hot'
     ? '#22c55e'
@@ -63,6 +69,7 @@ export default function SpotSuggester({ spots }: Props) {
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [usingCatalogCenter, setUsingCatalogCenter] = useState(false);
+  const [regionalAnswer, setRegionalAnswer] = useState<RegionalAnswer | null>(null);
   const [selectedSpecies, setSelectedSpecies] = useState(SPECIES[0]?.name ?? '');
 
   const runSuggestion = useCallback(
@@ -70,6 +77,7 @@ export default function SpotSuggester({ spots }: Props) {
       setLoading(true);
       setError(null);
       setResults([]);
+      setRegionalAnswer(null);
 
       const hasDeviceLocation = typeof lat === 'number' && Number.isFinite(lat) || userLocation !== null;
       const feedLat = typeof lat === 'number' && Number.isFinite(lat) ? lat : userLocation?.lat ?? spots[0]?.lat;
@@ -127,6 +135,11 @@ export default function SpotSuggester({ spots }: Props) {
           .slice(0, 10);
         setResults(matchingResults);
         setTotalNearby(data.total_nearby);
+        setRegionalAnswer({
+          score: matchingResults.length ? Math.round(matchingResults.reduce((sum, item) => sum + item.fishing_score, 0) / matchingResults.length) : null,
+          species: Array.from(new Set(matchingResults.flatMap((item) => item.primary_species))).slice(0, 3),
+          bait: matchingResults[0]?.recommended_lure ?? null,
+        });
       } catch (requestError: unknown) {
         setError(
           requestError instanceof Error
@@ -286,6 +299,16 @@ export default function SpotSuggester({ spots }: Props) {
           {totalNearby} nearby {totalNearby === 1 ? 'spot' : 'spots'} evaluated
         </p>
       ) : null}
+
+      {regionalAnswer && (
+        <section aria-labelledby="regional-fishing-answer" style={{ marginTop: 16, padding: 14, borderRadius: 12, background: 'linear-gradient(135deg, rgba(8,47,73,0.9), rgba(15,23,42,0.95))', border: '1px solid #155e75' }}>
+          <div style={{ color: '#67e8f9', fontSize: 11, fontWeight: 800, letterSpacing: 0.6 }}>25-MILE REGIONAL ANSWER</div>
+          <h2 id="regional-fishing-answer" style={{ margin: '5px 0 7px', fontSize: 17, color: '#f0fdfa' }}>Regional bite outlook{regionalAnswer.score !== null ? ` · ${regionalAnswer.score}/100` : ''}</h2>
+          <p style={{ margin: '0 0 8px', color: '#cbd5e1', fontSize: 12, lineHeight: 1.45 }}>This general answer summarizes the independent AI predictions for the catalog waters within 25 miles. It is separate from each spot’s dashboard.</p>
+          <p style={{ margin: 0, color: '#dbeafe', fontSize: 12 }}><strong>Likely species:</strong> {regionalAnswer.species.join(', ') || 'No species returned.'}</p>
+          <p style={{ margin: '5px 0 0', color: '#dbeafe', fontSize: 12 }}><strong>Starting bait/lure:</strong> {regionalAnswer.bait ?? 'No bait returned.'}</p>
+        </section>
+      )}
 
       <div
         style={{
