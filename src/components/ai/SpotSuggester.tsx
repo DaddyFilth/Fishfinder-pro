@@ -40,6 +40,14 @@ interface UserLocation {
   lng: number;
 }
 
+interface RegionalAnswer {
+  center: UserLocation;
+  score: number | null;
+  level: string | null;
+  species: string[];
+  baits: string[];
+}
+
 const ratingColor = (rating: string) =>
   rating === 'Hot'
     ? '#22c55e'
@@ -63,6 +71,7 @@ export default function SpotSuggester({ spots }: Props) {
   const [totalNearby, setTotalNearby] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [regionalAnswer, setRegionalAnswer] = useState<RegionalAnswer | null>(null);
   const [selectedSpecies, setSelectedSpecies] = useState(SPECIES[0]?.name ?? '');
 
   const runSuggestion = useCallback(
@@ -70,6 +79,7 @@ export default function SpotSuggester({ spots }: Props) {
       setLoading(true);
       setError(null);
       setResults([]);
+      setRegionalAnswer(null);
 
       const feedLat = typeof lat === 'number' && Number.isFinite(lat) ? lat : userLocation?.lat ?? spots[0]?.lat;
       const feedLng = typeof lng === 'number' && Number.isFinite(lng) ? lng : userLocation?.lng ?? spots[0]?.lng;
@@ -85,6 +95,13 @@ export default function SpotSuggester({ spots }: Props) {
         }
 
         const predictedSpots = Array.isArray(feed.microSpots) ? feed.microSpots : [];
+        setRegionalAnswer({
+          center: { lat: feedLat, lng: feedLng },
+          score: typeof feed.overallBite?.score === 'number' ? feed.overallBite.score : null,
+          level: typeof feed.overallBite?.level === 'string' ? feed.overallBite.level : null,
+          species: (feed.speciesLikely ?? []).map((candidate) => candidate.species).filter((value): value is string => Boolean(value)).slice(0, 3),
+          baits: (feed.recommendedBaits ?? []).map((candidate) => candidate.baitType).filter((value): value is string => Boolean(value)).slice(0, 3),
+        });
         const caughtSpecies = selectedSpecies.trim().toLowerCase();
         const scoped = caughtSpecies
           ? predictedSpots.filter((spot) =>
@@ -291,6 +308,21 @@ export default function SpotSuggester({ spots }: Props) {
           {totalNearby} nearby {totalNearby === 1 ? 'spot' : 'spots'} evaluated
         </p>
       ) : null}
+
+      {regionalAnswer && (
+        <section aria-labelledby="regional-fishing-answer" style={{ marginTop: 16, padding: 14, borderRadius: 12, background: 'linear-gradient(135deg, rgba(8,47,73,0.9), rgba(15,23,42,0.95))', border: '1px solid #155e75' }}>
+          <div style={{ color: '#67e8f9', fontSize: 11, fontWeight: 800, letterSpacing: 0.6 }}>25-MILE REGIONAL ANSWER</div>
+          <h2 id="regional-fishing-answer" style={{ margin: '5px 0 7px', fontSize: 17, color: '#f0fdfa' }}>
+            {regionalAnswer.level ? `${regionalAnswer.level} regional bite outlook` : 'Regional bite outlook'}
+            {regionalAnswer.score !== null ? ` · ${regionalAnswer.score}/100` : ''}
+          </h2>
+          <p style={{ margin: '0 0 8px', color: '#cbd5e1', fontSize: 12, lineHeight: 1.45 }}>
+            This answer is scoped to a 25-mile search around {regionalAnswer.center.lat.toFixed(4)}, {regionalAnswer.center.lng.toFixed(4)}. It is separate from every spot dashboard below.
+          </p>
+          <p style={{ margin: 0, color: '#dbeafe', fontSize: 12 }}><strong>Likely species:</strong> {regionalAnswer.species.join(', ') || 'Provider did not report species.'}</p>
+          <p style={{ margin: '5px 0 0', color: '#dbeafe', fontSize: 12 }}><strong>Starting bait/lure:</strong> {regionalAnswer.baits.join(', ') || 'Provider did not report bait guidance.'}</p>
+        </section>
+      )}
 
       <div
         style={{

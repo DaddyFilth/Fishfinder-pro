@@ -12,6 +12,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),
+    ...DEFAULT_SPOTS.map((spot) => ({
+      url: `${base}/fishing-spots/${spotSlug(spot)}/ai`,
+      changeFrequency: 'daily' as const,
+      priority: 0.65,
+    })),
     { url: `${base}/species`, changeFrequency: 'monthly', priority: 0.8 },
     ...SPECIES.map((species) => ({
       url: `${base}/species/${speciesSlug(species)}`,

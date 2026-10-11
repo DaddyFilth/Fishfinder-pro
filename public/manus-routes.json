@@ -5,6 +5,7 @@
     { "path": "/fishing-spots/:slug", "title": "Public Fishing Spot" },
     { "path": "/species", "title": "Oklahoma Fish Species Guide" },
     { "path": "/species/:slug", "title": "Oklahoma Fish Species" },
+    { "path": "/fishing-spots/:slug/ai", "title": "Spot-specific fishing intelligence" },
     { "path": "/account", "title": "Profile settings" },
     { "path": "/admin/users", "title": "User management" },
     { "path": "/auth/login", "title": "Sign in" },
