@@ -7,8 +7,8 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { getGroqClient } from '@/lib/ollama';
-import { getAiModel } from '@/lib/ollama';
+import { getGroqClient } from '@/lib/groq';
+import { getAiModel } from '@/lib/groq';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';

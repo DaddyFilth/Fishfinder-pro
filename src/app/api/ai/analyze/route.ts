@@ -1,5 +1,5 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/ollama';
+import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/groq';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';

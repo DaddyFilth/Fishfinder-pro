@@ -2,7 +2,7 @@ import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSuppliedContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { getAiModel, getGroqClient } from '@/lib/ollama'
+import { getAiModel, getGroqClient } from '@/lib/groq'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 

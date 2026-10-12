@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiVisionModel, getGroqClient } from '@/lib/ollama';
+import { getAiVisionModel, getGroqClient } from '@/lib/groq';
 import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';

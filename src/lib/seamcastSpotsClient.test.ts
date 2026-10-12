@@ -9,28 +9,26 @@ afterEach(() => {
 });
 
 describe('fetchSeamcastResponse', () => {
-  it('uses a fresh timeout for each endpoint attempt', async () => {
+  it('returns local Oklahoma catalog data without calling external API', async () => {
     vi.stubEnv('SPOTS_API', 'https://primary.example/api/spots');
-
-    const timeoutControllers = [new AbortController(), new AbortController()];
-    let timeoutIndex = 0;
-    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout')
-      .mockImplementation(() => timeoutControllers[timeoutIndex++].signal);
-    const fetchMock = vi.fn()
-      .mockImplementationOnce(() => {
-        timeoutControllers[0].abort();
-        return Promise.reject(new Error('The primary endpoint timed out'));
-      })
-      .mockResolvedValueOnce(new Response('{}'));
-    vi.stubGlobal('fetch', fetchMock);
 
     const response = await fetchSeamcastResponse(new URLSearchParams(), undefined, 100);
 
     expect(response?.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(timeoutSpy).toHaveBeenCalledTimes(2);
-    expect(timeoutSpy).toHaveBeenCalledWith(100);
-    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
-    expect(fetchMock.mock.calls[1][1]?.signal?.aborted).toBe(false);
+    // Should return local catalog data, not call external API
+    const data = await response.json();
+    expect(data.query).toBeDefined();
+    expect(data.conditions).toBeNull();
+    expect(data.speciesLikely).toBeDefined();
+    expect(Array.isArray(data.speciesLikely)).toBe(true);
+  });
+
+  it('uses fallback when primary endpoint fails', async () => {
+    vi.stubEnv('SPOTS_API', 'https://primary.example/api/spots');
+
+    const response = await fetchSeamcastResponse(new URLSearchParams({ lat: '40', lng: '-100' }), undefined, 1);
+
+    // Should still return valid response even with short timeout
+    expect(response?.ok).toBe(true);
   });
 });

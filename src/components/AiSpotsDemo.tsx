@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchSeamcastAiSpots } from '@/lib/seamcastSpotsClient';
+import { fetchLocalSpotsSuggestions } from '@/lib/seamcastSpotsClient';
 
 type SpotsState =
   | { status: 'idle' }
@@ -18,7 +18,7 @@ export default function AiSpotsDemo() {
     async function load() {
       setState({ status: 'loading' });
       try {
-        const data = await fetchSeamcastAiSpots(34.999, -97.366);
+        const data = await fetchLocalSpotsSuggestions(34.999, -97.366);
         if (!cancelled) {
           setState({ status: 'ok', data });
         }
@@ -58,7 +58,7 @@ export default function AiSpotsDemo() {
           marginBottom: '0.5rem',
         }}
       >
-        SeamCast Provider Spots Feed (Purcell)
+        Local Oklahoma Spots (AI-analytics)
       </h2>
 
       {state.status === 'idle' && <p>Idle…</p>}
