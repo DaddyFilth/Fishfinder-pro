@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   '/api/auth/recover',
   '/api/feed/cloudflare',
   '/api/health',
+  '/api/ai',
   '/offline',
   '/manifest.json',
   '/sw.js',
@@ -23,6 +24,7 @@ const PUBLIC_PATHS = [
 export function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/api/ai/') ||
     pathname === '/locations' ||
     pathname.startsWith('/locations/') ||
     pathname === '/species' ||
