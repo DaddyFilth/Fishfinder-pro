@@ -94,7 +94,7 @@ describe('spots route provenance', () => {
     expect(payload.spots[0].observed_at).toBeUndefined()
   })
 
-  it('does not attach a fabricated observation time to stored spot metadata', async () => {
+  it('falls back when stored spot metadata is only a sparse suggestion set', async () => {
     const query = {
       from: vi.fn(),
       select: vi.fn(),
@@ -119,10 +119,11 @@ describe('spots route provenance', () => {
 
     expect(payload.live).toBe(false)
     expect(payload.observed_at).toBeUndefined()
+    expect(payload.spots.length).toBeGreaterThanOrEqual(76)
     expect(payload.spots[0]).toMatchObject({
-      source: 'supabase-spots',
+      source: 'bundled-public-water-catalog',
       live: false,
-      data_mode: 'provider',
+      data_mode: 'fallback',
     })
   })
 })

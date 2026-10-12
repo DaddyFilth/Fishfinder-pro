@@ -151,12 +151,18 @@ function normalize(payload: unknown): AnyRec {
         : undefined;
   const source = typeof root.source === 'string' ? root.source : 'seamcast-spots';
   const dataMode = spots.length > 0 ? 'provider' : 'unavailable';
-  const normalizedSpots = spots.map((spot) => ({
-    ...spot,
-    source,
-    live: false,
-    data_mode: dataMode,
-  }));
+  // The upstream spot endpoint may return only three AI micro-spots for the
+  // requested area. Those are suggestions, not replacements for the map's
+  // statewide pin catalog. Keep the map on the stable catalog unless the
+  // provider returned a complete catalog-sized result.
+  const normalizedSpots = spots.length >= DEFAULT_SPOTS.length
+    ? spots.map((spot) => ({
+        ...spot,
+        source,
+        live: false,
+        data_mode: dataMode,
+      }))
+    : [];
 
   return {
     ...root,
@@ -202,7 +208,7 @@ export async function GET(req: NextRequest) {
            live: false,
           data_mode: 'provider',
         }));
-      if (storedSpots.length > 0) {
+      if (storedSpots.length >= DEFAULT_SPOTS.length) {
         return NextResponse.json({
           spots: storedSpots,
           source: 'supabase-spots',
