@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 interface Props {
   spot: object;
   conditions: object;
+  compact?: boolean;
 }
 
 interface Msg {
@@ -17,6 +18,13 @@ export default function FishBot({ spot, conditions }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const toolChoices = [
+    { label: 'Bite window', prompt: 'What is the best bite window at this spot, and what uncertainty should I know?' },
+    { label: 'Bait and technique', prompt: 'Recommend bait, lure presentation, and technique for this specific spot.' },
+    { label: 'Current conditions', prompt: 'Summarize the supplied current conditions for this spot and tell me what is unavailable.' },
+    { label: 'Safety and rules', prompt: 'What access, safety, and regulation checks should I make before fishing this spot?' },
+  ];
 
   const spotData = spot as Record<string, unknown>;
   const spotName = typeof spotData.name === 'string' ? spotData.name : 'this spot';
@@ -40,6 +48,7 @@ export default function FishBot({ spot, conditions }: Props) {
             lat: spotLat,
             lon: spotLon,
             targetSpecies,
+            conditions,
           }),
         });
 
@@ -76,8 +85,8 @@ export default function FishBot({ spot, conditions }: Props) {
     return () => { cancelled = true; };
   }, [spot, spotLat, spotLon, targetSpecies]);
 
-  async function sendMessage() {
-    const userMsg = input.trim();
+  async function sendMessage(prompt?: string) {
+    const userMsg = (prompt ?? input).trim();
     if (!userMsg || loading) return;
 
     setInput('');
@@ -139,6 +148,23 @@ export default function FishBot({ spot, conditions }: Props) {
     <section style={{ padding: '14px', color: '#e2e8f0' }}>
       <div style={{ marginBottom: '10px', fontWeight: 800, color: '#22d3ee' }}>
         🎣 FishBot — {spotName}
+      </div>
+
+      <div aria-label="FishBot tools" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+        {toolChoices.map((tool) => (
+          <button
+            key={tool.label}
+            type="button"
+            onClick={() => {
+              setInput(tool.prompt);
+              window.setTimeout(() => void sendMessage(tool.prompt), 0);
+            }}
+            disabled={loading}
+            style={{ border: '1px solid #155e75', borderRadius: '999px', padding: '6px 9px', background: '#0c2635', color: '#a5f3fc', fontSize: '11px', cursor: loading ? 'wait' : 'pointer' }}
+          >
+            {tool.label}
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
