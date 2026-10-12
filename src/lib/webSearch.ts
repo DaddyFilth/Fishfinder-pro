@@ -61,10 +61,15 @@ export async function searchDuckDuckGo(query: string, timeoutMs = 8_000): Promis
       const fallbackController = new AbortController();
       const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), timeoutMs);
 
-      const fallbackRes = await fetch(fallbackUrl.toString(), {
-        signal: fallbackController.signal,
-        headers: { 'Accept': 'application/json', 'User-Agent': 'Fishfinder-Pro/1.0' },
-      });
+      let fallbackRes: Response;
+      try {
+        fallbackRes = await fetch(fallbackUrl.toString(), {
+          signal: fallbackController.signal,
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Fishfinder-Pro/1.0' },
+        });
+      } finally {
+        clearTimeout(fallbackTimeoutId);
+      }
       if (!fallbackRes.ok) return null;
       const data: unknown = await fallbackRes.json();
       return formatDuckDuckGoResult(data);
@@ -97,7 +102,7 @@ function formatDuckDuckGoResult(value: unknown): WebSearchResult | null {
 
         return {
           text: typeof topic.Text === 'string' ? topic.Text : '',
-          url: typeof topic.Url === 'string' ? topic.Url : null,
+          url: typeof topic.FirstURL === 'string' ? topic.FirstURL : null,
         };
       }).filter((topic) => topic?.text)
     : [];
@@ -107,8 +112,12 @@ function formatDuckDuckGoResult(value: unknown): WebSearchResult | null {
   const result: WebSearchResult = {
     abstract: typeof value.Abstract === 'string' ? value.Abstract : null,
     abstract_truncated: Boolean(value.AbstractTruncated),
-    answer: typeof value.AbstractText === 'string' ? value.AbstractText : null,
-    answer_type: typeof value.AbstractType === 'string' ? value.AbstractType : null,
+    answer: typeof value.Answer === 'string'
+      ? value.Answer
+      : typeof value.AbstractText === 'string' ? value.AbstractText : null,
+    answer_type: typeof value.AnswerType === 'string'
+      ? value.AnswerType
+      : typeof value.AbstractType === 'string' ? value.AbstractType : null,
     related_topics: relatedTopics,
     defined_by: typeof value.DefinedBy === 'string' ? value.DefinedBy : null,
     image_url: typeof value.ImageURL === 'string' ? value.ImageURL : null,

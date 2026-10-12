@@ -4,7 +4,6 @@ import {
   SPECIES,
   type Species,
   type FishingCondition,
-  deriveFishingCondition,
 } from './speciesCatalog';
 
 export interface EnvironmentalConditions {
@@ -58,14 +57,9 @@ function getSeason(currentHour: number, explicitSeason?: 'Spring' | 'Summer' | '
   return 'Fall';
 }
 
-function filterSpeciesByHabitat(species: Species[], waterType: Spot['water_type']): Species[] {
-  return species.filter((s) => s.habitat === waterType);
-}
-
 function computeSuitabilityScore(
   spot: Spot,
   conditions: EnvironmentalConditions | undefined,
-  season: 'Spring' | 'Summer' | 'Fall' | 'Winter'
 ): number {
   let score = 50;
   const cond = conditions || {} as EnvironmentalConditions;
@@ -99,7 +93,6 @@ function getBestBiteWindow(
     : hour >= 16 && hour < 21 ? 'evening'
     : 'night';
 
-  const cond = conditions || {};
   let window = species.bestTime;
 
   if (species.bestTime.includes('Dawn') || species.bestTime.includes('Dusk') || species.bestTime.includes('Morning')) {
@@ -115,7 +108,6 @@ function generateReason(
   spot: Spot,
   conditions: EnvironmentalConditions | undefined,
   species: Species,
-  season: 'Spring' | 'Summer' | 'Fall' | 'Winter'
 ): string {
   const parts: string[] = [];
   const cond = conditions || {} as EnvironmentalConditions;
@@ -193,9 +185,9 @@ export async function analyzeSpotsSmart(
 
     const spotEvaluations = speciesToEvaluate.map((species) => {
       const effectiveConditions = conditions ? { ...conditions } : undefined;
-      const suitability = computeSuitabilityScore(spot, effectiveConditions, season);
+      const suitability = computeSuitabilityScore(spot, effectiveConditions);
       const biteWindow = getBestBiteWindow(spot, effectiveConditions, species, season, input.currentTimeHour ?? 6);
-      const reason = generateReason(spot, effectiveConditions, species, season);
+      const reason = generateReason(spot, effectiveConditions, species);
 
       return {
         species,
@@ -219,7 +211,7 @@ export async function analyzeSpotsSmart(
       recommendedBait: bestEvaluation?.recommendedBait ?? recommendedSpecies.advice.baitsWarm[0],
       recommendedTechnique: bestEvaluation?.recommendedTechnique ?? recommendedSpecies.advice.techniqueWarm,
       bestBiteWindow: bestEvaluation?.biteWindow ?? 'Not available',
-      reason: bestEvaluation?.reason ?? generateReason(spot, conditions, recommendedSpecies, season),
+      reason: bestEvaluation?.reason ?? generateReason(spot, conditions, recommendedSpecies),
     };
   });
 
