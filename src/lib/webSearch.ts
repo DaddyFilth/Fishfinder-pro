@@ -5,7 +5,7 @@ export interface WebSearchResult {
   abstract_truncated: boolean;
   answer: string | null;
   answer_type: string | null;
-  related_topics: Array<{ text: string; url: string } | null>;
+  related_topics: Array<{ text: string; url: string | null } | null>;
   defined_by: string | null;
   image_url: string | null;
   redirect: string | null;
@@ -66,11 +66,11 @@ export async function searchDuckDuckGo(query: string, timeoutMs = 8_000): Promis
         headers: { 'Accept': 'application/json', 'User-Agent': 'Fishfinder-Pro/1.0' },
       });
       if (!fallbackRes.ok) return null;
-      const data = await fallbackRes.json();
+      const data: unknown = await fallbackRes.json();
       return formatDuckDuckGoResult(data);
     }
 
-    const data = await response.json();
+    const data: unknown = await response.json();
     return formatDuckDuckGoResult(data);
   } catch (error) {
     console.error('DuckDuckGo search error:', error);
@@ -78,29 +78,49 @@ export async function searchDuckDuckGo(query: string, timeoutMs = 8_000): Promis
   }
 }
 
-function formatDuckDuckGoResult(data: any): WebSearchResult | null {
-  if (!data) return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function formatDuckDuckGoResult(value: unknown): WebSearchResult | null {
+  if (!isRecord(value)) return null;
+
+  const abstractMeaning = isRecord(value.AbstractMeaning) ? value.AbstractMeaning : null;
+  const meta = abstractMeaning && isRecord(abstractMeaning.meta) ? abstractMeaning.meta : null;
+  const responseHeader = isRecord(value.ResponseHeader) ? value.ResponseHeader : null;
+  const icon = isRecord(value.Icon) ? value.Icon : null;
+  const relatedTopics = Array.isArray(value.RelatedTopics)
+    ? value.RelatedTopics.map((topic): WebSearchResult['related_topics'][number] => {
+        if (!isRecord(topic)) {
+          return typeof topic === 'string' ? { text: topic, url: null } : null;
+        }
+
+        return {
+          text: typeof topic.Text === 'string' ? topic.Text : '',
+          url: typeof topic.Url === 'string' ? topic.Url : null,
+        };
+      }).filter((topic) => topic?.text)
+    : [];
+  const numericMeta = (key: string): number =>
+    typeof meta?.[key] === 'number' ? meta[key] : 0;
 
   const result: WebSearchResult = {
-    abstract: data.Abstract || null,
-    abstract_truncated: !!data.AbstractTruncated,
-    answer: data.AbstractText || null,
-    answer_type: data.AbstractType || null,
-    related_topics: (data.RelatedTopics || []).map((topic: any) => ({
-      text: typeof topic === 'object' && topic !== null ? (topic as any).Text : String(topic),
-      url: typeof topic === 'object' && topic !== null ? (topic as any).Url : null,
-    })).filter((t: any) => t.text),
-    defined_by: data.DefinedBy || null,
-    image_url: data.ImageURL || null,
-    redirect: data.Redirect || null,
-    icon: data.Icon || { url: '' },
-    shared_total_results: data.ResponseHeader?.Status || null,
-    meta: data.AbstractMeaning?.meta || {
-      api_status: 0,
-      api_results: 0,
-      execution_time: 0,
-      score: 0,
-      generated_at: new Date().toISOString(),
+    abstract: typeof value.Abstract === 'string' ? value.Abstract : null,
+    abstract_truncated: Boolean(value.AbstractTruncated),
+    answer: typeof value.AbstractText === 'string' ? value.AbstractText : null,
+    answer_type: typeof value.AbstractType === 'string' ? value.AbstractType : null,
+    related_topics: relatedTopics,
+    defined_by: typeof value.DefinedBy === 'string' ? value.DefinedBy : null,
+    image_url: typeof value.ImageURL === 'string' ? value.ImageURL : null,
+    redirect: typeof value.Redirect === 'string' ? value.Redirect : null,
+    icon: { url: typeof icon?.url === 'string' ? icon.url : typeof icon?.URL === 'string' ? icon.URL : '' },
+    shared_total_results: typeof responseHeader?.Status === 'string' ? responseHeader.Status : null,
+    meta: {
+      api_status: numericMeta('api_status'),
+      api_results: numericMeta('api_results'),
+      execution_time: numericMeta('execution_time'),
+      score: numericMeta('score'),
+      generated_at: typeof meta?.generated_at === 'string' ? meta.generated_at : new Date().toISOString(),
     },
   };
 
@@ -126,8 +146,8 @@ export async function searchFishingInfo(query: string, timeoutMs = 8_000): Promi
   }
   if (searchResult.related_topics?.length) {
     formatted += 'Related topics:\n';
-    searchResult.related_topics.slice(0, 3).forEach((topic: any) => {
-      if (topic.text) {
+    searchResult.related_topics.slice(0, 3).forEach((topic) => {
+      if (topic?.text) {
         formatted += `- ${topic.text}`;
         if (topic.url) formatted += ` (${topic.url})`;
         formatted += '\n';

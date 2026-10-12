@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeSpotsSmart, type SmartAnalyticsInput, type SmartAnalyticsResult } from '@/lib/aiAnalytics';
+import { analyzeSpotsSmart, type SmartAnalyticsInput } from '@/lib/aiAnalytics';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { getAiModel, getGroqClient } from '@/lib/groq';
 import { z } from 'zod';
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const result = await analyzeSpotsSmart(input);
 
     // If Groq client available, also generate a summary using AI
-    let aiSummary: any = null;
+    let aiSummary: string | null = null;
     try {
       const groq = getGroqClient();
       const model = getAiModel();
