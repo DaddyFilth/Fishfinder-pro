@@ -36,7 +36,7 @@ describe('spots route provenance', () => {
     expect(response.status).toBe(401)
   })
 
-  it('uses the configured Seamcast endpoint and returns its spots', async () => {
+  it('falls back to the bundled catalog when no provider data is returned', async () => {
     vi.stubEnv('SPOTS_API', 'https://configured-seamcast.example/api/spots')
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       spots: [{
@@ -51,17 +51,22 @@ describe('spots route provenance', () => {
     const response = await GET(new NextRequest('https://example.com/api/spots?lat=35.2&lon=-96.8'))
     const payload = await response.json()
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://configured-seamcast.example/api/spots?lat=35.2&lon=-96.8',
-      expect.objectContaining({ headers: { Accept: 'application/json' } }),
-    )
+    // External provider access was removed; the route serves the local catalog.
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(payload).toMatchObject({
-      data_mode: 'provider',
-      spots: [{ id: 'configured-spot', name: 'Configured Lake', source: 'seamcast-spots' }],
+      data_mode: 'fallback',
+      source: 'bundled-public-water-catalog',
+      live: false,
+    })
+    expect(payload.spots.length).toBeGreaterThan(0)
+    expect(payload.spots[0]).toMatchObject({
+      source: 'bundled-public-water-catalog',
+      live: false,
+      data_mode: 'fallback',
     })
   })
 
-  it('does not label provider spot metadata as a live observation', async () => {
+  it('does not label bundled catalog spots as a live observation', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       source: 'upstream-spots',
       live: true,
@@ -82,14 +87,14 @@ describe('spots route provenance', () => {
 
     expect(payload.live).toBe(false)
     expect(payload.spots[0]).toMatchObject({
-      source: 'upstream-spots',
+      source: 'bundled-public-water-catalog',
       live: false,
-      data_mode: 'provider',
+      data_mode: 'fallback',
     })
     expect(payload.spots[0].observed_at).toBeUndefined()
   })
 
-  it('does not attach a fabricated observation time to stored spot metadata', async () => {
+  it('falls back when stored spot metadata is only a sparse suggestion set', async () => {
     const query = {
       from: vi.fn(),
       select: vi.fn(),
@@ -114,10 +119,11 @@ describe('spots route provenance', () => {
 
     expect(payload.live).toBe(false)
     expect(payload.observed_at).toBeUndefined()
+    expect(payload.spots.length).toBeGreaterThanOrEqual(76)
     expect(payload.spots[0]).toMatchObject({
-      source: 'supabase-spots',
+      source: 'bundled-public-water-catalog',
       live: false,
-      data_mode: 'provider',
+      data_mode: 'fallback',
     })
   })
 })

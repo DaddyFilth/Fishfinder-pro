@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth/server';
 import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 import { isSafeGeneratedSvg } from '@/lib/svg';
-import { getAiModel, getGroqClient } from '@/lib/ollama';
+import { getAiModel, getGroqClient } from '@/lib/groq';
 import { enforceRateLimit } from '@/lib/security';
 
 export const runtime = 'nodejs';

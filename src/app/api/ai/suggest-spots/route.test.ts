@@ -14,7 +14,7 @@ vi.mock('@/lib/security', () => ({
   })),
 }))
 
-vi.mock('@/lib/ollama', () => ({
+vi.mock('@/lib/groq', () => ({
   getAiModel: vi.fn(() => 'test-model'),
   getGroqClient: vi.fn(() => ({
     chat: { completions: { create: createCompletion } },

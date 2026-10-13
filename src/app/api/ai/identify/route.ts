@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiVisionModel, getGroqClient } from '@/lib/ollama';
+import { callFishbot, getAiVisionModel } from '@/lib/fishbotBrain';
 import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -25,8 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const openai = getGroqClient();
-    const response = await openai.chat.completions.create({
+    const response = await callFishbot({
       model: getAiVisionModel(),
       max_tokens: 600,
       messages: [{

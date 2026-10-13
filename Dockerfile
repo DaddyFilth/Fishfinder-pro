@@ -1,4 +1,4 @@
-FROM node:22-bookworm AS deps
+FROM node:26-bookworm AS deps
 WORKDIR /app
 
 RUN chown node:node /app
@@ -7,7 +7,7 @@ USER node
 COPY --chown=node:node package*.json ./
 RUN npm ci --no-audit --no-fund
 
-FROM node:22-bookworm AS builder
+FROM node:26-bookworm AS builder
 WORKDIR /app
 
 RUN chown node:node /app
@@ -24,7 +24,7 @@ ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 # here rather than only at runtime.
 RUN npm run build
 
-FROM node:22-bookworm AS runner
+FROM node:26-bookworm AS runner
 WORKDIR /app
 
 RUN chown node:node /app
