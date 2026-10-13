@@ -177,3 +177,6 @@ export function mergeWithDefaultSpots(providerSpots: readonly Spot[]): Spot[] {
     };
   });
 }
+
+/** Export Spot type from mapFilters for use in other modules. */
+export type { Spot } from '@/lib/mapFilters';
