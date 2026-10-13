@@ -12,9 +12,9 @@ The app validates Supabase configuration at startup and requires Redis in produc
 
 Optional integrations:
 
-- `GROQ_API_KEY` enables all Groq-backed AI features. Image identification additionally needs `GROQ_VISION_MODEL`; `GROQ_MODEL` configures the text model.
-- `OPENAI_API_KEY` for AI spot discovery. Without it, discovery uses the bundled public spots catalog. `OPENAI_MODEL` selects the model.
+- `GROQ_API_KEY` enables every AI feature: Fishbot chat and advisor, smart analysis, conditions analysis, bite times, spot analysis, spot suggestions, gear and strategy, spot discovery, and photo identification. Image identification additionally needs `GROQ_VISION_MODEL`; `GROQ_MODEL` configures the text model. Without a key these routes return `503` and say that no AI output was generated.
 - `SPOTS_API` or `NEXT_PUBLIC_SPOTS_API_URL` to override the upstream spots service.
+- `SUPABASE_SERVICE_ROLE_KEY` lets smart analysis read the stored environmental history and aggregate the catch log. Without it those two sources report as unavailable and the analysis still runs from provider readings, the bundled catalogs, community reports (signed-in users), and search-derived research.
 
 These are hosted provider integrations; the app does not require a local Ollama service. For Supabase database setup and authentication URLs, see [README.md](README.md).
 

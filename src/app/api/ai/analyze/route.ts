@@ -1,5 +1,5 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/ollama';
+import { callFishbot, getAiProviderName } from '@/lib/fishbotBrain';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -18,13 +18,17 @@ export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
   const bodyResult = await readJsonBody(req, 16_384)
   if (!bodyResult.ok) return bodyResult.response
-  const body = bodyResult.value as { conditions?: unknown; spot?: unknown }
+  const body = bodyResult.value as { conditions?: unknown; spot?: unknown; scope?: unknown; radius_miles?: unknown }
   if (!body.conditions || typeof body.conditions !== 'object' || !body.spot || typeof body.spot !== 'object') {
     return NextResponse.json({ error: 'A spot and a condition context are required' }, { status: 400 });
   }
 
+  const scope = body.scope === 'spot' ? 'spot' : 'area';
   const spotData = body.spot as Record<string, unknown>;
   const conditionData = body.conditions as Record<string, unknown>;
+  if (conditionData.scope !== scope || (scope === 'area' && conditionData.radius_miles !== 25)) {
+    return NextResponse.json({ error: 'Analysis scope does not match its condition context.' }, { status: 400 });
+  }
   const inputSource = typeof conditionData.source === 'string' ? conditionData.source : 'caller-supplied context';
   const inputMode = typeof conditionData.data_mode === 'string' ? conditionData.data_mode : 'unspecified';
   const observedAt = typeof conditionData.captured_at === 'string' ? conditionData.captured_at : null;
@@ -38,8 +42,7 @@ export async function POST(req: NextRequest) {
     : 'Seamcast-spots feed: unavailable.';
 
   try {
-    const response = await getGroqClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       max_tokens: 400,
       temperature: 0.3,
       response_format: { type: 'json_object' },

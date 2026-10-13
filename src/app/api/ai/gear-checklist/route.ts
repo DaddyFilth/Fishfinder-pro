@@ -7,8 +7,7 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { getGroqClient } from '@/lib/ollama';
-import { getAiModel } from '@/lib/ollama';
+import { callFishbot } from '@/lib/fishbotBrain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
       ? JSON.stringify(envData, null, 2)
       : 'Unavailable as a verified recent live observation. Recommend general species-specific gear only; do not claim it is needed for current conditions.';
 
-    const client = getGroqClient();
     const prompt = `
       You are a Master Fishing Guide. Generate a precise GEAR CHECKLIST for targeting ${species.name} at coordinates ${lat}, ${lon}.
       
@@ -56,8 +54,7 @@ export async function POST(req: NextRequest) {
       Respond ONLY with the JSON array. No markdown formatting, no prose.
     `;
 
-    const response = await client.chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
