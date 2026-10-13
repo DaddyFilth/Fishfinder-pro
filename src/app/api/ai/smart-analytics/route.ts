@@ -137,8 +137,7 @@ export async function POST(req: NextRequest) {
 
   let analysis;
   try {
-    const response = await getGroqClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       temperature: 0.3,
       max_tokens: 1400,
       response_format: { type: 'json_object' },

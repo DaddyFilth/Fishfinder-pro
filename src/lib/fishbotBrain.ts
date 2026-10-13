@@ -1,4 +1,4 @@
-import { getAiModel, getAiVisionModel, getGroqClient } from '@/lib/groq';
+import { getAiModel, getAiProviderName, getAiVisionModel, getGroqClient } from '@/lib/groq';
 
 export interface FishbotMessage {
   role: 'system' | 'user' | 'assistant';
@@ -44,4 +44,4 @@ export async function callFishbot(params: FishbotParams): Promise<FishbotResult>
   };
 }
 
-export { getAiModel, getAiVisionModel };
+export { getAiModel, getAiProviderName, getAiVisionModel };
