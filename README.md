@@ -17,7 +17,32 @@ Start development:
 npm run dev
 ```
 
-`REDIS_URL` is optional in development, where the app uses its in-memory rate limiter. Production requires a reachable Redis for distributed rate limiting: `REDIS_URL` (`redis://` or `rediss://`), Upstash REST credentials (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` from the Vercel Upstash integration, or the legacy `NEXT_PUBLIC_KV_REST_API_URL` + `NEXT_PUBLIC_KV_REST_API_TOKEN` names). When both are configured, Upstash is tried first and `REDIS_URL` is the fallback. `GROQ_API_KEY` enables Groq-backed AI features; `OPENAI_API_KEY` enables spot discovery. These providers are optional for the app shell and are not needed for the smoke test.
+`REDIS_URL` is optional in development, where the app uses its in-memory rate limiter. Production requires a reachable Redis for distributed rate limiting: `REDIS_URL` (`redis://` or `rediss://`), Upstash REST credentials (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` from the Vercel Upstash integration, or the legacy `NEXT_PUBLIC_KV_REST_API_URL` + `NEXT_PUBLIC_KV_REST_API_TOKEN` names). When both are configured, Upstash is tried first and `REDIS_URL` is the fallback. `GROQ_API_KEY` enables every AI feature (Fishbot chat and advisor, spot analysis, bite times, gear and strategy, spot suggestions, spot discovery, and photo identification); `GROQ_VISION_MODEL` is additionally required for photo identification. Groq is the only AI provider in this app — there is no OpenAI dependency. AI credentials are optional for the app shell and are not needed for the smoke test: when they are missing, AI routes answer `503` with an explicit "no X was generated" message instead of returning invented content.
+
+## AI features and their data sources
+
+Every AI route returns a `source`, `data_mode` and `live_data` triple so a caller can tell what actually produced the answer. `data_mode: 'ai-generated'` is only ever set on responses a model actually generated; a provider failure returns `503` rather than a substitute.
+
+| Route | What it does | Inputs |
+| --- | --- | --- |
+| `POST /api/ai/chat` | Fishbot conversation | Stored species catalog entries mentioned in the message, DuckDuckGo research (labeled `search-derived`), spot/conditions context |
+| `POST /api/ai/advisor` | Fishbot opening briefing for a spot | Same catalog grounding plus supplied conditions |
+| `POST /api/ai/smart-analytics` | Ranked smart analysis for a coordinate | Provider conditions (NOAA/NWS, Open-Meteo), stored environmental snapshots, stored spot and species catalogs, community catch log, community reports, DuckDuckGo research, plus a deterministic catalog baseline |
+| `POST /api/ai/analyze` | Three-sentence interpretation of a conditions payload | Caller-supplied conditions |
+| `POST /api/ai/bite-times` | Bite windows for a species | Caller-supplied conditions and seasonal context |
+| `POST /api/ai/spots/[id]/analysis` | Spot-specific bite analysis | Canonical spot record, caller-supplied conditions, catalog habitat data |
+| `POST /api/ai/suggest-spots` | Ranked suggestions for supplied spots | Supplied spot metadata |
+| `POST /api/ai/species-strategy`, `POST /api/ai/gear-checklist` | Strategy and gear lists | Species catalog entry plus supplied conditions |
+| `POST /api/ai/identify` | Photo identification | Uploaded image via the vision model |
+
+### Smart analysis data phases
+
+Smart analysis reports `data_phase` on every response:
+
+- `bootstrap` — the community catch log does not yet hold `50` logged catches with `10` of them inside a 50-mile radius. Provider readings, stored environmental history, the bundled catalog, community reports and search-derived research carry the analysis, and the response says so.
+- `community` — the catch log clears that threshold and its species and bait histograms are weighted as user-logged evidence.
+
+Catch statistics are aggregated as counts only; no user ids, notes, photos or coordinates leave the server. Community report rows are only included for signed-in accounts, matching their row-level security.
 
 ## Build and verification
 
@@ -39,7 +64,7 @@ cp .env.container.example .env.container
 docker compose --env-file .env.container up --build
 ```
 
-The compose stack starts the app and Redis. The public Supabase values are passed as build arguments because Next.js embeds `NEXT_PUBLIC_*` values into the browser bundle. AI requests use the configured hosted Groq/OpenAI providers; no local Ollama model download is required.
+The compose stack starts the app and Redis. The public Supabase values are passed as build arguments because Next.js embeds `NEXT_PUBLIC_*` values into the browser bundle. AI requests use the configured hosted Groq provider; no local Ollama model download is required.
 
 ## GitHub Codespaces
 
@@ -69,7 +94,7 @@ The **API route smoke tests** workflow can be run manually from the Actions tab.
 - **Startup reports missing Supabase configuration:** set a valid `NEXT_PUBLIC_SUPABASE_URL` and a publishable or anon key. The app intentionally fails early instead of serving protected routes that cannot authenticate.
 - **Production reports missing/invalid `REDIS_URL`:** configure a reachable Redis URL, or set `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` for Upstash. Development can omit Redis and uses an in-memory limiter.
 - **Rate-limited API calls return 503:** check that Redis (or Upstash) is reachable from the app container/deployment; production does not silently fall back to per-process rate limiting.
-- **AI routes report missing provider credentials:** set `GROQ_API_KEY` (and `GROQ_VISION_MODEL` for image requests) or `OPENAI_API_KEY` for spot discovery. These are separate optional integrations.
+- **AI routes report missing provider credentials:** set `GROQ_API_KEY` (and `GROQ_VISION_MODEL` for image requests). Both are optional; without them the AI routes return an explicit `503` explaining that no AI output was generated.
 
 This project uses local system font stacks and does not load fonts from third-party providers.
 

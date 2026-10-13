@@ -3,6 +3,29 @@ import { NextRequest } from 'next/server'
 
 const routeModules = import.meta.glob('./**/route.ts', { eager: false })
 
+/**
+ * The environmental fetchers use axios rather than fetch, so stubbing fetch
+ * alone would let smoke requests leave the process and hang on real provider
+ * timeouts. Axios is disabled here for the same reason fetch is.
+ */
+vi.mock('axios', () => {
+  class AxiosError extends Error {
+    isAxiosError = true;
+    code?: string;
+    response?: unknown;
+  }
+  return {
+    default: {
+      get: vi.fn(async () => {
+        throw new AxiosError('network disabled');
+      }),
+      isAxiosError: (error: unknown): error is AxiosError =>
+        Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError === true),
+    },
+    AxiosError,
+  };
+})
+
 type RouteHandler = (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>
 
 async function loadHandler(mod: string, method: string): Promise<RouteHandler> {
@@ -23,7 +46,9 @@ const routes: Array<[string, string, string, Record<string, string>?]> = [
   ['ai/chat', 'POST', 'ai/chat/route'],
   ['ai/gear-checklist', 'POST', 'ai/gear-checklist/route'],
   ['ai/identify', 'POST', 'ai/identify/route'],
+  ['ai/smart-analytics', 'POST', 'ai/smart-analytics/route'],
   ['ai/species-strategy', 'POST', 'ai/species-strategy/route'],
+  ['ai/spots/x/analysis', 'POST', 'ai/spots/[id]/analysis/route', { id: 'x' }],
   ['ai/suggest-spots', 'POST', 'ai/suggest-spots/route'],
   ['auth/recover', 'POST', 'auth/recover/route'],
   ['auth', 'POST', 'auth/route'],

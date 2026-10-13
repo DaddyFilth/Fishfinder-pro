@@ -1,11 +1,25 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSuppliedContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { getAiModel, getGroqClient } from '@/lib/ollama'
+import {
+  FISHBOT_SYSTEM_PROMPT,
+  buildContextMessage,
+  buildSpeciesCatalogMessage,
+  buildSuppliedContextMessage,
+  buildWebSearchMessage,
+  findMentionedSpecies,
+  parseSpotsContext,
+  type SpotsContext,
+} from '@/lib/fishbotPrompt'
+import { formatSearchSummary, searchFishingInfo, type WebSearchResult } from '@/lib/webSearch'
+import { callFishbot } from '@/lib/fishbotBrain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 
 export const dynamic = 'force-dynamic'
+
+/** Caps how long a DuckDuckGo lookup may delay a chat reply. */
+const WEB_SEARCH_BUDGET_MS = 1_500
+const WEB_SEARCH_TIMEOUT_MS = 4_000
 
 type ChatMessage = {
   role: 'user' | 'assistant' | 'system'
@@ -57,13 +71,11 @@ async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderCo
 }
 
 async function callAi(messages: ChatMessage[]): Promise<string> {
-  const response = await getGroqClient().chat.completions.create({
-    model: getAiModel(),
+  const response = await callFishbot({
     messages,
     temperature: 0.7,
     max_tokens: 1024,
     top_p: 0.9,
-    stream: false,
   })
   const content = response.choices[0]?.message?.content?.trim()
   if (!content) throw new Error('AI provider returned no text')
@@ -80,6 +92,18 @@ function unavailableResponse() {
     },
     { status: 503 },
   )
+}
+
+/**
+ * Runs the DuckDuckGo lookup the system prompt promises, but never lets a slow
+ * search stall a reply: the race returns null once the budget is spent.
+ */
+async function researchWithinBudget(message: string): Promise<WebSearchResult | null> {
+  const lookup = searchFishingInfo(message, WEB_SEARCH_TIMEOUT_MS)
+    .then((result) => result?.result ?? null)
+    .catch(() => null)
+  const budget = new Promise<null>((resolve) => setTimeout(() => resolve(null), WEB_SEARCH_BUDGET_MS))
+  return Promise.race([lookup, budget])
 }
 
 export async function POST(req: NextRequest) {
@@ -112,8 +136,28 @@ export async function POST(req: NextRequest) {
 
     const spotLat = lat ?? coordinate(spot?.lat ?? spot?.latitude)
     const spotLon = lon ?? coordinate(spot?.lon ?? spot?.lng ?? spot?.longitude)
-    const spotsData = await fetchSpotsContext(spotLat, spotLon)
-    const context = `${buildContextMessage(spotsData)}\n\n${buildSuppliedContextMessage(spot, conditions)}`
+    const [spotsData, research] = await Promise.all([
+      fetchSpotsContext(spotLat, spotLon),
+      researchWithinBudget(message),
+    ])
+
+    const catalogSpecies = findMentionedSpecies(message)
+    const catalogMessage = buildSpeciesCatalogMessage(catalogSpecies)
+    const searchSummary = research ? formatSearchSummary(research) : null
+    const relatedTopics = (research?.related_topics ?? []).filter(
+      (topic): topic is { text: string; url: string | null } => Boolean(topic?.text),
+    )
+    const searchMessage =
+      research && searchSummary ? buildWebSearchMessage(searchSummary, relatedTopics) : ''
+    const usedWebSearch = Boolean(searchMessage)
+
+    const context = [
+      buildContextMessage(spotsData),
+      buildSuppliedContextMessage(spot, conditions),
+      catalogMessage,
+      searchMessage,
+    ].filter(Boolean).join('\n\n')
+
     const messages: ChatMessage[] = [
       { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
       { role: 'system', content: context },
@@ -129,6 +173,8 @@ export async function POST(req: NextRequest) {
         source: 'ai',
         data_mode: 'ai-generated',
         live_data: spotsData?.live === true,
+        used_web_search: usedWebSearch,
+        catalog_species: catalogSpecies.map((entry) => entry.name),
         context: spotsData
           ? {
               source: spotsData.source,

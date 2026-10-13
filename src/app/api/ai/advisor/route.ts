@@ -1,8 +1,8 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSuppliedContextMessage, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { getAiModel, getGroqClient } from '@/lib/ollama'
+import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSpeciesCatalogMessage, buildSuppliedContextMessage, findSpeciesByQuery, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
+import { callFishbot } from '@/lib/fishbotBrain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 
@@ -42,8 +42,7 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
 }
 
 async function callAi(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
-  const response = await getGroqClient().chat.completions.create({
-    model: getAiModel(),
+  const response = await callFishbot({
     messages,
     temperature: 0.7,
     max_tokens: 500,
@@ -82,7 +81,14 @@ export async function POST(req: NextRequest) {
   const { lat, lon, targetSpecies, conditions } = parsed.data
   const safeSpecies = targetSpecies ?? ''
     const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
-    const context = `${buildContextMessage(spotsData)}\n\n${buildSuppliedContextMessage(undefined, conditions)}`
+    const catalogMessage = buildSpeciesCatalogMessage(
+      safeSpecies ? findSpeciesByQuery(safeSpecies) : [],
+    )
+    const context = [
+      buildContextMessage(spotsData),
+      buildSuppliedContextMessage(undefined, conditions),
+      catalogMessage,
+    ].filter(Boolean).join('\n\n')
 
     try {
       const advice = await callAi([

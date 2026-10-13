@@ -44,7 +44,6 @@ let extra = "";
 const defaults = {
   GROQ_MODEL: "llama-3.3-70b-versatile",
   GROQ_VISION_MODEL: "llama-4-scout-17b-16e-instruct",
-  OPENAI_MODEL: "gpt-4o-mini",
 };
 for (const [name, value] of Object.entries(defaults)) {
   if (!vars.get(name)) {

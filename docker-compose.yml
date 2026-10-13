@@ -36,8 +36,6 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
       GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-llama-4-scout-17b-16e-instruct}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       NWS_BASE: ${NWS_BASE:-https://api.weather.gov}
       USGS_BASE: ${USGS_BASE:-https://api.waterdata.usgs.gov}
       OPEN_METEO_FORECAST: ${OPEN_METEO_FORECAST:-https://api.open-meteo.com/v1/forecast}
