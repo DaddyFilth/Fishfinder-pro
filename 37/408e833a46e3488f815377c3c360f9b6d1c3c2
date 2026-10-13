@@ -1,0 +1,68 @@
+.github/workflows/opencode.yml
+  h_3de1f45e8c8149 1-33
+DEPLOYMENT.md
+  h_3de1f45e8c8149 15,17
+README.md
+  h_3de1f45e8c8149 20-45,67,97
+session-ses_ed6f.md
+  h_3de1f45e8c8149 1-28
+src/app/api/ai/advisor/route.ts
+  h_3de1f45e8c8149 4-5,45,84-91
+src/app/api/ai/analyze/route.ts
+  h_3de1f45e8c8149 2,45
+src/app/api/ai/bite-times/route.ts
+  h_3de1f45e8c8149 3,91
+src/app/api/ai/chat/route.ts
+  h_3de1f45e8c8149 3-14,20-23,74,97-108,139-160,176-177
+src/app/api/ai/gear-checklist/route.ts
+  h_3de1f45e8c8149 10,57
+src/app/api/ai/identify/route.ts
+  h_3de1f45e8c8149 2,28
+src/app/api/ai/smart-analytics/route.test.ts
+  h_3de1f45e8c8149 1-146
+src/app/api/ai/smart-analytics/route.ts
+  h_3de1f45e8c8149 3-14,16-21,23-89,98,101,104,109-110,112-113,115-145,147,149-161,164-206
+src/app/api/ai/species-strategy/route.ts
+  h_3de1f45e8c8149 10,67
+src/app/api/ai/spots/[id]/analysis/route.ts
+  h_3de1f45e8c8149 5
+src/app/api/ai/suggest-spots/route.ts
+  h_3de1f45e8c8149 2,199
+src/app/api/smoke.test.ts
+  h_3de1f45e8c8149 6-28,49,51
+src/app/api/spots/route.ts
+  h_3de1f45e8c8149 66,81
+src/app/page.tsx
+  h_3de1f45e8c8149 13,239,750
+src/components/ai/FishBot.tsx
+  h_3de1f45e8c8149 14-15,18-28,128-130,138-139,167-170,174-193
+src/components/ai/SmartAnalyticsPanel.tsx
+  h_3de1f45e8c8149 1-229
+src/lib/aiAnalytics.ts
+  h_3de1f45e8c8149 122-124,181-187,189-190,213
+src/lib/aiResponse.ts
+  h_3de1f45e8c8149 83-104
+src/lib/fishbotBrain.ts
+  h_3de1f45e8c8149 1-47
+src/lib/fishbotPrompt.test.ts
+  h_3de1f45e8c8149 2-10,37-75
+src/lib/fishbotPrompt.ts
+  h_3de1f45e8c8149 2,20,23,26-27,107-108,110-112,114-124,126-142,144,147-151,153-177,179-190
+src/lib/smartAnalytics.test.ts
+  h_3de1f45e8c8149 1-112
+src/lib/smartAnalytics.ts
+  h_3de1f45e8c8149 1-754
+src/lib/webSearch.ts
+  h_3de1f45e8c8149 140-141,143,146-147,149-150,152,154,164,167-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37408e833a46e3488f815377c3c360f9b6d1c3c2",
+  "prompts": {},
+  "humans": {
+    "h_3de1f45e8c8149": {
+      "author": "DaddyFilth <daddyfilthie@proton.me>"
+    }
+  }
+}
