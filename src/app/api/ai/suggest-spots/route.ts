@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiModel, getGroqClient } from '@/lib/groq';
+import { callFishbot } from '@/lib/fishbotBrain';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -160,8 +160,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const ollama = getGroqClient();
-
     const spotSummary = spots
       .map(
         (spot) =>
@@ -198,8 +196,7 @@ Each object must contain:
 Every field is required and must be generated for every spot. Always use Fahrenheit only. Never use Celsius or °C. Do not return Markdown, code fences, commentary, or spots not included in the supplied list.
 `.trim();
 
-    const response = await ollama.chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
       max_tokens: 1800,

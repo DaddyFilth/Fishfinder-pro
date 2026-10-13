@@ -119,8 +119,9 @@ function generateReason(
     parts.push(`Wind is ${cond.windSpeedMph} mph.`);
   }
 
-  const tempRange = species.advice.optTempMin !== undefined && species.advice.optTempMax !== undefined
-    ? `${species.advice.optTempMin}-${species.advice.optTempMax}°F`
+  const { optTempMin, optTempMax } = species.advice;
+  const tempRange = typeof optTempMin === 'number' && typeof optTempMax === 'number'
+    ? `${Math.round((optTempMin * 9) / 5 + 32)}-${Math.round((optTempMax * 9) / 5 + 32)}°F`
     : 'unknown range';
 
   parts.push(`${species.name} prefers water temps of ${tempRange}.`);
@@ -177,9 +178,16 @@ export async function analyzeSpotsSmart(
 
   // Step 4: Analyze each spot
   const analyzedSpots = spots.map((spot) => {
+    const waterType = String(spot.water_type ?? '').toLowerCase();
+    // Catalog habitats are title case ("Freshwater") while spot rows are lower case.
+    const habitatMatches = (species: Species) => {
+      const habitat = species.habitat.toLowerCase();
+      return habitat === waterType || (species.habitat === 'Anadromous' && waterType === 'freshwater');
+    };
+
     const appropriateSpecies = targetSpeciesObj
-      ? okSpecies.filter((s) => s.id === targetSpeciesObj.id || s.habitat === spot.water_type)
-      : okSpecies.filter((s) => s.habitat === spot.water_type);
+      ? okSpecies.filter((s) => s.id === targetSpeciesObj.id || habitatMatches(s))
+      : okSpecies.filter((s) => habitatMatches(s));
 
     const speciesToEvaluate = appropriateSpecies.slice(0, 5);
 
@@ -202,7 +210,7 @@ export async function analyzeSpotsSmart(
     spotEvaluations.sort((a, b) => b.suitability - a.suitability);
 
     const bestEvaluation = spotEvaluations[0];
-    const recommendedSpecies = bestEvaluation?.species || appropriateSpecies[0];
+    const recommendedSpecies = bestEvaluation?.species ?? appropriateSpecies[0] ?? okSpecies[0];
 
     return {
       spot,

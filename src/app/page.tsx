@@ -10,6 +10,7 @@ import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
+import SmartAnalyticsPanel from '@/components/ai/SmartAnalyticsPanel';
 import LocationIntelligence from '@/components/LocationIntelligence';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
@@ -235,7 +236,7 @@ async function getSpots(): Promise<SpotLoadResult> {
       }
 
       if (dataMode !== 'provider' || filtered.length === 0) {
-        throw new Error('Live AI spot feed unavailable');
+        throw new Error('Spot provider feed unavailable');
       }
       const savedAt = new Date().toISOString();
       cacheSpots(filtered, savedAt);
@@ -746,6 +747,7 @@ export default function MobilePage() {
         {tab === 'ai' && (
           <div style={PAGE_STYLES.padPane}>
             <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="trip" onToolSelect={(tool) => setTab(tool === 'bite' ? 'bitetime' : tool === 'weather' ? 'weather' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'ai')} />
+            <SmartAnalyticsPanel spot={selectedSpot} coordinates={coordinates} />
             <SpotSuggester spots={visibleSpots} />
           </div>
         )}

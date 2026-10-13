@@ -1,5 +1,5 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { getAiModel, getAiProviderName, getGroqClient } from '@/lib/groq';
+import { callFishbot, getAiProviderName } from '@/lib/fishbotBrain';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -42,8 +42,7 @@ export async function POST(req: NextRequest) {
     : 'Seamcast-spots feed: unavailable.';
 
   try {
-    const response = await getGroqClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       max_tokens: 400,
       temperature: 0.3,
       response_format: { type: 'json_object' },

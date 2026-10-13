@@ -137,25 +137,21 @@ function formatDuckDuckGoResult(value: unknown): WebSearchResult | null {
 }
 
 /**
- * Searches for fishing-related information using DuckDuckGo.
- * Returns formatted information labeled as search-derived.
+ * Formats a DuckDuckGo result into a short, human-readable summary.
+ * Callers must label the output as search-derived; it is research, not an observation.
  */
-export async function searchFishingInfo(query: string, timeoutMs = 8_000): Promise<{ result: WebSearchResult | null; source: 'web' } | null> {
-  const searchResult = await searchDuckDuckGo(query, timeoutMs);
-  if (!searchResult) return null;
-
-  // Format a human-readable summary from the DuckDuckGo result
+export function formatSearchSummary(result: WebSearchResult): string {
   let formatted = '';
 
-  if (searchResult.answer) {
-    formatted += `Answer: ${searchResult.answer}\n\n`;
+  if (result.answer) {
+    formatted += `Answer: ${result.answer}\n\n`;
   }
-  if (searchResult.abstract) {
-    formatted += `Summary: ${searchResult.abstract}${searchResult.abstract_truncated ? ' (truncated)' : ''}\n\n`;
+  if (result.abstract) {
+    formatted += `Summary: ${result.abstract}${result.abstract_truncated ? ' (truncated)' : ''}\n\n`;
   }
-  if (searchResult.related_topics?.length) {
+  if (result.related_topics?.length) {
     formatted += 'Related topics:\n';
-    searchResult.related_topics.slice(0, 3).forEach((topic) => {
+    result.related_topics.slice(0, 3).forEach((topic) => {
       if (topic?.text) {
         formatted += `- ${topic.text}`;
         if (topic.url) formatted += ` (${topic.url})`;
@@ -165,8 +161,19 @@ export async function searchFishingInfo(query: string, timeoutMs = 8_000): Promi
   }
 
   if (!formatted) {
-    formatted = `DuckDuckGo search for: "${query}" - returned basic results. No specific answer found.`;
+    formatted = `DuckDuckGo search returned no specific answer for this query.`;
   }
+
+  return formatted;
+}
+
+/**
+ * Searches for fishing-related information using DuckDuckGo.
+ * Returns formatted information labeled as search-derived.
+ */
+export async function searchFishingInfo(query: string, timeoutMs = 8_000): Promise<{ result: WebSearchResult | null; source: 'web' } | null> {
+  const searchResult = await searchDuckDuckGo(query, timeoutMs);
+  if (!searchResult) return null;
 
   return {
     result: searchResult,
