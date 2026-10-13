@@ -10,6 +10,8 @@ import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
+import SmartAnalyticsPanel from '@/components/ai/SmartAnalyticsPanel';
+import LocationIntelligence from '@/components/LocationIntelligence';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
@@ -234,7 +236,7 @@ async function getSpots(): Promise<SpotLoadResult> {
       }
 
       if (dataMode !== 'provider' || filtered.length === 0) {
-        throw new Error('Live AI spot feed unavailable');
+        throw new Error('Spot provider feed unavailable');
       }
       const savedAt = new Date().toISOString();
       cacheSpots(filtered, savedAt);
@@ -698,6 +700,14 @@ export default function MobilePage() {
               }}
             />
 
+            <div style={{ position: 'absolute', left: 12, right: 12, bottom: sheetOpen ? 'calc(45dvh + 12px)' : 12, zIndex: 1700 }}>
+              <LocationIntelligence
+                coordinates={coordinates}
+                selectedSpot={selectedSpot}
+                compact
+                onToolSelect={(tool) => setTab(tool === 'bite' ? 'bitetime' : tool === 'trip' ? 'ai' : tool === 'weather' ? 'weather' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'map')}
+              />
+            </div>
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
@@ -736,6 +746,8 @@ export default function MobilePage() {
         {/* AI TAB */}
         {tab === 'ai' && (
           <div style={PAGE_STYLES.padPane}>
+            <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="trip" onToolSelect={(tool) => setTab(tool === 'bite' ? 'bitetime' : tool === 'weather' ? 'weather' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'ai')} />
+            <SmartAnalyticsPanel spot={selectedSpot} coordinates={coordinates} />
             <SpotSuggester spots={visibleSpots} />
           </div>
         )}
@@ -743,7 +755,8 @@ export default function MobilePage() {
         {/* TOP SPOTS TAB */}
         {tab === 'top' && (
           <div style={PAGE_STYLES.padPane}>
-            <div style={PAGE_STYLES.sectionTitle}>🏆 Top Spots</div>
+            <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="top" onToolSelect={(tool) => setTab(tool === 'weather' ? 'weather' : tool === 'bite' ? 'bitetime' : tool === 'trip' ? 'ai' : tool === 'settings' ? 'settings' : 'top')} />
+            <div style={PAGE_STYLES.sectionTitle}>Top Spots</div>
             {rankedSpots.length > 0 ? rankedSpots.map(({ spot, score }, i) => {
               const scoreValue = loadingScores[spot.id] ? '…' : score;
               return (
@@ -768,6 +781,7 @@ export default function MobilePage() {
         {/* BITE TIMES TAB */}
         {tab === 'bitetime' && (
           <div style={PAGE_STYLES.scrollPane}>
+            <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="bite" onToolSelect={(tool) => setTab(tool === 'weather' ? 'weather' : tool === 'trip' ? 'ai' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'bitetime')} />
             <BiteTimesTab
               lat={selectedSpot?.lat ?? coordinates?.latitude}
               locationLabel={selectedSpot?.name ?? (coordinates ? 'device location' : undefined)}
@@ -778,6 +792,7 @@ export default function MobilePage() {
         {/* WEATHER TAB */}
         {tab === 'weather' && (
           <div style={PAGE_STYLES.scrollPane}>
+            <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="weather" onToolSelect={(tool) => setTab(tool === 'bite' ? 'bitetime' : tool === 'trip' ? 'ai' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'weather')} />
             <WeatherTab
               lat={selectedSpot?.lat ?? coordinates?.latitude}
               lng={selectedSpot?.lng ?? coordinates?.longitude}
@@ -789,7 +804,8 @@ export default function MobilePage() {
         {/* SETTINGS TAB */}
         {tab === 'settings' && (
           <div style={PAGE_STYLES.padPane}>
-            <div style={PAGE_STYLES.sectionTitle}>⚙️ Settings</div>
+            <LocationIntelligence coordinates={coordinates} selectedSpot={selectedSpot} activeTool="settings" onToolSelect={(tool) => setTab(tool === 'weather' ? 'weather' : tool === 'bite' ? 'bitetime' : tool === 'trip' ? 'ai' : tool === 'top' ? 'top' : 'settings')} />
+            <div style={PAGE_STYLES.sectionTitle}>Settings</div>
 
             {/* Map Filters */}
             <div style={{ marginBottom:'20px' }}>

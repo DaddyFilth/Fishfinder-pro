@@ -1,36 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeSpotsSmart, type SmartAnalyticsInput, type SmartAnalyticsResult } from '@/lib/aiAnalytics';
-import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
-import { getAiModel, getGroqClient } from '@/lib/groq';
 import { z } from 'zod';
+import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
+import { callFishbot } from '@/lib/fishbotBrain';
+import { SmartAnalysisSchema, parseModelJson } from '@/lib/aiResponse';
+import { analyzeSpotsSmart } from '@/lib/aiAnalytics';
+import {
+  buildAnalysisPrompt,
+  gatherSmartAnalyticsSources,
+  type SmartAnalyticsSources,
+} from '@/lib/smartAnalytics';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getAuthContext } from '@/lib/auth/server';
+import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
 
-const SmartAnalyticsBodySchema = z.object({
-  userLat: z.number().optional().refine((val) => val === undefined || (val >= -90 && val <= 90), {
-    message: 'Invalid latitude',
-  }),
-  userLng: z.number().optional().refine((val) => val === undefined || (val >= -180 && val <= 180), {
-    message: 'Invalid longitude',
-  }),
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
+const RequestSchema = z.object({
+  lat: z.number().finite().min(-90).max(90),
+  lng: z.number().finite().min(-180).max(180),
   targetSpecies: z.string().trim().max(80).optional(),
-conditions: z
-    .object({
-      waterTempC: z.number().optional(),
-      waterTempF: z.number().optional(),
-      airTempC: z.number().optional(),
-      airTempF: z.number().optional(),
-      windSpeedMs: z.number().optional(),
-      windSpeedMph: z.number().optional(),
-      windDirection: z.string().optional(),
-      dissolvedOxygenMgl: z.number().optional(),
-      fishingScore: z.number().optional(),
-      condition: z.enum(['cool', 'warming', 'stable', 'low-light', 'windy']).optional(),
-    })
-    .optional().default({}),
-  season: z.enum(['Spring', 'Summer', 'Fall', 'Winter']).optional(),
-  currentTimeHour: z.number().optional().refine((val) => val === undefined || (val >= 0 && val <= 23), {
-    message: 'Invalid hour',
-  }),
-});
+  region: z.string().trim().max(80).optional(),
+  saltwater: z.boolean().optional(),
+}).strict();
+
+type BaselineRow = {
+  spot_id: string;
+  spot_name: string;
+  score: number;
+  species: string;
+  reason: string;
+};
+
+function toFahrenheit(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.round((value * 9) / 5 + 32)
+    : null;
+}
+
+/** Local, non-AI catalog scoring handed to the model as a comparison baseline. */
+async function buildBaseline(input: {
+  lat: number;
+  lng: number;
+  targetSpecies?: string;
+  sources: SmartAnalyticsSources;
+}): Promise<BaselineRow[]> {
+  const { provider } = input.sources;
+  const result = await analyzeSpotsSmart({
+    userLat: input.lat,
+    userLng: input.lng,
+    targetSpecies: input.targetSpecies,
+    conditions: provider.status === 'ok'
+      ? {
+          waterTempC: null,
+          waterTempF: toFahrenheit(provider.sea_surface_temp_f),
+          airTempC: null,
+          airTempF: provider.air_temp_f,
+          windSpeedMs: null,
+          windSpeedMph: provider.wind_speed_mph,
+          windDirection: provider.wind_direction,
+          dissolvedOxygenMgl: null,
+          fishingScore: provider.fishing_score,
+          condition: 'stable',
+        }
+      : undefined,
+  });
+
+  return result.analyzedSpots.slice(0, 8).map((analysis) => ({
+    spot_id: analysis.spot.id,
+    spot_name: analysis.spot.name,
+    score: analysis.suitabilityScore,
+    species: analysis.recommendedSpecies[0]?.name ?? 'unknown',
+    reason: analysis.reason,
+  }));
+}
+
+function unavailable(message: string, sources?: SmartAnalyticsSources) {
+  return NextResponse.json(
+    {
+      error: message,
+      source: 'none',
+      data_mode: 'unavailable',
+      live_data: false,
+      ...(sources ? { data_phase: sources.data_phase, sources: sources.sources } : {}),
+    },
+    { status: 503 },
+  );
+}
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'ai-smart-analytics', limit: 12, windowMs: 60_000 });
@@ -39,79 +95,111 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cross-site requests are not allowed.' }, { status: 403 });
   }
 
-  const bodyResult = await readJsonBody(req, 32_768);
+  const bodyResult = await readJsonBody(req, 16_384);
   if (!bodyResult.ok) return bodyResult.response;
-  const body = bodyResult.value;
 
-  const parsed = SmartAnalyticsBodySchema.safeParse(body);
+  const parsed = RequestSchema.safeParse(bodyResult.value);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Invalid input. Provide userLat, userLng, optional targetSpecies, conditions, season, and currentTimeHour.' },
+      { error: 'A valid latitude, longitude and optional target species are required.' },
       { status: 400 },
     );
   }
 
-  const input: SmartAnalyticsInput = {
-    userLat: parsed.data.userLat,
-    userLng: parsed.data.userLng,
-    targetSpecies: parsed.data.targetSpecies,
-    conditions: parsed.data.conditions
-      ? {
-          waterTempC: parsed.data.conditions.waterTempC ?? null,
-          waterTempF: parsed.data.conditions.waterTempF ?? null,
-          airTempC: parsed.data.conditions.airTempC ?? null,
-          airTempF: parsed.data.conditions.airTempF ?? null,
-          windSpeedMs: parsed.data.conditions.windSpeedMs ?? null,
-          windSpeedMph: parsed.data.conditions.windSpeedMph ?? null,
-          windDirection: parsed.data.conditions.windDirection ?? null,
-          dissolvedOxygenMgl: parsed.data.conditions.dissolvedOxygenMgl ?? null,
-          fishingScore: parsed.data.conditions.fishingScore ?? null,
-          condition: parsed.data.conditions.condition ?? 'stable',
-        }
-      : undefined,
-    season: parsed.data.season,
-    currentTimeHour: parsed.data.currentTimeHour,
-  };
+  const { lat, lng, targetSpecies, region, saltwater } = parsed.data;
+  const supabase = getSupabaseAdmin();
 
+  let authenticated = false;
+  let userId: string | null = null;
   try {
-    const result = await analyzeSpotsSmart(input);
+    const context = await getAuthContext();
+    authenticated = Boolean(context);
+    userId = context?.user?.id ?? null;
+  } catch {
+    authenticated = false;
+    userId = null;
+  }
 
-    // If Groq client available, also generate a summary using AI
-    let aiSummary: any = null;
-    try {
-      const groq = getGroqClient();
-      const model = getAiModel();
+  const sources = await gatherSmartAnalyticsSources(
+    { lat, lng, targetSpecies, region, saltwater },
+    { supabase, userId, authenticated },
+  );
 
-      const topSpot = result.analyzedSpots[0];
-      if (topSpot && topSpot.recommendedSpecies?.[0]) {
-        const species = topSpot.recommendedSpecies[0];
-        const prompt = `You are Fishbot, an AI fishing assistant. Provide a concise 2-sentence summary for an angler about why ${species.name} is the recommended species at ${topSpot.spot.name} today, given conditions: ${topSpot.reason}. Keep it encouraging and concise.`;
+  const baseline = await buildBaseline({ lat, lng, targetSpecies, sources });
+  const prompt = buildAnalysisPrompt({
+    lat,
+    lng,
+    targetSpecies,
+    region,
+    sources,
+    baseline,
+  });
 
-        const res = await groq.chat.completions.create({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.5,
-          max_tokens: 200,
-        });
-
-        aiSummary = res.choices[0]?.message?.content ?? null;
-      }
-    } catch {
-      // AI summary optional; continue without it.
-    }
-
-    return NextResponse.json({
-      ...result,
-      aiSummary,
-      source: 'local-catalog',
-      data_mode: 'ai-generated',
-      live_data: false,
+  let analysis;
+  try {
+    const response = await callFishbot({
+      temperature: 0.3,
+      max_tokens: 1400,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: prompt }],
     });
+    analysis = parseModelJson(response.choices[0]?.message?.content ?? '{}', SmartAnalysisSchema);
   } catch (error) {
-    console.error('Smart analytics error:', error);
-    return NextResponse.json(
-      { error: 'Smart analytics unavailable.', source: 'none', data_mode: 'unavailable', live_data: false },
-      { status: 503 },
+    console.error('[smart-analytics] AI provider error:', error);
+    return unavailable('AI smart analysis is unavailable; no analysis was generated.', sources);
+  }
+
+  const catalogIds = new Set(sources.catalog.nearby_spots.map((spot) => spot.id));
+  const recommendations = analysis.recommendations.filter((row) => catalogIds.has(row.spot_id));
+  const dropped = analysis.recommendations.length - recommendations.length;
+
+  if (recommendations.length === 0) {
+    console.warn('[smart-analytics] model returned no recommendations inside the stored catalog.');
+    return unavailable(
+      'AI smart analysis returned recommendations outside the stored catalog; no analysis was published.',
+      sources,
     );
   }
+
+  const observedAt = sources.provider.captured_at;
+  const liveData = hasVerifiedCurrentConditions({
+    live: sources.provider.status === 'ok',
+    data_mode: 'provider',
+    observed_at: observedAt,
+  });
+
+  return NextResponse.json(
+    {
+      analysis: {
+        verdict: analysis.verdict,
+        confidence: analysis.confidence,
+        reasoning: analysis.reasoning,
+        data_gaps: analysis.data_gaps,
+      },
+      recommendations,
+      aiSummary: analysis.verdict,
+      baseline,
+      data_phase: sources.data_phase,
+      data_sufficiency: {
+        catch_log_total: sources.catchLog.total,
+        catch_log_nearby: sources.catchLog.nearby,
+        catch_log_recent_30d: sources.catchLog.recent_30d,
+        sufficient: sources.catchLog.sufficient,
+        note: sources.catchLog.note,
+      },
+      sources: sources.sources,
+      dropped_recommendations: dropped,
+      source: 'ai',
+      data_mode: 'ai-generated',
+      live_data: liveData,
+      conditions: {
+        status: sources.provider.status,
+        providers: sources.provider.providers,
+        observed_at: observedAt,
+        fishing_score: sources.provider.fishing_score,
+      },
+      generated_at: new Date().toISOString(),
+    },
+    { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'ai-generated' } },
+  );
 }

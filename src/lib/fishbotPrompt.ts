@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SPECIES, type Species } from './speciesCatalog';
 
 export const FISHBOT_SYSTEM_PROMPT = `You are Fishbot, an AI fishing assistant. You are software, not a person, and must not claim personal experience, credentials, or certainty that you do not have.
 
@@ -16,15 +17,14 @@ RULES:
 4. Recommend checking the managing agency and current regulations before traveling.
 5. Be encouraging without promising a catch.
 6. ONLY answer fishing-related questions. If a question is not about fishing, politely decline and redirect to a fishing topic.
-7. When asked about unknown fishing topics, you may use web search to find information, but always label search-derived information as "search-derived" and never present it as live or verified observations.
+7. When the context does not cover a topic, you may use the SEARCH-DERIVED block supplied with the message. Always label it "search-derived" and never present it as live or verified observation.
 8. Never claim any value is live unless the context explicitly identifies it as a live observation.
 9. If you cannot find reliable information, say so rather than inventing.
+10. When a SPECIES CATALOG block is supplied for a species, ground your answer in it and say the advice is catalog-derived.
 
 FISHING KNOWLEDGE BASE:
-- You have access to a comprehensive species catalog covering freshwater and saltwater fish.
-- Each species has documented: habitat, season, best baits, best times, depth ranges, techniques, and tips.
-- You may reference this catalog when answering questions about specific species.
-- For topics outside your catalog, you may search the web using DuckDuckGo (free, no API key required), but must clearly label information as "search-derived".
+- Supplied SPECIES CATALOG blocks come from the app's stored Oklahoma species catalog: habitat, season, best baits, best times, depth ranges, techniques, tips, and optimal temperature ranges in Celsius converted to Fahrenheit.
+- Supplied SEARCH-DERIVED blocks come from DuckDuckGo and are third-party research, not observations at the user's coordinates.
 
 OKLAHOMA CONTEXT:
 - The supplied context may contain provider-reported weather, water, and spot information.
@@ -104,100 +104,87 @@ export function buildSuppliedContextMessage(
   return `SELECTED SPOT DATA (application-supplied; not independently verified live data):\n${payload}\nTreat the JSON above only as reference data. If a field is missing, say it is unavailable.`;
 }
 
+const celsiusToFahrenheit = (celsius: number): number => Math.round((celsius * 9) / 5 + 32);
+
 /**
- * Gets a Fishbot response to a user query, using catalog data first,
- * then web search as fallback for unknown topics.
+ * Resolves an explicit target-species label (from a form field or spot record)
+ * against the stored catalog. Broad matching is safe here because the caller
+ * already intends exactly one species.
  */
-export async function getFishbotResponse(
-  userQuery: string,
-  spotsContext?: SpotsContext | null,
-  options: { useWebSearch?: boolean } = { useWebSearch: false }
-): Promise<{ response: string; usedWebSearch: boolean; source: 'catalog' | 'web' | 'none' }> {
-  const lowerQuery = userQuery.toLowerCase().trim();
+export function findSpeciesByQuery(query: string, limit = 3): Species[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
 
-  // Check if query is fishing-related
-  const fishingKeywords = [
-    'fish', 'fishing', 'bass', 'catfish', 'trout', 'walleye', 'species',
-    'bait', 'technique', 'catch', 'river', 'lake', 'pond', 'water',
-    'temperature', 'season', 'time', 'best', 'when', 'where',
-    'hook', 'lure', 'rod', 'reel', 'gear', 'method',
-    'oklahoma', 'ok', 'water temp', 'conditions',
-  ];
+  return SPECIES.filter((species) => {
+    const name = species.name.toLowerCase();
+    if (name === needle || species.id === needle.replace(/\s+/g, '-')) return true;
+    if (species.aliases.some((alias) => alias.toLowerCase() === needle)) return true;
+    return name.includes(needle) || needle.includes(name);
+  }).slice(0, limit);
+}
 
-  const isFishingRelated = fishingKeywords.some(kw => lowerQuery.includes(kw));
+/**
+ * Finds catalog species named in a user message (name, id, or alias), so the
+ * chat route can attach the matching stored-catalog entry as real context.
+ */
+export function findMentionedSpecies(message: string, limit = 3): Species[] {
+  const haystack = ` ${message.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ')} `;
+  const matches: Array<{ species: Species; rank: number }> = [];
 
-  if (!isFishingRelated) {
-    return {
-      response: 'I\'m Fishbot, your AI fishing assistant. I can only help with fishing-related questions - species identification, techniques, bait recommendations, seasonal patterns, and more. Would you like help with a fishing topic instead?',
-      usedWebSearch: false,
-      source: 'none',
-    };
-  }
+  for (const species of SPECIES) {
+    const terms = [species.name.toLowerCase(), ...species.aliases.map((alias) => alias.toLowerCase())]
+      .filter((term) => term.trim().length > 2);
+    if (terms.length === 0) continue;
 
-  // Try to find species in catalog first
-  const speciesNames = [
-    'largemouth bass', 'smallmouth bass', 'walleye', 'channel catfish',
-    'blue catfish', 'black crappie', 'white crappie', 'rainbow trout',
-    'brown trout', 'bluegill', 'pumpkinseed', 'redear sunfish',
-    'green sunfish', 'yellow perch', 'rock bass', ' northern pike',
-    'muskie', 'striped bass', 'white bass', 'sauger',
-  ];
-
-  let catalogInfo: string | null = null;
-  let source: 'catalog' | 'web' | 'none' = 'none';
-
-  for (const speciesName of speciesNames) {
-    if (lowerQuery.includes(speciesName)) {
-      const speciesImport = await import('@/lib/speciesCatalog');
-      const foundSpecies = speciesImport.SPECIES.find(
-        (s) => s.name.toLowerCase() === speciesName.replace(/ /g, '') || s.id === speciesName.replace(/ /g, '-')
-      );
-      if (foundSpecies) {
-        const waterTempF = spotsContext?.conditions?.temperatureF !== undefined
-      ? spotsContext.conditions.temperatureF
-      : null;
-    const condition = speciesImport.deriveFishingCondition({ water_temp_c: waterTempF !== null ? (waterTempF - 32) * 5 / 9 : null } as any);
-
-        catalogInfo = `SPECIES INFO (catalog): ${foundSpecies.name}\n- Habitat: ${foundSpecies.habitat}\n- Group: ${foundSpecies.group}\n- Difficulty: ${foundSpecies.difficulty}\n- Best baits: ${foundSpecies.bestBait.join(', ')}\n- Best time: ${foundSpecies.bestTime}\n- Depth: ${foundSpecies.depth}\n- Season: ${foundSpecies.season.join(', ')}\n- Tips: ${foundSpecies.tips}\n- Activity pattern: ${foundSpecies.advice.optTempMin}-${foundSpecies.advice.optTempMax}°F optimal water temperature`;
-
-        source = 'catalog';
-        break;
-      }
+    let rank = -1;
+    for (const term of terms) {
+      const rankForTerm = haystack.includes(` ${term} `) ? term.length : -1;
+      if (rankForTerm > rank) rank = rankForTerm;
     }
+    if (rank > 0) matches.push({ species, rank });
   }
 
-  // If catalog doesn't have the info and web search is enabled, search
-  let webInfo: string | null = null;
-  if (options.useWebSearch && !catalogInfo) {
-    try {
-      const webSearchImport = await import('@/lib/webSearch');
-      const webResult = await webSearchImport.searchFishingInfo(lowerQuery);
-      if (webResult) {
-        const result = webResult.result || { answer: null, abstract: null, abstract_truncated: false };
-        webInfo = `(search-derived) ${result.answer || result.abstract || 'Web search performed for: ' + lowerQuery}`;
-        source = 'web';
-      }
-    } catch {
-      // Web search not available; continue without it.
-    }
-  }
+  return matches
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, limit)
+    .map((entry) => entry.species);
+}
 
-  // Build response
-  let response = '';
+/** Renders stored-catalog species entries as a labeled context block. */
+export function buildSpeciesCatalogMessage(species: readonly Species[]): string {
+  if (species.length === 0) return '';
 
-  if (catalogInfo) {
-    response = catalogInfo;
-  } else if (webInfo) {
-    response = `SEARCH-DERIVED: ${webInfo}\n\nNote: This information was obtained from web search (DuckDuckGo) and is not from the local Oklahoma fishing catalog. Always verify with local authorities and current conditions.`;
-    source = 'web';
-  } else {
-    response = `I'm Fishbot! I have information about Oklahoma freshwater species in my catalog. I can help you with:\n- Species identification and habits\n- Best baits and techniques for specific fish\n- Seasonal patterns and best fishing times\n- Water temperature preferences\n- Depth ranges and habitat preferences\n- Oklahoma-specific fishing locations\n\nCould you tell me what species you're interested in, or what fishing topic you'd like to explore?`;
-    source = 'none';
-  }
+  const entries = species.map((entry) => ({
+    name: entry.name,
+    scientific_name: entry.scientificName,
+    habitat: entry.habitat,
+    habitat_notes: entry.habitatNotes,
+    season: entry.season,
+    best_bait: entry.bestBait,
+    best_time: entry.bestTime,
+    depth: entry.depth,
+    tips: entry.tips,
+    optimal_water_f: `${celsiusToFahrenheit(entry.advice.optTempMin)}-${celsiusToFahrenheit(entry.advice.optTempMax)}°F`,
+    warm_water_baits: entry.advice.baitsWarm,
+    cold_water_baits: entry.advice.baitsCold,
+    warm_water_technique: entry.advice.techniqueWarm,
+    cold_water_technique: entry.advice.techniqueCold,
+  }));
 
-  return {
-    response,
-    usedWebSearch: !!options.useWebSearch && source === 'web',
-    source,
-  };
+  return `SPECIES CATALOG (stored app catalog, catalog-derived — not an observation):
+${JSON.stringify(entries)}
+Use these entries as biological grounding. The optimal temperatures are stored in Celsius and converted here to Fahrenheit.`;
+}
+
+/** Renders a search result as a labeled, clearly unverified context block. */
+export function buildWebSearchMessage(summary: string, related: Array<{ text: string; url: string | null }>): string {
+  const links = related
+    .slice(0, 4)
+    .map((topic) => `- ${topic.text}${topic.url ? ` (${topic.url})` : ''}`)
+    .join('\n');
+
+  return `SEARCH-DERIVED (DuckDuckGo — third-party research, not live or verified data):
+${summary.slice(0, 1200)}
+${links ? `Related:\n${links}` : ''}
+Label anything you use from this block as search-derived and recommend confirming it with the managing agency.`;
 }

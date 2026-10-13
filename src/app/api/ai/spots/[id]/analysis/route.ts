@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 import { SPECIES } from '@/lib/speciesCatalog'
-import { getAiModel, getGroqClient } from '@/lib/groq'
+import { callFishbot } from '@/lib/fishbotBrain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 const ConditionsSchema = z.record(z.string(), z.unknown()).default({})
@@ -79,8 +79,7 @@ Return ONLY valid JSON matching this schema:
 
 Rules: keep confidence lower when provider conditions are missing; never call catalog depth a live measurement; never claim a guaranteed catch; never mention another spot; include the exact canonical spot_id and spot_name.`
   try {
-    const response = await getGroqClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       temperature: 0.2,
       max_tokens: 900,
       messages: [{ role: 'system', content: prompt }],
