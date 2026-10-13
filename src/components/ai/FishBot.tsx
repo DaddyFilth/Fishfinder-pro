@@ -12,7 +12,20 @@ interface Msg {
   role: 'user' | 'bot';
   text: string;
   ts: string;
+  webSearch?: boolean;
+  catalogSpecies?: string[];
 }
+
+const badgeStyle: React.CSSProperties = {
+  fontSize: '9px',
+  fontWeight: 700,
+  letterSpacing: '0.02em',
+  color: '#94a3b8',
+  border: '1px solid #334155',
+  borderRadius: '999px',
+  padding: '2px 7px',
+  background: '#0f172a',
+};
 
 export default function FishBot({ spot, conditions }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -121,6 +134,9 @@ export default function FishBot({ spot, conditions }: Props) {
         typeof payload.advice === 'string' ? payload.advice :
         null;
       const error = typeof payload.error === 'string' ? payload.error : null;
+      const catalogSpecies = Array.isArray(payload.catalog_species)
+        ? payload.catalog_species.filter((entry): entry is string => typeof entry === 'string')
+        : [];
 
       setMessages((current) => [
         ...current,
@@ -128,6 +144,8 @@ export default function FishBot({ spot, conditions }: Props) {
           role: 'bot',
           text: reply ?? (error ? `AI provider unavailable: ${error}` : 'AI provider unavailable; no response was generated.'),
           ts: new Date().toLocaleTimeString(),
+          webSearch: payload.used_web_search === true,
+          catalogSpecies,
         },
       ]);
     } catch {
@@ -172,17 +190,33 @@ export default function FishBot({ spot, conditions }: Props) {
           <div
             key={`${message.ts}-${index}`}
             style={{
-              alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: message.role === 'user' ? 'flex-end' : 'flex-start',
+              gap: '4px',
               maxWidth: '88%',
-              padding: '10px 12px',
-              borderRadius: '12px',
-              background: message.role === 'user' ? '#075985' : '#172033',
-              fontSize: '13px',
-              lineHeight: 1.45,
-              whiteSpace: 'pre-wrap',
             }}
           >
-            {message.text}
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '12px',
+                background: message.role === 'user' ? '#075985' : '#172033',
+                fontSize: '13px',
+                lineHeight: 1.45,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {message.text}
+            </div>
+            {message.role === 'bot' && (message.webSearch || (message.catalogSpecies?.length ?? 0) > 0) && (
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {message.webSearch && <span style={badgeStyle}>search-derived</span>}
+                {(message.catalogSpecies?.length ?? 0) > 0 && (
+                  <span style={badgeStyle}>catalog: {message.catalogSpecies?.join(', ')}</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {loading && <div style={{ color: '#94a3b8', fontSize: '12px' }}>FishBot is thinking…</div>}

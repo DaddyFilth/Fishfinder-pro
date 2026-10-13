@@ -63,7 +63,7 @@ async function fetchRemoteSpots(key: string, params: URLSearchParams): Promise<R
       if (!res) {
         console.warn('[API] remote spots request failed');
         const reason = 'upstream unavailable';
-        const payload = { error: 'Live AI spot feed is unavailable.' };
+        const payload = { error: 'Spot provider feed is unavailable.' };
         writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
         return { payload, reason };
       }
@@ -78,7 +78,7 @@ async function fetchRemoteSpots(key: string, params: URLSearchParams): Promise<R
         kind: error instanceof Error ? error.name : 'unknown',
       });
       const reason = 'upstream unreachable';
-      const payload = { error: 'Live AI spot feed is unavailable.' };
+      const payload = { error: 'Spot provider feed is unavailable.' };
       writeRemoteCache(key, payload, reason, REMOTE_FAILURE_TTL_MS);
       return { payload, reason };
     }

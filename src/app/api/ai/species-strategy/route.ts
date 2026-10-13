@@ -7,7 +7,7 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiModel, getGroqClient } from '@/lib/groq';
+import { callFishbot } from '@/lib/fishbotBrain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
       ? JSON.stringify(envData, null, 2)
       : 'Unavailable as a verified recent live observation. Do not infer or invent current environmental readings.';
 
-    const client = getGroqClient();
     const prompt = `
       You are a Master Fishing Guide. Create a hyper-personalized strategy for targeting ${species.name} (${species.scientificName}) at coordinates ${lat}, ${lon}.
       
@@ -65,8 +64,7 @@ export async function POST(req: NextRequest) {
       Response format: Concise, authoritative, and formatted with clear headings.
     `;
 
-    const response = await client.chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
     });

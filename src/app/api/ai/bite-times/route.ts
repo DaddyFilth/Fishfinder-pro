@@ -1,6 +1,6 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAiModel, getGroqClient } from '@/lib/groq';
+import { callFishbot } from '@/lib/fishbotBrain';
 import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
@@ -88,9 +88,7 @@ Respond with ONLY valid JSON in this exact format:
 } Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
   try {
-    const openai = getGroqClient();
-    const res = await openai.chat.completions.create({
-      model: getAiModel(),
+    const res = await callFishbot({
       max_tokens: 600,
       temperature: 0.4,
       messages: [{ role: 'user', content: prompt }],

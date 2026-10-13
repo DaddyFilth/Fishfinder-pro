@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 import { SPECIES } from '@/lib/speciesCatalog'
-import { getAiModel, getGroqClient } from '@/lib/groq'
+import { callFishbot } from '@/lib/fishbotBrain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 const ConditionsSchema = z.record(z.string(), z.unknown()).default({})

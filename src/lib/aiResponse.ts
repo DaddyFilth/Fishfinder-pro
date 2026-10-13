@@ -80,6 +80,28 @@ export const SpotPredictionsSchema = z.array(
 
 export type SpotPrediction = z.infer<typeof SpotPredictionsSchema>[number]
 
+export const SmartRecommendationSchema = z.object({
+  spot_id: z.string().trim().min(1).max(128),
+  spot_name: z.string().trim().min(1).max(200),
+  score: z.number().int().min(0).max(100),
+  rating: z.enum(['Hot', 'Good', 'Fair']),
+  primary_species: z.array(z.string().trim().min(1).max(120)).min(1).max(3),
+  best_time_today: z.string().trim().min(1).max(160),
+  best_technique: z.string().trim().min(1).max(300),
+  recommended_lure: z.string().trim().min(1).max(160),
+  reason: z.string().trim().min(1).max(500),
+})
+
+export const SmartAnalysisSchema = z.object({
+  verdict: z.string().trim().min(1).max(600),
+  confidence: z.number().int().min(0).max(100),
+  reasoning: z.string().trim().min(1).max(2000),
+  data_gaps: z.array(z.string().trim().min(1).max(300)).max(8),
+  recommendations: z.array(SmartRecommendationSchema).min(1).max(6),
+})
+
+export type SmartAnalysis = z.infer<typeof SmartAnalysisSchema>
+
 export function cleanModelJson(content: string): string {
   return content
     .trim()
