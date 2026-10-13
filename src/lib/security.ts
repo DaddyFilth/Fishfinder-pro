@@ -275,12 +275,15 @@ export function noStore(response: NextResponse) {
 export function isSameOrigin(request: NextRequest) {
   const origin = request.headers.get('origin')
   if (origin) {
-    if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
-    try {
-      return new URL(origin).origin === request.nextUrl.origin
-    } catch {
-      return false
-    }
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+  try {
+  const originUrl = new URL(origin)
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim()
+  const requestHost = forwardedHost || request.headers.get('host')?.split(',')[0].trim() || request.nextUrl.host
+  return originUrl.host === requestHost
+  } catch {
+  return false
+  }
   }
 
   return request.headers.get('sec-fetch-site') === 'same-origin'

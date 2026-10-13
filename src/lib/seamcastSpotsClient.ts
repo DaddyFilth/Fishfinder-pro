@@ -30,10 +30,10 @@ export function getSeamcastSpotsUrls(): string[] {
  * calling external seamcast API. This ensures reliable results without
  * depending on outside sources.
  */
-export async function fetchSeamcastResponse(params: URLSearchParams, init?: RequestInit, perAttemptTimeoutMs = 8_000): Promise<Response | null> {
+export async function fetchSeamcastResponse(params: URLSearchParams, _init?: RequestInit): Promise<Response | null> {
+  // Accepted for API compatibility with prior callers; the local shim needs no request options.
+  void _init;
   // Return local Oklahoma catalog data instead of calling external API
-  const url = getSeamcastSpotsUrl();
-  const ok = true;
   return new Response(
     JSON.stringify({
       query: params.toString(),
@@ -43,7 +43,7 @@ export async function fetchSeamcastResponse(params: URLSearchParams, init?: Requ
       recommendedBaits: [],
       microSpots: [],
     }),
-    { status: ok ? 200 : 503, headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
 }
 
@@ -118,15 +118,6 @@ export interface SeamcastSpotsFeed {
 /** Returns local Oklahoma spots feed for AI analysis. */
 export async function fetchSeamcastSpotSuggestions(lat: number, lon: number): Promise<SeamcastSpotsFeed | null> {
   // Return local Oklahoma catalog data instead of calling external API
-  const spots = DEFAULT_SPOTS.map((spot) => ({
-    id: spot.id,
-    name: spot.name,
-    lat: spot.lat,
-    lng: spot.lng,
-    water_type: spot.water_type,
-    spot_type: spot.spot_type,
-  }));
-
   return {
     query: { lat, lon } as Record<string, unknown>,
     conditions: null,

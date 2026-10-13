@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Spot } from '@/lib/mapFilters'
+import FishBot from '@/components/ai/FishBot'
 
 type Props = { spot: Spot }
 type Analysis = { spot_id: string; spot_name: string; bite_likelihood: string; confidence: number; summary: string; best_species: Array<{ species: string; reason: string }>; best_bait: string; target_depth: string; bite_window: string; technique: string; evidence: string[]; source?: string; conditions_source?: string; observed_at?: string | null }
@@ -71,6 +72,9 @@ export default function SpotMiniDashboard({ spot }: Props) {
           </>
         )}
         {isCurrentSpot && conditions && !analysis && <p>Provider conditions loaded for this spot. AI analysis is still unavailable.</p>}
+      </div>
+      <div style={cardStyle}>
+        <FishBot spot={spot} conditions={conditions ?? {}} />
       </div>
     </section>
   )

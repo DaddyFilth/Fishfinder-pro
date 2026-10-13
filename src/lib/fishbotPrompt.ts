@@ -153,11 +153,6 @@ export async function getFishbotResponse(
         (s) => s.name.toLowerCase() === speciesName.replace(/ /g, '') || s.id === speciesName.replace(/ /g, '-')
       );
       if (foundSpecies) {
-        const waterTempF = spotsContext?.conditions?.temperatureF !== undefined
-      ? spotsContext.conditions.temperatureF
-      : null;
-    const condition = speciesImport.deriveFishingCondition({ water_temp_c: waterTempF !== null ? (waterTempF - 32) * 5 / 9 : null } as any);
-
         catalogInfo = `SPECIES INFO (catalog): ${foundSpecies.name}\n- Habitat: ${foundSpecies.habitat}\n- Group: ${foundSpecies.group}\n- Difficulty: ${foundSpecies.difficulty}\n- Best baits: ${foundSpecies.bestBait.join(', ')}\n- Best time: ${foundSpecies.bestTime}\n- Depth: ${foundSpecies.depth}\n- Season: ${foundSpecies.season.join(', ')}\n- Tips: ${foundSpecies.tips}\n- Activity pattern: ${foundSpecies.advice.optTempMin}-${foundSpecies.advice.optTempMax}°F optimal water temperature`;
 
         source = 'catalog';

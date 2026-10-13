@@ -12,11 +12,11 @@ describe('fetchSeamcastResponse', () => {
   it('returns local Oklahoma catalog data without calling external API', async () => {
     vi.stubEnv('SPOTS_API', 'https://primary.example/api/spots');
 
-    const response = await fetchSeamcastResponse(new URLSearchParams(), undefined, 100);
+    const response = await fetchSeamcastResponse(new URLSearchParams(), undefined);
 
     expect(response?.ok).toBe(true);
     // Should return local catalog data, not call external API
-    const data = await response.json();
+    const data = await response!.json();
     expect(data.query).toBeDefined();
     expect(data.conditions).toBeNull();
     expect(data.speciesLikely).toBeDefined();
@@ -26,7 +26,7 @@ describe('fetchSeamcastResponse', () => {
   it('uses fallback when primary endpoint fails', async () => {
     vi.stubEnv('SPOTS_API', 'https://primary.example/api/spots');
 
-    const response = await fetchSeamcastResponse(new URLSearchParams({ lat: '40', lng: '-100' }), undefined, 1);
+    const response = await fetchSeamcastResponse(new URLSearchParams({ lat: '40', lng: '-100' }), undefined);
 
     // Should still return valid response even with short timeout
     expect(response?.ok).toBe(true);
