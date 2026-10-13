@@ -79,8 +79,7 @@ Return ONLY valid JSON matching this schema:
 
 Rules: keep confidence lower when provider conditions are missing; never call catalog depth a live measurement; never claim a guaranteed catch; never mention another spot; include the exact canonical spot_id and spot_name.`
   try {
-    const response = await getGroqClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await callFishbot({
       temperature: 0.2,
       max_tokens: 900,
       messages: [{ role: 'system', content: prompt }],
