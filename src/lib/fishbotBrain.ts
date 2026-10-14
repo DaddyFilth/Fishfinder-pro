@@ -18,7 +18,7 @@ export interface FishbotResult {
   choices: Array<{ message: { content: string | null } }>;
 }
 
-const REQUEST_TIMEOUT_MS = 15_000;
+// REQUEST_TIMEOUT_MS reserved for future timeout handling
 
 /**
  * Single brain for every Fishbot rendering in the app (chat, advisor,

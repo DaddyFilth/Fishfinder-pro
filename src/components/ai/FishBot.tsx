@@ -96,7 +96,7 @@ export default function FishBot({ spot, conditions }: Props) {
 
     void loadAdvice();
     return () => { cancelled = true; };
-  }, [spot, spotLat, spotLon, targetSpecies]);
+  }, [spot, spotLat, spotLon, targetSpecies, conditions]);
 
   async function sendMessage(prompt?: string) {
     const userMsg = (prompt ?? input).trim();
