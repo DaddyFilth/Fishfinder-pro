@@ -1,0 +1,31 @@
+src/lib/fishbotBrain.ts
+  s_36e0ca2efa7fd6::t_24ad4f91f4099c 21
+vitest.config.ts
+  s_a8a4505c77cb32::t_90e53be9766ace 15-22
+src/components/ai/FishBot.tsx
+  s_36e0ca2efa7fd6::t_bd67712fab7f00 99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65548a2d322cf225dbc2ebe0202f5a53d3ce2a0d",
+  "prompts": {},
+  "sessions": {
+    "s_36e0ca2efa7fd6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec84ecf9bffePoln0ueabAf8pg",
+        "model": "big-pickle"
+      },
+      "human_author": "DaddyFilth <daddyfilthie@proton.me>"
+    },
+    "s_a8a4505c77cb32": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec828e946ffeDYO7y7WMCh54ei",
+        "model": "big-pickle"
+      },
+      "human_author": "DaddyFilth <daddyfilthie@proton.me>"
+    }
+  }
+}
