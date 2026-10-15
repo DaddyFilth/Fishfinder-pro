@@ -1,0 +1,57 @@
+src/app/api/ai/advisor/route.ts
+  s_a8a4505c77cb32::t_b1ba73f2621677 4-5,72-79,81,83-112
+src/app/api/species-image/[species]/route.ts
+  s_a8a4505c77cb32::t_0df05a56e37770 49-61,64
+  s_a8a4505c77cb32::t_68be220d3f2d41 6
+src/ai/context.ts
+  s_a8a4505c77cb32::t_8d29731b8bfddf 1-120
+src/app/api/ai/identify/route.ts
+  s_a8a4505c77cb32::t_7c90e72e5c451a 2
+  s_a8a4505c77cb32::t_fff5459e6d814c 28,42,44-46
+src/app/api/ai/smart-analytics/route.ts
+  s_a8a4505c77cb32::t_cdf43eea26da98 4
+  s_a8a4505c77cb32::t_58619237f61b91 140,146
+src/ai/brain.ts
+  s_a8a4505c77cb32::t_7b6db641e18a8c 1-177
+src/lib/fishbotBrain.ts
+  s_a8a4505c77cb32::t_95f2fb98c48360 2-3,5
+src/app/api/ai/analyze/route.ts
+  s_a8a4505c77cb32::t_8256578f820b4a 2
+  s_a8a4505c77cb32::t_f7addcef23a74c 45
+src/app/api/ai/suggest-spots/route.ts
+  s_a8a4505c77cb32::t_88cffc9ec9aa68 2
+  s_a8a4505c77cb32::t_6ba650f92259e2 199
+src/app/api/ai/bite-times/route.ts
+  s_a8a4505c77cb32::t_3e7fe19adb577d 91
+  s_a8a4505c77cb32::t_41ac3d1f0010cc 3
+src/app/api/spots/discover/route.ts
+  s_a8a4505c77cb32::t_b09cb1f66d7042 4
+  s_a8a4505c77cb32::t_6ebf6c990b0b8a 143,147
+src/app/api/ai/gear-checklist/route.ts
+  s_a8a4505c77cb32::t_5939588d14a357 10
+  s_a8a4505c77cb32::t_f2470ee53bf975 57
+src/app/api/ai/species-strategy/route.ts
+  s_a8a4505c77cb32::t_8fba983c71bfa6 10
+  s_a8a4505c77cb32::t_fb114913b3c191 67,72
+src/app/api/ai/spots/[id]/analysis/route.ts
+  s_a8a4505c77cb32::t_aaea29a45bf775 5,55-59,61,63-64,82,84,86-87,89
+src/app/api/ai/chat/route.ts
+  s_a8a4505c77cb32::t_f7af747d7601d8 109
+  s_a8a4505c77cb32::t_b5df3bd1685a63 9,132-144,147-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa113481c8761bdf0ac2e4250845338db6c3b836",
+  "prompts": {},
+  "sessions": {
+    "s_a8a4505c77cb32": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec828e946ffeDYO7y7WMCh54ei",
+        "model": "big-pickle"
+      },
+      "human_author": "DaddyFilth <daddyfilthie@proton.me>"
+    }
+  }
+}
