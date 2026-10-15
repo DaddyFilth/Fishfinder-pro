@@ -1,5 +1,5 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { callFishbot, getAiProviderName } from '@/lib/fishbotBrain';
+import { getAiProviderName, runBrainPrompt } from '@/ai/brain';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     : 'Seamcast-spots feed: unavailable.';
 
   try {
-    const response = await callFishbot({
+    const raw = await runBrainPrompt({
       max_tokens: 400,
       temperature: 0.3,
       response_format: { type: 'json_object' },
@@ -67,7 +67,6 @@ ${feedContext}
 Respond with ONLY a JSON object: { "summary": "three-sentence interpretation", "emoji_rating": "a short label" }`,
       }],
     });
-    const raw = response.choices[0]?.message?.content ?? '{}';
     const result = parseModelJson(raw, AnalysisSchema);
     return NextResponse.json({
       ...result,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 import { SPECIES } from '@/lib/speciesCatalog'
-import { callFishbot } from '@/lib/fishbotBrain'
+import { askBrain, type BrainContext } from '@/ai/brain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
 const ConditionsSchema = z.record(z.string(), z.unknown()).default({})
@@ -51,16 +51,17 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
   const conditionsResult = ConditionsSchema.safeParse(body.conditions)
   if (!conditionsResult.success) return NextResponse.json({ error: 'Invalid spot conditions.' }, { status: 400 })
   const conditions = conditionsResult.data
-  const prompt = `You are a freshwater fishing habitat and behavior specialist for Oklahoma. Analyze ONLY the canonical spot below. Do not use facts from another water and do not invent live readings.
+
+  const context: BrainContext = {
+    spot: spot as unknown as BrainContext['spot'],
+    conditions,
+    extra: `REFERENCE HABITAT AND HABIT DATA (biological grounding, not a claim that fish are present):\n${JSON.stringify(groundingForSpot()).slice(0, 24000)}\nTreat catalog depth as reference, never as a live measurement.`,
+  }
+
+  const question = `Analyze ONLY the canonical spot identified above. Do not use facts from another water and do not invent live readings.
 
 CANONICAL SPOT (authoritative identity)
 ${JSON.stringify({ id: spot.id, name: spot.name, lat: spot.lat, lng: spot.lng, water_type: spot.water_type, spot_type: spot.spot_type, access_type: spot.access_type, region: spot.region, description: spot.description, depth_metadata: spot.depth_metadata })}
-
-PROVIDER CONDITIONS FOR THIS SPOT ONLY
-${JSON.stringify(conditions).slice(0, 12000)}
-
-REFERENCE HABITAT AND HABIT DATA. Use it as biological grounding, not as a claim that fish are present:
-${JSON.stringify(groundingForSpot()).slice(0, 24000)}
 
 Return ONLY valid JSON matching this schema:
 {
@@ -78,13 +79,14 @@ Return ONLY valid JSON matching this schema:
 }
 
 Rules: keep confidence lower when provider conditions are missing; never call catalog depth a live measurement; never claim a guaranteed catch; never mention another spot; include the exact canonical spot_id and spot_name.`
+
   try {
-    const response = await callFishbot({
+    const { text } = await askBrain(question, context, {
       temperature: 0.2,
-      max_tokens: 900,
-      messages: [{ role: 'system', content: prompt }],
+      maxTokens: 900,
+      responseFormat: { type: 'json_object' },
     })
-    const raw = response.choices[0]?.message?.content ?? '{}'
+    const raw = text || '{}'
     const parsedJson = JSON.parse(raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, ''))
     const analysis = AnalysisSchema.parse(parsedJson)
     if (analysis.spot_id !== spot.id || analysis.spot_name !== spot.name) {

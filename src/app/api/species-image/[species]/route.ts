@@ -3,12 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext } from '@/lib/auth/server';
 import { speciesImagePlaceholder } from '@/lib/speciesImagePlaceholder';
 import { isSafeGeneratedSvg } from '@/lib/svg';
-import { getAiModel, getGroqClient } from '@/lib/groq';
+import { runBrainPrompt } from '@/ai/brain';
 import { enforceRateLimit } from '@/lib/security';
 
 export const runtime = 'nodejs';
-
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SVG_HEADERS = {
   'Content-Type': 'image/svg+xml; charset=utf-8',
@@ -48,36 +46,22 @@ export async function GET(
   }
 
   try {
-    const response = await fetch(GROQ_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${getGroqClient().apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: getAiModel(),
-        temperature: 0.2,
-        max_tokens: 5000,
-        messages: [
-          {
-            role: 'system',
-            content: 'Return only valid standalone SVG markup. Create a polished, naturalistic field-guide fish illustration with a blue underwater background. Do not use external images, scripts, text labels, or markdown fences. Use a 1024 square viewBox.',
-          },
-          {
-            role: 'user',
-            content: `Create an accurate side-profile illustration of a ${speciesName} fish. Make the fish large and centered, with recognizable species-specific body shape, fins, markings, and coloring.`,
-          },
-        ],
-      }),
+    const raw = await runBrainPrompt({
+      temperature: 0.2,
+      max_tokens: 5000,
+      messages: [
+        {
+          role: 'system',
+          content: 'Return only valid standalone SVG markup. Create a polished, naturalistic field-guide fish illustration with a blue underwater background. Do not use external images, scripts, text labels, or markdown fences. Use a 1024 square viewBox.',
+        },
+        {
+          role: 'user',
+          content: `Create an accurate side-profile illustration of a ${speciesName} fish. Make the fish large and centered, with recognizable species-specific body shape, fins, markings, and coloring.`,
+        },
+      ],
     });
 
-    if (!response.ok) {
-      throw new Error(`Groq request failed with ${response.status}`);
-    }
-
-    const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const rawSvg = payload.choices?.[0]?.message?.content?.replace(/^```(?:svg)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const svg = rawSvg;
+    const svg = raw.replace(/^```(?:svg)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
     if (!isSafeGeneratedSvg(svg)) {
       throw new Error('Groq returned unsafe or invalid SVG artwork');

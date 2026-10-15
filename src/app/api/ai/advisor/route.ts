@@ -1,8 +1,8 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { FISHBOT_SYSTEM_PROMPT, buildContextMessage, buildSpeciesCatalogMessage, buildSuppliedContextMessage, findSpeciesByQuery, parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
-import { callFishbot } from '@/lib/fishbotBrain'
+import { parseSpotsContext, type SpotsContext } from '@/lib/fishbotPrompt'
+import { askBrain, type BrainContext } from '@/ai/brain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 
@@ -41,17 +41,6 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
   }
 }
 
-async function callAi(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
-  const response = await callFishbot({
-    messages,
-    temperature: 0.7,
-    max_tokens: 500,
-  })
-  const content = response.choices[0]?.message?.content?.trim()
-  if (!content) throw new Error('AI provider returned no text')
-  return content
-}
-
 function unavailableResponse() {
   return NextResponse.json(
     {
@@ -80,50 +69,45 @@ export async function POST(req: NextRequest) {
 
   const { lat, lon, targetSpecies, conditions } = parsed.data
   const safeSpecies = targetSpecies ?? ''
-    const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
-    const catalogMessage = buildSpeciesCatalogMessage(
-      safeSpecies ? findSpeciesByQuery(safeSpecies) : [],
-    )
-    const context = [
-      buildContextMessage(spotsData),
-      buildSuppliedContextMessage(undefined, conditions),
-      catalogMessage,
-    ].filter(Boolean).join('\n\n')
+  const spotsData = await fetchSpotsContext(lat, lon, safeSpecies)
 
-    try {
-      const advice = await callAi([
-        { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
-        { role: 'system', content: context },
-        {
-          role: 'user',
-          content: `Provide general fishing-planning suggestions for ${safeSpecies || 'a plausible local species'} at this location.
-          
-          Your response MUST include:
-          1. GEAR: Offer a general lure or bait suggestion and explain it is not based on water clarity unless context supplies clarity.
-          2. APPROACH: Give a general technique; do not claim unprovided depth, structure, or access details.
-          3. CONDITIONS: Describe a bite window only when the context contains relevant current observations. Otherwise state that current conditions are unavailable.
-          4. TIP: Give a general species tip, not an insider claim.
-          
-          Be concise and explicit about uncertainty. Context may be absent or incomplete. Never invent measurements, observations, recent catches, or spot features. Do not claim any value is live unless the context identifies it as a live observation.`,
-        },
-      ])
+  const context: BrainContext = {
+    conditions: conditions ?? null,
+    location: { lat, lon },
+    providerContext: spotsData,
+    species: safeSpecies ? [safeSpecies] : [],
+  }
 
-      return NextResponse.json({
-        advice,
-        source: 'ai',
-        data_mode: 'ai-generated',
-        live_data: spotsData?.live === true,
-        context: spotsData
-          ? {
-              source: spotsData.source,
-              data_mode: spotsData.data_mode,
-              observed_at: spotsData.observed_at,
-            }
-          : { source: 'none', data_mode: 'unavailable', observed_at: undefined },
-        generated_at: new Date().toISOString(),
-      })
-    } catch (error) {
-      console.error('AI advisor provider error:', error)
-      return unavailableResponse()
-    }
+  const question = `Provide general fishing-planning suggestions for ${safeSpecies || 'a plausible local species'} at this location.
+
+  Your response MUST include:
+  1. GEAR: Offer a general lure or bait suggestion and explain it is not based on water clarity unless context supplies clarity.
+  2. APPROACH: Give a general technique; do not claim unprovided depth, structure, or access details.
+  3. CONDITIONS: Describe a bite window only when the context contains relevant current observations. Otherwise state that current conditions are unavailable.
+  4. TIP: Give a general species tip, not an insider claim.
+
+  Be concise and explicit about uncertainty. Context may be absent or incomplete. Never invent measurements, observations, recent catches, or spot features. Do not claim any value is live unless the context identifies it as a live observation.`
+
+  try {
+    const { text: advice } = await askBrain(question, context, { temperature: 0.7, maxTokens: 500 })
+    if (!advice) return unavailableResponse()
+
+    return NextResponse.json({
+      advice,
+      source: 'ai',
+      data_mode: 'ai-generated',
+      live_data: spotsData?.live === true,
+      context: spotsData
+        ? {
+            source: spotsData.source,
+            data_mode: spotsData.data_mode,
+            observed_at: spotsData.observed_at,
+          }
+        : { source: 'none', data_mode: 'unavailable', observed_at: undefined },
+      generated_at: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error('AI advisor provider error:', error)
+    return unavailableResponse()
+  }
 }

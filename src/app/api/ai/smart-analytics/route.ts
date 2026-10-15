@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
-import { callFishbot } from '@/lib/fishbotBrain';
+import { runBrainPrompt } from '@/ai/brain';
 import { SmartAnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { analyzeSpotsSmart } from '@/lib/aiAnalytics';
 import {
@@ -137,13 +137,13 @@ export async function POST(req: NextRequest) {
 
   let analysis;
   try {
-    const response = await callFishbot({
+    const raw = await runBrainPrompt({
       temperature: 0.3,
       max_tokens: 1400,
       response_format: { type: 'json_object' },
       messages: [{ role: 'user', content: prompt }],
     });
-    analysis = parseModelJson(response.choices[0]?.message?.content ?? '{}', SmartAnalysisSchema);
+    analysis = parseModelJson(raw, SmartAnalysisSchema);
   } catch (error) {
     console.error('[smart-analytics] AI provider error:', error);
     return unavailable('AI smart analysis is unavailable; no analysis was generated.', sources);

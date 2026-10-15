@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callFishbot } from '@/lib/fishbotBrain';
+import { runBrainPrompt } from '@/ai/brain';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -196,13 +196,12 @@ Each object must contain:
 Every field is required and must be generated for every spot. Always use Fahrenheit only. Never use Celsius or °C. Do not return Markdown, code fences, commentary, or spots not included in the supplied list.
 `.trim();
 
-    const response = await callFishbot({
+    const content = await runBrainPrompt({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
       max_tokens: 1800,
     });
 
-    const content = response.choices[0]?.message?.content ?? '';
     const parsed = parseModelJson(content, SpotPredictionsSchema);
 
     const normalizedResults = normalizeAiResults(

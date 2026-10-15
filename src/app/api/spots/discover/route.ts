@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
-import { getAiModel, getGroqClient } from '@/lib/groq';
+import { runBrainPrompt } from '@/ai/brain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 const requestSchema = z.object({
@@ -124,7 +124,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const groq = getGroqClient();
     const prompt = `
 You are a fishing-spot discovery assistant. Suggest plausible public fishing spots near latitude ${input.lat}, longitude ${input.lng}, within about ${input.radiusMiles} miles.
 
@@ -141,14 +140,11 @@ Rules:
 
 Return ONLY valid JSON matching {"candidates":[{"name":"...","lat":0,"lng":0,"water_type":"freshwater|saltwater","spot_type":"lake","notes":"..."}]}. Return at most 8 candidates. No Markdown, no commentary.`.trim();
 
-    const result = await groq.chat.completions.create({
-      model: getAiModel(),
+    const text = (await runBrainPrompt({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       max_tokens: 1500,
-    });
-
-    const text = (result.choices[0]?.message?.content ?? '').replace(/```(?:json)?\s*|\s*```$/gi, '').trim();
+    })).replace(/```(?:json)?\s*|\s*```$/gi, '').trim();
     let responseJson: unknown;
     try {
       responseJson = JSON.parse(text) as unknown;

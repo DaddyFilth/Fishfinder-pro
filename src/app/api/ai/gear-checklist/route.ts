@@ -7,7 +7,7 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { callFishbot } from '@/lib/fishbotBrain';
+import { runBrainPrompt } from '@/ai/brain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
@@ -54,12 +54,11 @@ export async function POST(req: NextRequest) {
       Respond ONLY with the JSON array. No markdown formatting, no prose.
     `;
 
-    const response = await callFishbot({
+    const content = await runBrainPrompt({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
 
-    const content = response.choices[0]?.message?.content || '[]';
     const parsed = JSON.parse(content.replace(/```json|```/g, ''));
 
     const validated = ChecklistSchema.parse(parsed);

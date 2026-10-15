@@ -1,17 +1,12 @@
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  FISHBOT_SYSTEM_PROMPT,
-  buildContextMessage,
-  buildSpeciesCatalogMessage,
-  buildSuppliedContextMessage,
-  buildWebSearchMessage,
   findMentionedSpecies,
   parseSpotsContext,
   type SpotsContext,
 } from '@/lib/fishbotPrompt'
 import { formatSearchSummary, searchFishingInfo, type WebSearchResult } from '@/lib/webSearch'
-import { callFishbot } from '@/lib/fishbotBrain'
+import { askBrain, type BrainContext } from '@/ai/brain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions'
 
@@ -70,18 +65,6 @@ async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderCo
   }
 }
 
-async function callAi(messages: ChatMessage[]): Promise<string> {
-  const response = await callFishbot({
-    messages,
-    temperature: 0.7,
-    max_tokens: 1024,
-    top_p: 0.9,
-  })
-  const content = response.choices[0]?.message?.content?.trim()
-  if (!content) throw new Error('AI provider returned no text')
-  return content
-}
-
 function unavailableResponse() {
   return NextResponse.json(
     {
@@ -123,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const safeHistory = Array.isArray(history)
       ? history
-          .filter((item): item is ChatMessage =>
+          .filter((item): item is { role: 'user' | 'assistant'; content: string } =>
             Boolean(
               item &&
                 (item.role === 'user' || item.role === 'assistant') &&
@@ -142,31 +125,31 @@ export async function POST(req: NextRequest) {
     ])
 
     const catalogSpecies = findMentionedSpecies(message)
-    const catalogMessage = buildSpeciesCatalogMessage(catalogSpecies)
     const searchSummary = research ? formatSearchSummary(research) : null
     const relatedTopics = (research?.related_topics ?? []).filter(
       (topic): topic is { text: string; url: string | null } => Boolean(topic?.text),
     )
-    const searchMessage =
-      research && searchSummary ? buildWebSearchMessage(searchSummary, relatedTopics) : ''
-    const usedWebSearch = Boolean(searchMessage)
+    const webSearch = research && searchSummary
+      ? { summary: searchSummary, related: relatedTopics }
+      : null
+    const usedWebSearch = Boolean(webSearch)
 
-    const context = [
-      buildContextMessage(spotsData),
-      buildSuppliedContextMessage(spot, conditions),
-      catalogMessage,
-      searchMessage,
-    ].filter(Boolean).join('\n\n')
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: FISHBOT_SYSTEM_PROMPT },
-      { role: 'system', content: context },
-      ...safeHistory,
-      { role: 'user', content: message },
-    ]
+    const context: BrainContext = {
+      spot: spot as BrainContext['spot'],
+      conditions: conditions ?? null,
+      location: { lat: spotLat, lon: spotLon },
+      providerContext: spotsData,
+      webSearch,
+      history: safeHistory,
+    }
 
     try {
-      const reply = await callAi(messages)
+      const { text: reply } = await askBrain(message, context, {
+        temperature: 0.7,
+        maxTokens: 1024,
+        topP: 0.9,
+      })
+      if (!reply) return unavailableResponse()
       return NextResponse.json({
         reply,
         response: reply,

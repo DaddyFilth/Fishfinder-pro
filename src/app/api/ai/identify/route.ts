@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callFishbot, getAiVisionModel } from '@/lib/fishbotBrain';
+import { askBrainVision } from '@/ai/brain';
 import { parseFishIdentification } from '@/lib/aiResponse';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -25,15 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const response = await callFishbot({
-      model: getAiVisionModel(),
-      max_tokens: 600,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `You are an expert fish biologist and angler. Analyze this fishing photo and respond with ONLY valid JSON in this exact format:
+    const prompt = `You are an expert fish biologist and angler. Analyze this fishing photo and respond with ONLY valid JSON in this exact format:
 {
   "species": "Common Name",
   "scientific_name": "Genus species",
@@ -47,15 +39,11 @@ export async function POST(req: NextRequest) {
   "legal_notes": "Check local regulations for size/bag limits",
   "is_fish": true
 }
-Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`
-          },
-          { type: 'image_url', image_url: { url: image_base64 } }
-        ]
-      }]
-    });
+Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`;
 
-    const raw = response.choices[0]?.message?.content ?? '{}';
-    return NextResponse.json(parseFishIdentification(raw), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
+    const { text } = await askBrainVision(prompt, image_base64, { maxTokens: 600 });
+
+    return NextResponse.json(parseFishIdentification(text || '{}'), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
   } catch (e) {
     console.error('[AI Identify]', e);
     return NextResponse.json({ error: 'AI identification failed; no identification was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });

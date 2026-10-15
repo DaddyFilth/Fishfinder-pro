@@ -1,6 +1,6 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { callFishbot } from '@/lib/fishbotBrain';
+import { runBrainPrompt } from '@/ai/brain';
 import { BiteTimesSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
@@ -88,12 +88,11 @@ Respond with ONLY valid JSON in this exact format:
 } Always use Fahrenheit only for every temperature. Never use Celsius or °C.`;
 
   try {
-    const res = await callFishbot({
+    const raw = await runBrainPrompt({
       max_tokens: 600,
       temperature: 0.4,
       messages: [{ role: 'user', content: prompt }],
     });
-    const raw = res.choices[0].message.content ?? '{}';
     return NextResponse.json(parseModelJson(raw, BiteTimesSchema), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
   } catch {
     return NextResponse.json({ error: 'AI bite prediction is unavailable; no prediction was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });

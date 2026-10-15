@@ -7,7 +7,7 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { callFishbot } from '@/lib/fishbotBrain';
+import { runBrainPrompt } from '@/ai/brain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
       Response format: Concise, authoritative, and formatted with clear headings.
     `;
 
-    const response = await callFishbot({
+    const strategy = await runBrainPrompt({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
     });
 
-    const result = { strategy: response.choices[0]?.message?.content || '' };
+    const result = { strategy };
     const validated = StrategySchema.parse(result);
     return NextResponse.json({
       ...validated,
