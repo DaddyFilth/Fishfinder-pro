@@ -1,4 +1,5 @@
 import type { Spot, SpotDepthMetadata } from '@/lib/mapFilters';
+import { deriveAdaInfo } from '@/lib/adaAccess';
 
 /**
  * Bundled Oklahoma public-water pins keep the map useful when the optional
@@ -37,6 +38,7 @@ const spot = (
   source,
   notes,
   depth_metadata: depthMetadata(spot_type),
+  ada: deriveAdaInfo(notes),
 });
 
 function depthMetadata(spotType: Spot['spot_type']): SpotDepthMetadata {

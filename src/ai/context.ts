@@ -23,7 +23,7 @@ export interface BrainSpotContext {
   access_type?: string;
   region?: string;
   description?: string;
-  ada?: boolean;
+  ada?: boolean | { accessible: boolean; label: string; accommodations: string[]; note: string };
   [key: string]: unknown;
 }
 
