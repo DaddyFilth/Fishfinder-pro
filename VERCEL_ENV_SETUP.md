@@ -30,7 +30,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
   2. Select your project
   3. Click Settings → API
   4. Copy "Project URL"
-- **Vercel Environment:** Development, Preview, Production
+- **Vercel Environment:** Development, Production
 
 ### NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 - **Value Type:** API Key (Public anon key)
@@ -39,7 +39,7 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
   1. Go to <https://app.supabase.com/project/[your-project]/settings/api>
   2. Find "anon public" key
   3. Copy the full key value
-- **Vercel Environment:** Development, Preview, Production
+- **Vercel Environment:** Development, Production
 
 ### SUPABASE_SERVICE_ROLE_KEY
 - **Value Type:** Secret API Key (Keep confidential!)
@@ -120,12 +120,12 @@ https://vercel.com/dashboard
 ### 2. Add NEXT_PUBLIC_SUPABASE_URL
 - **Name:** `NEXT_PUBLIC_SUPABASE_URL`
 - **Value:** `https://your-project-id.supabase.co`
-- **Environments:** Check Development, Preview, Production
+- **Environments:** Check Development, Production
 
 ### 3. Add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 - **Name:** `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - **Value:** Your Supabase anon key
-- **Environments:** Check Development, Preview, Production
+- **Environments:** Check Development, Production
 
 ### 4. Add SUPABASE_SERVICE_ROLE_KEY
 - **Name:** `SUPABASE_SERVICE_ROLE_KEY`
@@ -174,7 +174,7 @@ If `/api/spots/discover` is enabled, add `OPENAI_API_KEY` to Production. Other A
 
 ### Recommendation
 - Development: Skip (use local .env.local instead)
-- Preview: Add public keys only
+- Preview: Add public Supabase keys only if you intend to run preview deployments
 - Production: Add all required variables
 
 ---

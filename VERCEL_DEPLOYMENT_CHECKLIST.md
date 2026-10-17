@@ -39,13 +39,13 @@
 **Variable 1: NEXT_PUBLIC_SUPABASE_URL**
 - [ ] Name: `NEXT_PUBLIC_SUPABASE_URL`
 - [ ] Value: `https://your-project-id.supabase.co` (from Supabase Settings → API)
-- [ ] Check: Development, Preview, Production
+- [ ] Check: Development, Production
 - [ ] Click Add
 
 **Variable 2: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY**
 - [ ] Name: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - [ ] Value: (Supabase anon key from Settings → API)
-- [ ] Check: Development, Preview, Production
+- [ ] Check: Development, Production
 - [ ] Click Add
 
 **Variable 3: SUPABASE_SERVICE_ROLE_KEY**
@@ -121,7 +121,7 @@
 - [ ] Review Vercel function logs
 
 ### Preview deployments fail
-- [ ] Add public Supabase variables to Preview environment
+- [ ] Add public Supabase variables to Preview only if you intend to run preview deployments
 - [ ] Secret keys should be Production only
 
 ### Slow first request
