@@ -75,9 +75,9 @@
 - [ ] Add: `OLLAMA_MODEL` = `llama3.1`
 - [ ] Add: `OLLAMA_VISION_MODEL` = `llama3.2-vision`
 
-**OpenAI is only required for the current spot-discovery route**
-- [ ] Add `OPENAI_API_KEY` in Production if `/api/spots/discover` is enabled.
-- [ ] Add: `OPENAI_API_KEY` = (your OpenAI key starting with sk-)
+**Optional fallback providers: OpenAI and OpenCode Console**
+- [ ] Optional: `OPENAI_API_KEY` = your OpenAI key starting with `sk-`
+- [ ] Optional: `OPENCODE_API_KEY` = OpenCode Console service key (https://opencode.ai/console); defaults to the multimodal `glm-5.3-flash`
 - [ ] Check: **Production ONLY** ⚠️
 
 ---

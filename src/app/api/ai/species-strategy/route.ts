@@ -7,7 +7,7 @@ const RequestSchema = z.object({
 }).strict();
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { runBrainPrompt } from '@/ai/brain';
+import { runBrainPromptCompletion } from '@/ai/brain';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { SPECIES } from '@/lib/speciesCatalog';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       Response format: Concise, authoritative, and formatted with clear headings.
     `;
 
-    const strategy = await runBrainPrompt({
+    const { text: strategy, provider } = await runBrainPromptCompletion({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
     });
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       source: 'ai',
       data_mode: 'ai-generated',
       live_data: false,
-      provider: 'groq',
+      provider,
       generated_at: new Date().toISOString(),
     });
   } catch (error) {

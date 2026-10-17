@@ -17,7 +17,7 @@ vi.mock('@/lib/groq', () => ({
   getAiVisionModel: vi.fn(() => 'vision-model'),
 }));
 
-import { askBrain, askBrainVision, buildFallbackReply } from './brain';
+import { askBrain, askBrainVision, buildFallbackReply, runBrainPromptCompletion } from './brain';
 
 function addTarget(provider: AiProvider, impl: (params: { model: string }) => Promise<unknown>): ReturnType<typeof vi.fn> {
   const create = vi.fn(impl);
@@ -112,6 +112,20 @@ describe('askBrain provider fallback', () => {
   it('names the spot in the local answer when the context includes one', () => {
     expect(buildFallbackReply({ spot: { id: 's1', name: 'Lake Thunderbird' } }))
       .toContain('Lake Thunderbird');
+  });
+});
+
+describe('runBrainPromptCompletion', () => {
+  it('reports the provider that actually answered, even when it is not the first target', async () => {
+    addTarget('groq', async () => {
+      throw new Error('groq outage');
+    });
+    const answering = addTarget('opencode', async () => ({ choices: [{ message: { content: 'Checklist from OpenCode' } }] }));
+
+    const completion = await runBrainPromptCompletion({ messages: [{ role: 'user', content: 'Build a gear checklist.' }] });
+
+    expect(completion).toEqual({ text: 'Checklist from OpenCode', provider: 'opencode', model: 'opencode-model' });
+    expect(answering).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,5 +1,5 @@
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
-import { getAiProviderName, runBrainPrompt } from '@/ai/brain';
+import { getAiProviderName, runBrainPromptCompletion } from '@/ai/brain';
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisSchema, parseModelJson } from '@/lib/aiResponse';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     : 'Seamcast-spots feed: unavailable.';
 
   try {
-    const raw = await runBrainPrompt({
+    const { text: raw, provider: answeredProvider } = await runBrainPromptCompletion({
       max_tokens: 400,
       temperature: 0.3,
       response_format: { type: 'json_object' },
@@ -73,7 +73,7 @@ Respond with ONLY a JSON object: { "summary": "three-sentence interpretation", "
       source: 'ai',
       data_mode: 'ai-generated',
       live_data: false,
-      provider: getAiProviderName(),
+      provider: answeredProvider,
       input: { source: inputSource, data_mode: inputMode, observed_at: observedAt },
       generated_at: new Date().toISOString(),
     });

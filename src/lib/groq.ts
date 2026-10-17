@@ -1,9 +1,9 @@
-export type AiProvider = 'groq' | 'openai' | 'gemini'
+export type AiProvider = 'groq' | 'openai' | 'opencode'
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
 export const OPENAI_BASE_URL = 'https://api.openai.com/v1'
-/** Google exposes an OpenAI-compatible surface for Gemini, so one client shape covers all providers. */
-export const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai'
+/** OpenCode Console exposes OpenAI-compatible chat completions, so one client shape covers all providers. */
+export const OPENCODE_BASE_URL = 'https://opencode.ai/inference/openai/v1'
 
 const REQUEST_TIMEOUT_MS = 30_000
 const MAX_ATTEMPTS = 3
@@ -12,7 +12,8 @@ const RETRY_DELAYS_MS = [250, 750] as const
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
 const DEFAULT_GROQ_VISION_MODEL = 'qwen/qwen3.8-27b'
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+/** GLM 5.3 Flash is OpenCode Console's cheapest multimodal model (text and image input). */
+const DEFAULT_OPENCODE_MODEL = 'glm-5.3-flash'
 
 /**
  * Groq retired the Llama 4 vision models. Stored configurations that still name
@@ -35,14 +36,14 @@ function sleep(delayMs: number): Promise<void> {
 }
 
 /**
- * Returns the primary provider name. Prefers Groq, then OpenAI, then Gemini,
- * and falls back to 'groq' when no provider is configured so callers always
- * have a stable label.
+ * Returns the primary provider name. Prefers Groq, then OpenAI, then OpenCode
+ * Console, and falls back to 'groq' when no provider is configured so callers
+ * always have a stable label.
  */
 export function getAiProviderName(): AiProvider {
   if (process.env.GROQ_API_KEY?.trim()) return 'groq'
   if (process.env.OPENAI_API_KEY?.trim()) return 'openai'
-  if (geminiApiKey()) return 'gemini'
+  if (opencodeApiKey()) return 'opencode'
   return 'groq'
 }
 
@@ -82,18 +83,18 @@ export function getOpenAiVisionModel(): string {
   return process.env.OPENAI_VISION_MODEL?.trim() || getOpenAiModel()
 }
 
-/** Returns the trimmed GEMINI_MODEL, defaulting to the free-tier 'gemini-2.0-flash'. */
-export function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL?.trim() || process.env.GOOGLE_MODEL?.trim() || DEFAULT_GEMINI_MODEL
+/** Returns the trimmed OPENCODE_MODEL, defaulting to the multimodal 'glm-5.3-flash'. */
+export function getOpenCodeModel(): string {
+  return process.env.OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL
 }
 
-/** Returns the Gemini vision model, defaulting to the configured text model. */
-export function getGeminiVisionModel(): string {
-  return process.env.GEMINI_VISION_MODEL?.trim() || process.env.GOOGLE_VISION_MODEL?.trim() || getGeminiModel()
+/** Returns the OpenCode vision model, defaulting to the configured text model (multimodal). */
+export function getOpenCodeVisionModel(): string {
+  return process.env.OPENCODE_VISION_MODEL?.trim() || getOpenCodeModel()
 }
 
-function geminiApiKey(): string | undefined {
-  return process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim() || undefined
+function opencodeApiKey(): string | undefined {
+  return process.env.OPENCODE_API_KEY?.trim() || undefined
 }
 
 export interface GroqChatMessage {
@@ -207,9 +208,10 @@ export interface AiProviderTarget {
 }
 
 /**
- * The ordered provider fallback chain: Groq, then OpenAI, then Gemini. Providers
- * whose API key is not configured are skipped. Returns an empty array when no
- * provider is configured, which callers surface as a graceful, local reply.
+ * The ordered provider fallback chain: Groq, then OpenAI, then OpenCode
+ * Console. Providers whose API key is not configured are skipped. Returns an
+ * empty array when no provider is configured, which callers surface as a
+ * graceful, local reply.
  */
 export function getAiProviderTargets(): AiProviderTarget[] {
   const targets: AiProviderTarget[] = []
@@ -234,13 +236,13 @@ export function getAiProviderTargets(): AiProviderTarget[] {
     })
   }
 
-  const geminiKey = geminiApiKey()
-  if (geminiKey) {
+  const opencodeKey = opencodeApiKey()
+  if (opencodeKey) {
     targets.push({
-      provider: 'gemini',
-      model: getGeminiModel(),
-      visionModel: getGeminiVisionModel(),
-      client: createOpenAiCompatibleClient(GEMINI_BASE_URL, geminiKey, 'Gemini'),
+      provider: 'opencode',
+      model: getOpenCodeModel(),
+      visionModel: getOpenCodeVisionModel(),
+      client: createOpenAiCompatibleClient(OPENCODE_BASE_URL, opencodeKey, 'OpenCode'),
     })
   }
 

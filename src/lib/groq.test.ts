@@ -8,6 +8,9 @@ afterEach(() => {
 
 describe('AI provider selection', () => {
   it('always uses Groq provider', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', undefined)
     expect(getAiProviderName()).toBe('groq')
   })
 
@@ -44,13 +47,52 @@ describe('AI provider selection', () => {
     vi.stubEnv('GROQ_API_KEY', 'test-groq-key')
     vi.stubEnv('GROQ_VISION_MODEL', undefined)
     vi.stubEnv('OPENAI_API_KEY', undefined)
-    vi.stubEnv('GEMINI_API_KEY', undefined)
-    vi.stubEnv('GOOGLE_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', undefined)
 
     const targets = getAiProviderTargets()
     expect(targets).toHaveLength(1)
     expect(targets[0]?.provider).toBe('groq')
     expect(targets[0]?.visionModel).toBe('qwen/qwen3.8-27b')
+  })
+
+  it('reports OpenCode as the provider when only OPENCODE_API_KEY is configured', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key')
+
+    expect(getAiProviderName()).toBe('opencode')
+  })
+
+  it('adds an OpenCode target with the multimodal default model', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key')
+
+    const targets = getAiProviderTargets()
+    expect(targets).toHaveLength(1)
+    expect(targets[0]?.provider).toBe('opencode')
+    expect(targets[0]?.model).toBe('glm-5.3-flash')
+    expect(targets[0]?.visionModel).toBe('glm-5.3-flash')
+    expect(targets[0]?.client.baseURL).toBe('https://opencode.ai/inference/openai/v1')
+  })
+
+  it('uses configured OpenCode models', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key')
+    vi.stubEnv('OPENCODE_MODEL', 'custom-text-model')
+    vi.stubEnv('OPENCODE_VISION_MODEL', 'custom-vision-model')
+
+    const targets = getAiProviderTargets()
+    expect(targets[0]).toMatchObject({ model: 'custom-text-model', visionModel: 'custom-vision-model' })
+  })
+
+  it('orders the provider chain Groq, then OpenAI, then OpenCode', () => {
+    vi.stubEnv('GROQ_API_KEY', 'groq-key')
+    vi.stubEnv('OPENAI_API_KEY', 'openai-key')
+    vi.stubEnv('OPENCODE_API_KEY', 'opencode-key')
+
+    expect(getAiProviderTargets().map((target) => target.provider)).toEqual(['groq', 'openai', 'opencode'])
   })
 
   it('configures getGroqClient with Groq base URL and apiKey', () => {

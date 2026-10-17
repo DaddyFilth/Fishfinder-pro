@@ -64,14 +64,14 @@ export interface BrainResult {
   degraded: boolean;
 }
 
-interface ProviderCompletion {
+export interface ProviderCompletion {
   text: string;
   provider: AiProvider;
   model: string;
 }
 
 /**
- * Walks the configured provider chain (Groq, then OpenAI, then Gemini) and
+ * Walks the configured provider chain (Groq, then OpenAI, then OpenCode) and
  * returns the first non-empty completion. Each provider is tried with its own
  * model, so a model name valid for one provider is never sent to another.
  * @throws {Error} When no provider is configured or every provider fails.
@@ -329,7 +329,7 @@ export function buildFallbackReply(context: BrainContext = {}, question = ''): s
 
 /**
  * The single server-side brain. Every AI call in the app routes through here so
- * they share one provider policy (Groq → OpenAI → Gemini) and one grounding
+ * they share one provider policy (Groq → OpenAI → OpenCode) and one grounding
  * contract. `runBrainPrompt` is the raw-text gate for task-specific routes;
  * `askBrain` is the grounded conversational entry point.
  */
@@ -347,6 +347,15 @@ export async function callFishbot(params: BrainParams): Promise<BrainProviderRes
 export async function runBrainPrompt(params: BrainParams): Promise<string> {
   const result = await completeChat(params);
   return result.text;
+}
+
+/**
+ * Like `runBrainPrompt`, but also returns the provider and model that produced
+ * the text, so routes can report which provider actually answered instead of
+ * assuming the first one in the chain.
+ */
+export async function runBrainPromptCompletion(params: BrainParams): Promise<ProviderCompletion> {
+  return completeChat(params);
 }
 
 /** Assembles the canonical grounded conversation for a chat turn. */
