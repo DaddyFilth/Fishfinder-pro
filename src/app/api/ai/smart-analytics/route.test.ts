@@ -17,9 +17,12 @@ vi.mock('@/lib/security', () => ({
 vi.mock('@/lib/groq', () => ({
   getAiModel: vi.fn(() => 'test-model'),
   getAiProviderName: vi.fn(() => 'groq'),
-  getGroqClient: vi.fn(() => ({
-    chat: { completions: { create: createCompletion } },
-  })),
+  getAiProviderTargets: vi.fn(() => [{
+    provider: 'groq',
+    model: 'test-model',
+    visionModel: 'test-model',
+    client: { chat: { completions: { create: createCompletion } } },
+  }]),
 }));
 
 vi.mock('@/lib/fetchers/environmental', () => ({
@@ -131,16 +134,28 @@ describe('POST /api/ai/smart-analytics', () => {
     expect(prompt).toContain(DEFAULT_SPOTS[0].id);
   });
 
-  it('answers 503 without publishing anything when the provider returns unusable output', async () => {
+  it('publishes a complete catalog-derived analysis when the provider returns unusable output', async () => {
     createCompletion.mockResolvedValue({ choices: [{ message: { content: 'not json' } }] });
 
     const res = await POST(request({ lat: 35.4676, lng: -97.5164 }));
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.error).toMatch(/no analysis was generated/i);
-    expect(body.data_mode).toBe('unavailable');
-    expect(body.analysis).toBeUndefined();
+    expect(body.source).toBe('app-stored');
+    expect(body.data_mode).toBe('catalog-derived');
+    expect(body.analysis.verdict).toMatch(/catalog ranking/i);
+    expect(body.analysis.data_gaps).toContain('AI model verdict');
+    expect(body.recommendations.length).toBeGreaterThan(0);
+    expect(body.recommendations.length).toBeLessThanOrEqual(6);
+
+    const catalogIds = DEFAULT_SPOTS.map((spot) => spot.id);
+    expect(
+      body.recommendations.every((row: { spot_id: string; rating: string; primary_species: string[] }) =>
+        catalogIds.includes(row.spot_id) &&
+        ['Hot', 'Good', 'Fair'].includes(row.rating) &&
+        row.primary_species.length > 0,
+      ),
+    ).toBe(true);
   });
 
   it('answers 400 when coordinates are missing', async () => {

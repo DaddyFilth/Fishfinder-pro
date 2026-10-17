@@ -631,7 +631,7 @@ export default function MobilePage() {
   { id: 'bitetime', icon: '🌙', label: 'Bite times' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
-    { id: 'settings', icon: '⚙���', label: 'Settings' },
+    { id: 'settings', icon: '⚙️', label: 'Settings' },
   ] as const;
   return (
     <div style={PAGE_STYLES.root}>

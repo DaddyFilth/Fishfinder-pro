@@ -41,11 +41,18 @@ export async function POST(req: NextRequest) {
 }
 Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`;
 
-    const { text } = await askBrainVision(prompt, image_base64, { maxTokens: 600 });
+    const { text, degraded } = await askBrainVision(prompt, image_base64, { maxTokens: 600 });
+
+    if (degraded) {
+      return NextResponse.json(
+        { error: 'AI identification is temporarily unavailable; no identification was generated.', is_fish: false, source: 'none', data_mode: 'unavailable', live_data: false },
+        { status: 200, headers: { 'x-fishfinder-source': 'none', 'x-fishfinder-data-mode': 'unavailable', 'x-fishfinder-live-data': 'false' } },
+      );
+    }
 
     return NextResponse.json(parseFishIdentification(text || '{}'), { status: 200, headers: { 'x-fishfinder-source': 'ai', 'x-fishfinder-data-mode': 'ai-generated', 'x-fishfinder-live-data': 'false' } });
   } catch (e) {
     console.error('[AI Identify]', e);
-    return NextResponse.json({ error: 'AI identification failed; no identification was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
+    return NextResponse.json({ error: 'AI identification failed; no identification was generated.', is_fish: false, source: 'none', data_mode: 'unavailable', live_data: false }, { status: 200 });
   }
 }

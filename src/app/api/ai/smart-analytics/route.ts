@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 import { runBrainPrompt } from '@/ai/brain';
-import { SmartAnalysisSchema, parseModelJson } from '@/lib/aiResponse';
+import { SmartAnalysisSchema, parseModelJson, type SmartAnalysis } from '@/lib/aiResponse';
+import { SPECIES } from '@/lib/speciesCatalog';
 import { analyzeSpotsSmart } from '@/lib/aiAnalytics';
 import {
   buildAnalysisPrompt,
@@ -88,6 +89,99 @@ function unavailable(message: string, sources?: SmartAnalyticsSources) {
   );
 }
 
+function catalogRecommendation(row: BaselineRow, catalogIds: Set<string>): SmartAnalysis['recommendations'][number] | null {
+  if (!catalogIds.has(row.spot_id)) return null;
+  const catalogSpecies = SPECIES.find((entry) => entry.name.toLowerCase() === row.species.toLowerCase());
+  const score = Math.min(100, Math.max(0, Math.round(row.score)));
+
+  return {
+    spot_id: row.spot_id.slice(0, 128),
+    spot_name: row.spot_name.slice(0, 200),
+    score,
+    rating: score >= 70 ? 'Hot' : score >= 45 ? 'Good' : 'Fair',
+    primary_species: [(catalogSpecies?.name ?? row.species).slice(0, 120)],
+    best_time_today: (catalogSpecies?.bestTime ?? 'Catalog best time unavailable').slice(0, 160),
+    best_technique: (catalogSpecies?.advice.techniqueWarm ?? catalogSpecies?.tips ?? 'Catalog technique unavailable').slice(0, 300),
+    recommended_lure: (catalogSpecies?.bestBait.join(', ') ?? 'Catalog bait unavailable').slice(0, 160),
+    reason: row.reason.slice(0, 500),
+  };
+}
+
+/**
+ * Complete, catalog-only analysis used when no model reply is available. It
+ * publishes the app's own stored scoring so the panel still answers, and states
+ * plainly that no model judgment was applied.
+ */
+function buildCatalogAnalysis(
+  baseline: BaselineRow[],
+  catalogIds: Set<string>,
+  providerStatus: string,
+): SmartAnalysis | null {
+  const recommendations = baseline
+    .map((row) => catalogRecommendation(row, catalogIds))
+    .filter((row): row is SmartAnalysis['recommendations'][number] => row !== null)
+    .slice(0, 6);
+  if (recommendations.length === 0) return null;
+
+  const leader = recommendations[0];
+  const dataGaps = ['AI model verdict'];
+  if (providerStatus !== 'ok') dataGaps.push('live provider readings');
+
+  return {
+    verdict: `Catalog ranking: ${leader.spot_name} leads at ${leader.score}/100 from the app's stored catalog scoring because no AI model was reachable. No model judgment was applied.`,
+    confidence: 40,
+    reasoning:
+      'Scores come from the stored catalog baseline (distance, species match, and any provider readings on file). Treat them as planning estimates, not live predictions.',
+    data_gaps: dataGaps,
+    recommendations,
+  };
+}
+
+function catalogDerivedResponse(analysis: SmartAnalysis, sources: SmartAnalyticsSources, baseline: BaselineRow[]) {
+  const observedAt = sources.provider.captured_at;
+  const liveData = hasVerifiedCurrentConditions({
+    live: sources.provider.status === 'ok',
+    data_mode: 'provider',
+    observed_at: observedAt,
+  });
+
+  return NextResponse.json(
+    {
+      analysis: {
+        verdict: analysis.verdict,
+        confidence: analysis.confidence,
+        reasoning: analysis.reasoning,
+        data_gaps: analysis.data_gaps,
+      },
+      recommendations: analysis.recommendations,
+      aiSummary: analysis.verdict,
+      baseline,
+      data_phase: sources.data_phase,
+      data_sufficiency: {
+        catch_log_total: sources.catchLog.total,
+        catch_log_nearby: sources.catchLog.nearby,
+        catch_log_recent_30d: sources.catchLog.recent_30d,
+        sufficient: sources.catchLog.sufficient,
+        note: sources.catchLog.note,
+      },
+      sources: sources.sources,
+      dropped_recommendations: 0,
+      source: 'app-stored',
+      data_mode: 'catalog-derived',
+      live_data: liveData,
+      conditions: {
+        status: sources.provider.status,
+        providers: sources.provider.providers,
+        observed_at: observedAt,
+        fishing_score: sources.provider.fishing_score,
+      },
+      generated_at: new Date().toISOString(),
+      note: 'No AI model was reachable; this analysis was assembled from the stored catalog and any provider data on file.',
+    },
+    { headers: { 'Cache-Control': 'no-store', 'x-fishfinder-data-mode': 'catalog-derived' } },
+  );
+}
+
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'ai-smart-analytics', limit: 12, windowMs: 60_000 });
   if (limited) return limited;
@@ -135,7 +229,9 @@ export async function POST(req: NextRequest) {
     baseline,
   });
 
-  let analysis;
+  const catalogIds = new Set(sources.catalog.nearby_spots.map((spot) => spot.id));
+
+  let analysis: SmartAnalysis;
   try {
     const raw = await runBrainPrompt({
       temperature: 0.3,
@@ -146,15 +242,21 @@ export async function POST(req: NextRequest) {
     analysis = parseModelJson(raw, SmartAnalysisSchema);
   } catch (error) {
     console.error('[smart-analytics] AI provider error:', error);
-    return unavailable('AI smart analysis is unavailable; no analysis was generated.', sources);
+    const catalogAnalysis = buildCatalogAnalysis(baseline, catalogIds, sources.provider.status);
+    if (catalogAnalysis) return catalogDerivedResponse(catalogAnalysis, sources, baseline);
+    return unavailable(
+      'AI smart analysis is unavailable and no stored catalog spots answered for these coordinates; no analysis was generated.',
+      sources,
+    );
   }
 
-  const catalogIds = new Set(sources.catalog.nearby_spots.map((spot) => spot.id));
   const recommendations = analysis.recommendations.filter((row) => catalogIds.has(row.spot_id));
   const dropped = analysis.recommendations.length - recommendations.length;
 
   if (recommendations.length === 0) {
     console.warn('[smart-analytics] model returned no recommendations inside the stored catalog.');
+    const catalogAnalysis = buildCatalogAnalysis(baseline, catalogIds, sources.provider.status);
+    if (catalogAnalysis) return catalogDerivedResponse(catalogAnalysis, sources, baseline);
     return unavailable(
       'AI smart analysis returned recommendations outside the stored catalog; no analysis was published.',
       sources,

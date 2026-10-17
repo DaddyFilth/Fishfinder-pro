@@ -65,18 +65,6 @@ async function fetchSpotsContext(lat?: number, lon?: number): Promise<ProviderCo
   }
 }
 
-function unavailableResponse() {
-  return NextResponse.json(
-    {
-      error: 'Fishbot is unavailable; no AI response was generated.',
-      source: 'none',
-      data_mode: 'unavailable',
-      live_data: false,
-    },
-    { status: 503 },
-  )
-}
-
 /**
  * Runs the DuckDuckGo lookup the system prompt promises, but never lets a slow
  * search stall a reply: the race returns null once the budget is spent.
@@ -144,18 +132,18 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const { text: reply } = await askBrain(message, context, {
+      const { text: reply, degraded } = await askBrain(message, context, {
         temperature: 0.7,
         maxTokens: 1024,
         topP: 0.9,
       })
-      if (!reply) return unavailableResponse()
       return NextResponse.json({
         reply,
         response: reply,
-        source: 'ai',
-        data_mode: 'ai-generated',
-        live_data: spotsData?.live === true,
+        source: degraded ? 'app-stored' : 'ai',
+        data_mode: degraded ? 'catalog-derived' : 'ai-generated',
+        live_data: !degraded && spotsData?.live === true,
+        degraded,
         used_web_search: usedWebSearch,
         catalog_species: catalogSpecies.map((entry) => entry.name),
         context: spotsData
@@ -169,7 +157,16 @@ export async function POST(req: NextRequest) {
       })
     } catch (error) {
       console.error('Fishbot provider error:', error)
-      return unavailableResponse()
+      return NextResponse.json(
+        {
+          error: 'Fishbot is unavailable; no AI response was generated.',
+          source: 'none',
+          data_mode: 'unavailable',
+          live_data: false,
+          degraded: true,
+        },
+        { status: 200 },
+      )
     }
   } catch (error: unknown) {
     console.error('Fishbot request error:', error instanceof Error ? error.message : 'unknown error')

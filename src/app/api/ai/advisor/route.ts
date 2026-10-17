@@ -41,18 +41,6 @@ async function fetchSpotsContext(lat: number, lon: number, species?: string): Pr
   }
 }
 
-function unavailableResponse() {
-  return NextResponse.json(
-    {
-      error: 'AI advisor is unavailable; no advice was generated.',
-      source: 'none',
-      data_mode: 'unavailable',
-      live_data: false,
-    },
-    { status: 503 },
-  )
-}
-
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'ai-advisor', limit: 12, windowMs: 60_000 })
   if (limited) return limited
@@ -89,14 +77,14 @@ export async function POST(req: NextRequest) {
   Be concise and explicit about uncertainty. Context may be absent or incomplete. Never invent measurements, observations, recent catches, or spot features. Do not claim any value is live unless the context identifies it as a live observation.`
 
   try {
-    const { text: advice } = await askBrain(question, context, { temperature: 0.7, maxTokens: 500 })
-    if (!advice) return unavailableResponse()
+    const { text: advice, degraded } = await askBrain(question, context, { temperature: 0.7, maxTokens: 500 })
 
     return NextResponse.json({
       advice,
-      source: 'ai',
-      data_mode: 'ai-generated',
-      live_data: spotsData?.live === true,
+      source: degraded ? 'app-stored' : 'ai',
+      data_mode: degraded ? 'catalog-derived' : 'ai-generated',
+      live_data: !degraded && spotsData?.live === true,
+      degraded,
       context: spotsData
         ? {
             source: spotsData.source,
@@ -108,6 +96,15 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('AI advisor provider error:', error)
-    return unavailableResponse()
+    return NextResponse.json(
+      {
+        error: 'AI advisor is unavailable; no advice was generated.',
+        source: 'none',
+        data_mode: 'unavailable',
+        live_data: false,
+        degraded: true,
+      },
+      { status: 200 },
+    )
   }
 }

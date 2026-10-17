@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import SpotMiniDashboard from '@/components/SpotMiniDashboard'
 import { catalogSourceLabel, catalogSourceUrl, findSpotBySlug, publicSpotSlugs, spotSlug } from '@/lib/publicSeo'
 
 type PageProps = { params: Promise<{ slug: string }> }
@@ -48,8 +47,6 @@ export default async function FishingSpotPage({ params }: PageProps) {
         <section className="seo-panel"><h2>Depth provenance</h2><p>{spot.depth_metadata?.note ?? 'Depth information is not available in the catalog.'}</p><p><strong>Source:</strong> {spot.depth_metadata?.source ?? catalogSourceLabel}</p>{spot.depth_metadata?.source_url && <p><a href={spot.depth_metadata.source_url} rel="noreferrer">View source documentation</a></p>}</section>
       </div>
       <section className="seo-panel"><h2>Planning note</h2><p>This page uses the {catalogSourceLabel}. It does not report a live water temperature, live depth reading, current bite score, or guaranteed fish presence. Confirm access, permits, closures, lake level, weather, and Oklahoma fishing regulations with the responsible agency before traveling.</p><p><a href={catalogSourceUrl} rel="noreferrer">Review Oklahoma bathymetry source documentation</a></p></section>
-      <p><Link href={`/fishing-spots/${spotSlug(spot)}/ai`}>Open the dedicated {spot.name} AI dashboard →</Link></p>
-      <SpotMiniDashboard spot={spot} />
       <p className="seo-page__source">Catalog coordinates and descriptions are source-labeled planning data. <Link href="/">Open the dashboard for provider-reported conditions →</Link></p>
     </main>
   )

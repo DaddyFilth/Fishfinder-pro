@@ -121,8 +121,8 @@ export default function SpotSuggester({ spots }: Props) {
           throw new Error(typeof data.error === 'string' ? data.error : 'AI spot predictions are unavailable.');
         }
         if (
-          data.source !== 'ai' ||
-          data.data_mode !== 'ai-generated' ||
+          (data.source !== 'ai' && data.source !== 'app-stored') ||
+          (data.data_mode !== 'ai-generated' && data.data_mode !== 'catalog-derived') ||
           data.live_data !== false ||
           !Array.isArray(data.results) ||
           typeof data.total_nearby !== 'number'

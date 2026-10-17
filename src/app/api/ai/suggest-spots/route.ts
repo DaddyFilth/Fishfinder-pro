@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runBrainPrompt } from '@/ai/brain';
 import { SpotPredictionsSchema, parseModelJson, type SpotPrediction } from '@/lib/aiResponse';
+import { analyzeSpotsSmart } from '@/lib/aiAnalytics';
+import { findSpeciesByQuery } from '@/lib/fishbotPrompt';
 import { fetchSeamcastSpotSuggestions } from '@/lib/seamcastSpotsClient';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
@@ -97,6 +99,58 @@ function normalizeAiResults(
       };
     })
     .filter((result): result is RankedSpot => result !== null)
+    .slice(0, 10);
+}
+
+/**
+ * Complete, catalog-only predictions used when no model reply is available.
+ * Scores come from the app's stored catalog scoring — never from invented
+ * numbers — and every entry states that the metadata is insufficient for a
+ * site-specific prediction.
+ */
+async function buildCatalogPredictions(
+  spots: Spot[],
+  species?: string,
+  userLat?: number,
+  userLng?: number,
+): Promise<RankedSpot[]> {
+  const anchorLat = userLat ?? spots[0]?.lat;
+  const anchorLng = userLng ?? spots[0]?.lng;
+  const analysis = await analyzeSpotsSmart({
+    ...(typeof anchorLat === 'number' && Number.isFinite(anchorLat) ? { userLat: anchorLat } : {}),
+    ...(typeof anchorLng === 'number' && Number.isFinite(anchorLng) ? { userLng: anchorLng } : {}),
+    ...(species ? { targetSpecies: species } : {}),
+  });
+  const byId = new Map(analysis.analyzedSpots.map((row) => [row.spot.id, row]));
+  const requestedSpecies = species ? findSpeciesByQuery(species)[0] : undefined;
+
+  return spots
+    .map((spot): RankedSpot | null => {
+      const row = byId.get(spot.id);
+      if (!row) return null;
+      const recommended = row.recommendedSpecies[0];
+      const speciesNames = [requestedSpecies?.name ?? recommended?.name]
+        .filter((name): name is string => Boolean(name))
+        .slice(0, 3);
+
+      return {
+        spot_id: spot.id,
+        spot_name: spot.name,
+        spot_lat: spot.lat,
+        spot_lng: spot.lng,
+        miles_away: typeof userLat === 'number' && typeof userLng === 'number'
+          ? round(distanceMiles(userLat, userLng, spot.lat, spot.lng))
+          : null,
+        fishing_score: Math.max(0, Math.min(100, Math.round(row.suitabilityScore))),
+        rating: row.suitabilityScore >= 70 ? 'Hot' : row.suitabilityScore >= 45 ? 'Good' : 'Fair',
+        primary_species: speciesNames,
+        best_time_today: `${row.bestBiteWindow} (catalog estimate)`.slice(0, 120),
+        best_technique: (row.recommendedTechnique ?? recommended?.advice.techniqueWarm ?? 'Catalog technique unavailable').slice(0, 240),
+        recommended_lure: (row.recommendedBait ?? recommended?.bestBait.join(', ') ?? 'Catalog bait unavailable').slice(0, 120),
+        reason: `${row.reason} Catalog planning estimate only; the supplied metadata is insufficient for a site-specific prediction.`.slice(0, 400),
+      };
+    })
+    .filter((row): row is RankedSpot => row !== null)
     .slice(0, 10);
 }
 
@@ -222,11 +276,23 @@ Every field is required and must be generated for every spot. Always use Fahrenh
       });
     }
   } catch {
-    // Do not substitute non-AI estimates when the provider fails or returns invalid output.
+    // Model unreachable: answer from the stored catalog below instead of refusing.
+  }
+
+  const catalogResults = await buildCatalogPredictions(spots, species, userLat, userLng);
+  if (catalogResults.length > 0) {
+    return NextResponse.json({
+      results: catalogResults,
+      total_nearby: spots.length,
+      source: 'app-stored',
+      data_mode: 'catalog-derived',
+      live_data: false,
+      note: "No AI model was reachable; scores come from the app's stored catalog planning estimate.",
+    });
   }
 
   return NextResponse.json(
-    { error: 'AI predictions are temporarily unavailable. No hardcoded ratings were used.' },
+    { error: 'AI predictions are temporarily unavailable and the supplied spots are not in the stored catalog; no predictions were generated.' },
     { status: 503 },
   );
 }

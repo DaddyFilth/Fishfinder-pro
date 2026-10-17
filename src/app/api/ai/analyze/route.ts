@@ -78,6 +78,45 @@ Respond with ONLY a JSON object: { "summary": "three-sentence interpretation", "
       generated_at: new Date().toISOString(),
     });
   } catch {
-    return NextResponse.json({ error: 'AI analysis is unavailable; no interpretation was generated.', source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 });
+    const readings: string[] = [];
+    const addReading = (value: unknown, label: string, unit: string) => {
+      const numeric = typeof value === 'number' ? value : Number(value);
+      if (value === null || value === undefined || value === '' || !Number.isFinite(numeric)) return;
+      const rendered = Number.isInteger(numeric) ? String(numeric) : String(Math.round(numeric * 10) / 10);
+      readings.push(`${label} ${rendered}${unit}`);
+    };
+
+    if (waterTempF !== 'unknown') readings.push(`water ${waterTempF}°F`);
+    if (airTempF !== 'unknown') readings.push(`air ${airTempF}°F`);
+    addReading(conditionData.wind_speed_ms, 'wind', ' m/s');
+    addReading(conditionData.pressure_hpa, 'pressure', ' hPa');
+    addReading(conditionData.dissolved_oxygen_mgl, 'dissolved oxygen', ' mg/L');
+    addReading(conditionData.flow_rate_cfs, 'flow', ' cfs');
+    addReading(conditionData.fishing_score, 'calculated score', '/100');
+
+    const spotName = String(spotData.name ?? 'this location');
+    const waterType = String(spotData.water_type ?? 'unspecified water type');
+    const scopeLabel = scope === 'spot' ? 'this spot' : 'the 25-mile area around this point';
+    const summary = [
+      `${spotName} (${waterType}) for ${scopeLabel}: ${readings.length > 0 ? readings.join(', ') : 'no readings were supplied'}.`,
+      `Context source: ${inputSource} (mode ${inputMode}${observedAt ? `, captured ${observedAt}` : ''}). ${feedContext}`,
+      'No AI model was reachable, so this reports the supplied readings without adding an interpretation; treat them as reported data, not independently verified live values.',
+    ].join(' ');
+
+    const score = Number(conditionData.fishing_score);
+    const emojiRating = Number.isFinite(score)
+      ? score >= 70 ? 'Strong conditions' : score >= 45 ? 'Fair conditions' : 'Slow conditions'
+      : 'Data limited';
+
+    return NextResponse.json({
+      summary: summary.length > 600 ? `${summary.slice(0, 597)}...` : summary,
+      emoji_rating: emojiRating,
+      source: 'app-stored',
+      data_mode: 'catalog-derived',
+      live_data: false,
+      provider: getAiProviderName(),
+      input: { source: inputSource, data_mode: inputMode, observed_at: observedAt },
+      generated_at: new Date().toISOString(),
+    });
   }
 }

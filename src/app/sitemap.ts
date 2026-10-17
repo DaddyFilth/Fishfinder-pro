@@ -18,7 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     { url: `${base}/fishing-spots`, lastModified, changeFrequency: 'weekly' as const, priority: 0.8 },
     ...DEFAULT_SPOTS.map((spot) => ({
-      url: `${base}/fishing-spots/${spotSlug(spot)}/ai`,
+      url: `${base}/fishing-spots/${spotSlug(spot)}`,
       lastModified,
       changeFrequency: 'daily' as const,
       priority: 0.65,

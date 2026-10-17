@@ -16,12 +16,17 @@ vi.mock('@/lib/security', () => ({
 
 vi.mock('@/lib/groq', () => ({
   getAiModel: vi.fn(() => 'test-model'),
-  getGroqClient: vi.fn(() => ({
-    chat: { completions: { create: createCompletion } },
-  })),
+  getAiProviderName: vi.fn(() => 'groq'),
+  getAiProviderTargets: vi.fn(() => [{
+    provider: 'groq',
+    model: 'test-model',
+    visionModel: 'test-model',
+    client: { chat: { completions: { create: createCompletion } } },
+  }]),
 }))
 
 import { POST } from './route'
+import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 
 const spots = [{
   id: 'spot-1',
@@ -85,7 +90,7 @@ describe('AI spot suggestions', () => {
     })
   })
 
-  it('rejects AI output that cannot be matched to the supplied spot', async () => {
+  it('answers 503 only when neither the model nor the stored catalog can cover the supplied spot', async () => {
     createCompletion.mockResolvedValue({
       choices: [{ message: { content: JSON.stringify(prediction('Imaginary Lake')) } }],
     })
@@ -94,8 +99,49 @@ describe('AI spot suggestions', () => {
 
     expect(response.status).toBe(503)
     expect(await response.json()).toMatchObject({
-      error: expect.stringContaining('No hardcoded ratings were used'),
+      error: expect.stringContaining('not in the stored catalog'),
     })
+  })
+
+  it('answers from the stored catalog when the model is unreachable', async () => {
+    createCompletion.mockRejectedValue(new Error('provider down'))
+    const catalogSpot = DEFAULT_SPOTS[0]
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/ai/suggest-spots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spots: [{
+            id: catalogSpot.id,
+            name: catalogSpot.name,
+            lat: catalogSpot.lat,
+            lng: catalogSpot.lng,
+            water_type: catalogSpot.water_type,
+            spot_type: catalogSpot.spot_type,
+          }],
+          species: 'Largemouth Bass',
+          userLat: catalogSpot.lat,
+          userLng: catalogSpot.lng,
+        }),
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload).toMatchObject({
+      source: 'app-stored',
+      data_mode: 'catalog-derived',
+      live_data: false,
+      total_nearby: 1,
+    })
+    expect(payload.results).toHaveLength(1)
+    expect(payload.results[0]).toMatchObject({
+      spot_id: catalogSpot.id,
+      spot_name: catalogSpot.name,
+    })
+    expect(payload.results[0].primary_species).toContain('Largemouth Bass')
+    expect(payload.results[0].rating).toMatch(/^(Hot|Good|Fair)$/)
   })
 
   it('does not return predictions that omit the requested species', async () => {
