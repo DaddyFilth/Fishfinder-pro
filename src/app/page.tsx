@@ -256,7 +256,9 @@ async function getSpots(): Promise<SpotLoadResult> {
       isOklahomaSpot(spot),
     ) ?? [];
 
-    if (cached && cachedSpots.length > 0) {
+    // A partial cache is not a valid map catalog. It can be left behind by an
+    // older provider response and must never replace the complete 76-spot map.
+    if (cached && cachedSpots.length >= DEFAULT_SPOTS.length) {
       return { spots: cachedSpots, source: 'cached', savedAt: cached.savedAt };
     }
 
