@@ -20,6 +20,7 @@ const AnalysisSchema = z.object({
   target_depth: z.string().min(1).max(160),
   bite_window: z.string().min(1).max(160),
   technique: z.string().min(1).max(300),
+  location_advice: z.string().min(1).max(300),
   evidence: z.array(z.string().min(1).max(240)).max(5),
 }).strict()
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
   const question = `Analyze ONLY the canonical spot identified above. Do not use facts from another water and do not invent live readings.
 
 CANONICAL SPOT (authoritative identity)
-${JSON.stringify({ id: spot.id, name: spot.name, lat: spot.lat, lng: spot.lng, water_type: spot.water_type, spot_type: spot.spot_type, access_type: spot.access_type, region: spot.region, description: spot.description, depth_metadata: spot.depth_metadata })}
+${JSON.stringify({ id: spot.id, name: spot.name, lat: spot.lat, lng: spot.lng, water_type: spot.water_type, spot_type: spot.spot_type, access_type: spot.access_type, region: spot.region, description: spot.description, depth_metadata: spot.depth_metadata, ada: spot.ada ?? 'ADA access not documented in catalog' })}
 
 Return ONLY valid JSON matching this schema:
 {
@@ -75,6 +76,7 @@ Return ONLY valid JSON matching this schema:
   "target_depth": "depth range or state unavailable",
   "bite_window": "best time window or state unavailable",
   "technique": "spot-specific presentation",
+  "location_advice": "where on this water to fish (structure/shore/pier) using only catalog facts; state if exact location unavailable; mention ADA-accessible spots/accommodations when documented",
   "evidence": ["condition or catalog fact used"]
 }
 
@@ -92,7 +94,7 @@ Rules: keep confidence lower when provider conditions are missing; never call ca
     if (analysis.spot_id !== spot.id || analysis.spot_name !== spot.name) {
       return NextResponse.json({ error: 'AI returned a mismatched spot identity.' }, { status: 502 })
     }
-    return NextResponse.json({ ...analysis, source: 'groq-grounded-by-seamcast-catalog', data_mode: 'ai-generated', live_data: false, conditions_source: conditions.source ?? 'not supplied', observed_at: conditions.captured_at ?? conditions.issuedAt ?? null, generated_at: new Date().toISOString() })
+    return NextResponse.json({ ...analysis, ada: spot.ada ?? { accessible: false, label: 'ADA access not documented', accommodations: [], note: 'Contact the managing agency to confirm accessibility.' }, source: 'groq-grounded-by-seamcast-catalog', data_mode: 'ai-generated', live_data: false, conditions_source: conditions.source ?? 'not supplied', observed_at: conditions.captured_at ?? conditions.issuedAt ?? null, generated_at: new Date().toISOString() })
   } catch (error) {
     console.error('[ai-spot-analysis]', error)
     return NextResponse.json({ error: 'AI spot analysis is unavailable; no prediction was generated.', spot_id: spot.id, spot_name: spot.name, source: 'none', data_mode: 'unavailable', live_data: false }, { status: 503 })

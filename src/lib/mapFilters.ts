@@ -23,6 +23,13 @@ export interface SpotDepthMetadata {
   note: string;
 }
 
+export interface SpotAdaInfo {
+  accessible: boolean;
+  label: string;
+  accommodations: string[];
+  note: string;
+}
+
 export interface Spot {
   id: string;
   name: string;
@@ -36,6 +43,7 @@ export interface Spot {
   notes?: string;
   description?: string;
   depth_metadata?: SpotDepthMetadata;
+  ada?: SpotAdaInfo;
   usgs_site_id?: string;
   noaa_station_id?: string;
   biteScore?: { score: number; level: string; reasons?: string[] } | null;
