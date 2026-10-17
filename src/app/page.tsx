@@ -705,14 +705,8 @@ export default function MobilePage() {
               }}
             />
 
-            <div style={{ position: 'absolute', left: 12, right: 12, bottom: sheetOpen ? 'calc(45dvh + 12px)' : 12, zIndex: 1700 }}>
-              <LocationIntelligence
-                coordinates={coordinates}
-                selectedSpot={selectedSpot}
-                compact
-                onToolSelect={(tool) => setTab(tool === 'bite' ? 'bitetime' : tool === 'trip' ? 'ai' : tool === 'weather' ? 'weather' : tool === 'top' ? 'top' : tool === 'settings' ? 'settings' : 'map')}
-              />
-            </div>
+            {/* The compact intelligence dashboard stays off the map so the map is unobstructed;
+                its destinations (Weather, Bite times, Top spots, Trip help, Settings) live in the bottom nav. */}
 
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
