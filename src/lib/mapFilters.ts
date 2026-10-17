@@ -12,7 +12,8 @@ export type SpotFilter =
   | 'fishing-pier'
   | 'public-shore'
   | 'walk-in'
-  | 'state-park';
+  | 'state-park'
+  | 'ada';
 
 export interface SpotDepthMetadata {
   source: string;
@@ -82,6 +83,10 @@ function matchesFilter(spot: Spot, filter: string): boolean {
 
   if (filter === 'all') {
     return true;
+  }
+
+  if (filter === 'ada') {
+    return spot.ada?.accessible === true;
   }
 
   if (filter === 'freshwater') {
