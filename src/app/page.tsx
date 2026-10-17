@@ -235,8 +235,10 @@ async function getSpots(): Promise<SpotLoadResult> {
         throw new Error('No supported Oklahoma spots returned');
       }
 
-      if (dataMode !== 'provider' || filtered.length === 0) {
-        throw new Error('Spot provider feed unavailable');
+      // The map uses the complete statewide catalog. A provider response with
+      // only a few micro-spots must never replace the 76 stable map markers.
+      if (dataMode !== 'provider' || filtered.length < DEFAULT_SPOTS.length) {
+        throw new Error('Spot provider feed incomplete');
       }
       const savedAt = new Date().toISOString();
       cacheSpots(filtered, savedAt);
