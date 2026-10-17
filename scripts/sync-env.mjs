@@ -42,7 +42,7 @@ const aliases = [
 let extra = "";
 // Non-secret defaults so every environment ends up with the same dependencies.
 const defaults = {
-  GROQ_MODEL: "llama-3.3-70b-versatile",
+  GROQ_MODEL: "openai/gpt-oss-120b",
   GROQ_VISION_MODEL: "qwen/qwen3.8-27b",
 };
 for (const [name, value] of Object.entries(defaults)) {

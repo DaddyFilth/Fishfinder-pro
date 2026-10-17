@@ -22,7 +22,7 @@ describe('AI provider selection', () => {
   it('uses default Groq model when GROQ_MODEL is unset', () => {
     vi.stubEnv('GROQ_MODEL', undefined)
     expect(getAiProviderName()).toBe('groq')
-    expect(getAiModel()).toBe('llama-3.3-70b-versatile')
+    expect(getAiModel()).toBe('openai/gpt-oss-120b')
   })
 
   it('uses configured Groq vision model', () => {
@@ -40,6 +40,12 @@ describe('AI provider selection', () => {
     expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
 
     vi.stubEnv('GROQ_VISION_MODEL', 'meta-llama/llama-4-maverick-17b-128e-instruct')
+    expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
+
+    vi.stubEnv('GROQ_VISION_MODEL', 'llama-4-scout-17')
+    expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
+
+    vi.stubEnv('GROQ_VISION_MODEL', 'llama-4-maverick-17')
     expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
   })
 
@@ -148,7 +154,7 @@ describe('getGroqClient().chat.completions.create', () => {
 
     const client = getGroqClient()
     const result = await client.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: 'hi' }],
       temperature: 0.2,
     })
@@ -160,7 +166,7 @@ describe('getGroqClient().chat.completions.create', () => {
     expect(init.method).toBe('POST')
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-groq-key')
     expect(JSON.parse(String(init.body))).toMatchObject({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: 'hi' }],
       stream: false,
     })

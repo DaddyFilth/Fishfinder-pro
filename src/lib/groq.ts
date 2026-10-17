@@ -11,7 +11,7 @@ const REQUEST_TIMEOUT_MS = 30_000
 const MAX_ATTEMPTS = 3
 const RETRY_DELAYS_MS = [250, 750] as const
 
-const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_GROQ_VISION_MODEL = 'qwen/qwen3.8-27b'
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
 /** GLM 5.3 Flash is OpenCode Console's cheapest multimodal model (text and image input). */
@@ -24,8 +24,10 @@ const DEFAULT_OPENCODE_MODEL = 'glm-5.3-flash'
  */
 const RETIRED_GROQ_VISION_MODELS = new Set([
   'llama-4-scout-17b-16e-instruct',
+  'llama-4-scout-17',
   'meta-llama/llama-4-scout-17b-16e-instruct',
   'llama-4-maverick-17b-128e-instruct',
+  'llama-4-maverick-17',
   'meta-llama/llama-4-maverick-17b-128e-instruct',
 ])
 
@@ -50,7 +52,7 @@ export function getAiProviderName(): AiProvider {
 }
 
 /**
- * Returns the trimmed GROQ_MODEL, defaulting to 'llama-3.3-70b-versatile'
+ * Returns the trimmed GROQ_MODEL, defaulting to 'openai/gpt-oss-120b'
  * when unset, empty, or whitespace-only.
  */
 export function getAiModel(): string {

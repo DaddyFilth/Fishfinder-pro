@@ -65,7 +65,8 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Purpose:** Current production AI provider is Groq.
 
 ### GROQ_MODEL (Optional)
-- **Default:** `llama-3.3-70b-versatile`
+- **Default:** `openai/gpt-oss-120b`
+- **Note:** `llama-3.3-70b-versatile` is enterprise-only on Groq; set a model your plan can access.
 - **Environment:** Production/Preview as needed.
 
 ### GROQ_VISION_MODEL (Required for fish-image identification)
