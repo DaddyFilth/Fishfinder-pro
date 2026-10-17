@@ -96,7 +96,7 @@ export function getGroqClient(): GroqClient {
         if (!response.ok) {
           const detail = await response.text().catch(() => '')
           const error = new Error(`Groq request failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`)
-          if (!isRetryableStatus(response.status)) return Promise.reject(error)
+          if (!isRetryableStatus(response.status) || attempt === MAX_ATTEMPTS - 1) return Promise.reject(error)
           if (attempt === MAX_ATTEMPTS - 1) throw error
           lastError = error
         } else {
