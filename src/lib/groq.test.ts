@@ -89,4 +89,15 @@ describe('getGroqClient().chat.completions.create', () => {
       client.chat.completions.create({ model: 'm', messages: [{ role: 'user', content: 'hi' }] }),
     ).rejects.toThrow(/Groq request failed \(429\)/)
   })
+
+  it('does not retry non-retryable HTTP errors', async () => {
+    fetchMock.mockResolvedValue(new Response('unauthorized', { status: 401 }))
+
+    const client = getGroqClient()
+    await expect(
+      client.chat.completions.create({ model: 'm', messages: [{ role: 'user', content: 'hi' }] }),
+    ).rejects.toThrow(/Groq request failed \(401\)/)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })
