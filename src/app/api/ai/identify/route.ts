@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
 }
 Use a canonical guide name when the fish matches this catalog; otherwise return the most specific accurate common name. Do not force an identification to this list.\n\nCatalog names:\n${CATALOG_SPECIES_CONTEXT}\n\nIf no fish is visible set is_fish to false and only include that field.`;
 
-    const { text, degraded } = await askBrainVision(prompt, image_base64, { maxTokens: 600 });
+    const { text, degraded } = await askBrainVision(prompt, image_base64, {
+      maxTokens: 600,
+      responseFormat: { type: 'json_object' },
+    });
 
     if (degraded) {
       return NextResponse.json(

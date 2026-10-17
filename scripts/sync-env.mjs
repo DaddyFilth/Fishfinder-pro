@@ -43,7 +43,7 @@ let extra = "";
 // Non-secret defaults so every environment ends up with the same dependencies.
 const defaults = {
   GROQ_MODEL: "llama-3.3-70b-versatile",
-  GROQ_VISION_MODEL: "llama-4-scout-17b-16e-instruct",
+  GROQ_VISION_MODEL: "qwen/qwen3.8-27b",
 };
 for (const [name, value] of Object.entries(defaults)) {
   if (!vars.get(name)) {

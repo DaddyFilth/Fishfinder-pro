@@ -10,8 +10,21 @@ const MAX_ATTEMPTS = 3
 const RETRY_DELAYS_MS = [250, 750] as const
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_GROQ_VISION_MODEL = 'qwen/qwen3.8-27b'
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
 const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+
+/**
+ * Groq retired the Llama 4 vision models. Stored configurations that still name
+ * them are migrated to the current multimodal model instead of failing every
+ * image request with a "model not found" error.
+ */
+const RETIRED_GROQ_VISION_MODELS = new Set([
+  'llama-4-scout-17b-16e-instruct',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-4-maverick-17b-128e-instruct',
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+])
 
 function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
@@ -42,13 +55,21 @@ export function getAiModel(): string {
 }
 
 /**
- * Returns the trimmed GROQ_VISION_MODEL for image requests.
- * @throws {Error} If GROQ_VISION_MODEL is unset, empty, or whitespace-only.
+ * Returns the Groq vision model for image requests: GROQ_VISION_MODEL when it
+ * names a current model, otherwise the built-in multimodal default. Retired
+ * Llama 4 IDs are migrated instead of being sent to the API.
  */
 export function getAiVisionModel(): string {
+  return getGroqVisionModel()
+}
+
+/** Returns the trimmed GROQ_VISION_MODEL, defaulting to 'qwen/qwen3.8-27b'. */
+export function getGroqVisionModel(): string {
   const configured = process.env.GROQ_VISION_MODEL?.trim()
-  if (configured) return configured
-  throw new Error('GROQ_VISION_MODEL must be configured for image requests.')
+  if (!configured || RETIRED_GROQ_VISION_MODELS.has(configured.toLowerCase())) {
+    return DEFAULT_GROQ_VISION_MODEL
+  }
+  return configured
 }
 
 /** Returns the trimmed OPENAI_MODEL, defaulting to the free-tier 'gpt-4o-mini'. */
@@ -198,7 +219,7 @@ export function getAiProviderTargets(): AiProviderTarget[] {
     targets.push({
       provider: 'groq',
       model: getAiModel(),
-      visionModel: process.env.GROQ_VISION_MODEL?.trim() || getAiModel(),
+      visionModel: getGroqVisionModel(),
       client: createOpenAiCompatibleClient(GROQ_BASE_URL, groqKey, 'Groq'),
     })
   }

@@ -14,6 +14,7 @@ vi.mock('@/lib/groq', () => ({
   getAiModel: vi.fn(() => 'primary-model'),
   getAiProviderName: vi.fn(() => 'groq'),
   getAiProviderTargets: vi.fn(() => targets),
+  getAiVisionModel: vi.fn(() => 'vision-model'),
 }));
 
 import { askBrain, askBrainVision, buildFallbackReply } from './brain';

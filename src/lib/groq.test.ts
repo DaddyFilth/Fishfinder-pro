@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GROQ_BASE_URL, getAiModel, getAiProviderName, getAiVisionModel, getGroqClient } from './groq'
+import { GROQ_BASE_URL, getAiModel, getAiProviderName, getAiProviderTargets, getAiVisionModel, getGroqClient } from './groq'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -27,9 +27,30 @@ describe('AI provider selection', () => {
     expect(getAiVisionModel()).toBe('groq-vision-model')
   })
 
-  it('throws when GROQ_VISION_MODEL is unset', () => {
+  it('defaults to the current multimodal model when GROQ_VISION_MODEL is unset', () => {
     vi.stubEnv('GROQ_VISION_MODEL', undefined)
-    expect(() => getAiVisionModel()).toThrow('GROQ_VISION_MODEL must be configured for image requests.')
+    expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
+  })
+
+  it('migrates retired Llama 4 vision model IDs to the current model', () => {
+    vi.stubEnv('GROQ_VISION_MODEL', 'llama-4-scout-17b-16e-instruct')
+    expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
+
+    vi.stubEnv('GROQ_VISION_MODEL', 'meta-llama/llama-4-maverick-17b-128e-instruct')
+    expect(getAiVisionModel()).toBe('qwen/qwen3.8-27b')
+  })
+
+  it('gives every configured provider target a vision model', () => {
+    vi.stubEnv('GROQ_API_KEY', 'test-groq-key')
+    vi.stubEnv('GROQ_VISION_MODEL', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('GEMINI_API_KEY', undefined)
+    vi.stubEnv('GOOGLE_API_KEY', undefined)
+
+    const targets = getAiProviderTargets()
+    expect(targets).toHaveLength(1)
+    expect(targets[0]?.provider).toBe('groq')
+    expect(targets[0]?.visionModel).toBe('qwen/qwen3.8-27b')
   })
 
   it('configures getGroqClient with Groq base URL and apiKey', () => {

@@ -2,6 +2,7 @@ import {
   getAiModel,
   getAiProviderName,
   getAiProviderTargets,
+  getAiVisionModel,
   type AiProvider,
 } from '@/lib/groq';
 import { FISHBOT_SYSTEM_PROMPT } from '@/lib/fishbotPrompt';
@@ -431,6 +432,7 @@ export async function askBrainVision(
         ...(options.model !== undefined && { model: options.model }),
         max_tokens: options.maxTokens ?? 600,
         ...(options.temperature !== undefined && { temperature: options.temperature }),
+        ...(options.responseFormat !== undefined && { response_format: options.responseFormat }),
         messages: [
           {
             role: 'user',
@@ -449,12 +451,12 @@ export async function askBrainVision(
     return {
       text: 'The AI image identification model is temporarily unavailable. Please try again in a moment.',
       provider: getAiProviderName(),
-      model: options.model ?? getAiModel(),
+      model: options.model ?? getAiVisionModel(),
       grounding,
       degraded: true,
     };
   }
 }
 
-export { getAiModel, getAiProviderName, getAiVisionModel } from '@/lib/groq';
+export { getAiModel, getAiProviderName, getAiVisionModel };
 export type { AiProvider, BrainContext, GroundingReport };

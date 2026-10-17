@@ -67,7 +67,7 @@
 **Current production AI provider: Groq**
 - [ ] Add: `GROQ_API_KEY` — Production secret
 - [ ] Add: `GROQ_MODEL` = `llama-3.3-70b-versatile` (or your selected Groq model)
-- [ ] Add: `GROQ_VISION_MODEL` = your selected vision-capable Groq model
+- [ ] Optional: `GROQ_VISION_MODEL` = vision-capable Groq model (defaults to `qwen/qwen3.8-27b`)
 - [ ] Do **not** use `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel.
 
 **Legacy/local Ollama:**
