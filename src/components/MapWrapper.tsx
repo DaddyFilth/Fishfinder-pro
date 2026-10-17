@@ -714,6 +714,17 @@ export default function FishingMap({
                     <div style={{ marginBottom: 10 }}>
                       <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
+                      {spot.ada?.accessible ? (
+                        <div role="note" aria-label="ADA accessible fishing" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#1e3a8a', border: '1px solid #60a5fa', color: '#e0f2fe', fontSize: 11 }}>
+                          <div style={{ fontWeight: 800 }}>♿ {spot.ada.label}</div>
+                          <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                            {spot.ada.accommodations.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                          <div style={{ marginTop: 4, fontSize: 10, color: '#bfdbfe' }}>{spot.ada.note}</div>
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 6, fontSize: 10, color: '#64748b' }}>ADA access not documented</div>
+                      )}
                       <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{spot.region ?? 'Oklahoma'} · {spot.notes ?? 'Verify current access and regulations before traveling.'}</div>
                       <button type="button" onClick={() => openDirections(spot)} style={{ ...S.directionsBtn, marginTop: 10 }}>Get directions</button>
                     </div>

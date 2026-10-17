@@ -94,6 +94,7 @@ const PAGE_STYLES = {
 
 const MAP_FILTERS = [
   { id: 'all', label: 'All' },
+  { id: 'ada', label: '♿ ADA Accessible' },
   { id: 'freshwater', label: 'Freshwater' },
   { id: 'lake', label: 'Lake' },
   { id: 'reservoir', label: 'Reservoir' },
@@ -716,8 +717,11 @@ export default function MobilePage() {
             {/* Floating spot count badge */}
             <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
               <div style={PAGE_STYLES.mapBadge}>
-                {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}public waters
+                {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}{mapFilter === 'ada' ? 'ADA accessible ' : ''}public waters
               </div>
+              <button type="button" aria-pressed={mapFilter === 'ada'} onClick={() => setMapFilter(mapFilter === 'ada' ? 'all' : 'ada')} style={{ background: mapFilter === 'ada' ? '#1d4ed8' : 'rgba(10,15,30,0.94)', border:'1px solid #60a5fa', borderRadius:'20px', padding:'6px 10px', color:'#e0f2fe', fontSize:'11px', fontWeight:700, cursor:'pointer', backdropFilter:'blur(8px)' }}>
+                {mapFilter === 'ada' ? '♿ ADA only ✓' : '♿ ADA'}
+              </button>
               <button type="button" onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
               </button>
