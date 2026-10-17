@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 import { runBrainPrompt } from '@/ai/brain';
+import { envValue } from '@/lib/env';
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security';
 
 const requestSchema = z.object({
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
   }
   const input = inputResult.data;
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!envValue(process.env.GROQ_API_KEY)) {
     return discoveryResponse(
       bundledCandidates(input),
       'bundled-catalog',

@@ -98,6 +98,10 @@ async function completeChat(params: BrainParams, useVision = false): Promise<Pro
       if (text) return { text, provider: target.provider, model };
       lastError = new Error(`${target.provider} returned no text`);
     } catch (error) {
+      console.error(
+        `[brain] ${target.provider} provider failed:`,
+        error instanceof Error ? error.message : error,
+      );
       lastError = error;
     }
   }

@@ -3,23 +3,11 @@ import type { NextRequest } from 'next/server'
 import Redis from 'ioredis'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis as UpstashRedis } from '@upstash/redis'
+import { envValue } from './env'
 
 export { isHttpUrl, isImageDataUrl } from './urls'
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
-
-/**
- * Environment values are sometimes pasted with surrounding quotes. A quoted
- * Upstash URL makes the client throw and a quoted `REDIS_URL` fails to
- * connect, which previously failed logins closed with a misleading
- * rate-limit error. Quote characters are never legitimate at either end of
- * these values.
- */
-function envValue(value: string | undefined) {
-  const trimmed = value?.trim()
-  if (!trimmed) return undefined
-  return trimmed.replace(/^["']+/, '').replace(/["']+$/, '').trim() || undefined
-}
 
 let redis: Redis | null = null
 let ready: Promise<void> | null = null

@@ -63,6 +63,28 @@ describe('AI provider selection', () => {
     expect(getAiProviderName()).toBe('opencode')
   })
 
+  it('strips surrounding quotes from provider keys and models', () => {
+    vi.stubEnv('GROQ_API_KEY', '"test-groq-key"')
+    vi.stubEnv('GROQ_MODEL', "'custom-groq-model'")
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', undefined)
+
+    expect(getAiProviderName()).toBe('groq')
+    const targets = getAiProviderTargets()
+    expect(targets).toHaveLength(1)
+    expect(targets[0]?.model).toBe('custom-groq-model')
+    expect(targets[0]?.client.apiKey).toBe('test-groq-key')
+  })
+
+  it('keeps a quoted OpenCode key usable as the provider credential', () => {
+    vi.stubEnv('GROQ_API_KEY', undefined)
+    vi.stubEnv('OPENAI_API_KEY', undefined)
+    vi.stubEnv('OPENCODE_API_KEY', '"test-opencode-key"')
+
+    expect(getAiProviderName()).toBe('opencode')
+    expect(getAiProviderTargets()[0]?.client.apiKey).toBe('test-opencode-key')
+  })
+
   it('adds an OpenCode target with the multimodal default model', () => {
     vi.stubEnv('GROQ_API_KEY', undefined)
     vi.stubEnv('OPENAI_API_KEY', undefined)

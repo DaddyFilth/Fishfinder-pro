@@ -1,3 +1,5 @@
+import { envValue } from './env'
+
 export type AiProvider = 'groq' | 'openai' | 'opencode'
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
@@ -41,8 +43,8 @@ function sleep(delayMs: number): Promise<void> {
  * always have a stable label.
  */
 export function getAiProviderName(): AiProvider {
-  if (process.env.GROQ_API_KEY?.trim()) return 'groq'
-  if (process.env.OPENAI_API_KEY?.trim()) return 'openai'
+  if (envValue(process.env.GROQ_API_KEY)) return 'groq'
+  if (envValue(process.env.OPENAI_API_KEY)) return 'openai'
   if (opencodeApiKey()) return 'opencode'
   return 'groq'
 }
@@ -52,7 +54,7 @@ export function getAiProviderName(): AiProvider {
  * when unset, empty, or whitespace-only.
  */
 export function getAiModel(): string {
-  return process.env.GROQ_MODEL?.trim() || DEFAULT_GROQ_MODEL
+  return envValue(process.env.GROQ_MODEL) || DEFAULT_GROQ_MODEL
 }
 
 /**
@@ -66,7 +68,7 @@ export function getAiVisionModel(): string {
 
 /** Returns the trimmed GROQ_VISION_MODEL, defaulting to 'qwen/qwen3.8-27b'. */
 export function getGroqVisionModel(): string {
-  const configured = process.env.GROQ_VISION_MODEL?.trim()
+  const configured = envValue(process.env.GROQ_VISION_MODEL)
   if (!configured || RETIRED_GROQ_VISION_MODELS.has(configured.toLowerCase())) {
     return DEFAULT_GROQ_VISION_MODEL
   }
@@ -75,26 +77,26 @@ export function getGroqVisionModel(): string {
 
 /** Returns the trimmed OPENAI_MODEL, defaulting to the free-tier 'gpt-4o-mini'. */
 export function getOpenAiModel(): string {
-  return process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL
+  return envValue(process.env.OPENAI_MODEL) || DEFAULT_OPENAI_MODEL
 }
 
 /** Returns the OpenAI vision model, defaulting to the configured text model. */
 export function getOpenAiVisionModel(): string {
-  return process.env.OPENAI_VISION_MODEL?.trim() || getOpenAiModel()
+  return envValue(process.env.OPENAI_VISION_MODEL) || getOpenAiModel()
 }
 
 /** Returns the trimmed OPENCODE_MODEL, defaulting to the multimodal 'glm-5.3-flash'. */
 export function getOpenCodeModel(): string {
-  return process.env.OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL
+  return envValue(process.env.OPENCODE_MODEL) || DEFAULT_OPENCODE_MODEL
 }
 
 /** Returns the OpenCode vision model, defaulting to the configured text model (multimodal). */
 export function getOpenCodeVisionModel(): string {
-  return process.env.OPENCODE_VISION_MODEL?.trim() || getOpenCodeModel()
+  return envValue(process.env.OPENCODE_VISION_MODEL) || getOpenCodeModel()
 }
 
 function opencodeApiKey(): string | undefined {
-  return process.env.OPENCODE_API_KEY?.trim() || undefined
+  return envValue(process.env.OPENCODE_API_KEY)
 }
 
 export interface GroqChatMessage {
@@ -192,7 +194,7 @@ function createOpenAiCompatibleClient(baseURL: string, apiKey: string, label: st
  * @throws {Error} If GROQ_API_KEY is unset, empty, or whitespace-only.
  */
 export function getGroqClient(): GroqClient {
-  const apiKey = process.env.GROQ_API_KEY?.trim()
+  const apiKey = envValue(process.env.GROQ_API_KEY)
   if (!apiKey) {
     throw new Error('GROQ_API_KEY must be configured.')
   }
@@ -216,7 +218,7 @@ export interface AiProviderTarget {
 export function getAiProviderTargets(): AiProviderTarget[] {
   const targets: AiProviderTarget[] = []
 
-  const groqKey = process.env.GROQ_API_KEY?.trim()
+  const groqKey = envValue(process.env.GROQ_API_KEY)
   if (groqKey) {
     targets.push({
       provider: 'groq',
@@ -226,7 +228,7 @@ export function getAiProviderTargets(): AiProviderTarget[] {
     })
   }
 
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
+  const openaiKey = envValue(process.env.OPENAI_API_KEY)
   if (openaiKey) {
     targets.push({
       provider: 'openai',
