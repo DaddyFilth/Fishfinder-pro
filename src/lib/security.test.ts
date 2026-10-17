@@ -9,6 +9,7 @@ const originalUpstashToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
 const redisMock = vi.hoisted(() => ({
   status: 'wait',
+  create: vi.fn(),
   connect: vi.fn(),
   on: vi.fn(),
   once: vi.fn(),
@@ -28,6 +29,10 @@ const upstashMock = vi.hoisted(() => ({
 
 vi.mock('ioredis', () => ({
   default: class {
+    constructor(url: unknown) {
+      redisMock.create(url)
+    }
+
     get status() {
       return redisMock.status
     }
@@ -103,6 +108,7 @@ beforeEach(() => {
   delete process.env.UPSTASH_REDIS_REST_URL
   delete process.env.UPSTASH_REDIS_REST_TOKEN
   redisMock.status = 'wait'
+  redisMock.create.mockReset()
   redisMock.connect.mockReset().mockImplementation(async () => {
     redisMock.status = 'ready'
   })
@@ -238,6 +244,35 @@ describe('enforceRateLimit', () => {
     }))
     expect(upstashMock.limit).toHaveBeenCalledWith('upstash-integration:unknown')
     expect(redisMock.exec).not.toHaveBeenCalled()
+  })
+
+  it('strips surrounding quotes from Upstash credentials', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    delete process.env.REDIS_URL
+    process.env.UPSTASH_REDIS_REST_URL = '"https://example.upstash.io"'
+    process.env.UPSTASH_REDIS_REST_TOKEN = "'upstash-token'"
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test')
+
+    const response = await enforceRateLimit(request, { name: 'quoted-upstash', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(upstashMock.createRedis).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.upstash.io',
+      token: 'upstash-token',
+    }))
+    expect(redisMock.create).not.toHaveBeenCalled()
+  })
+
+  it('strips a stray trailing quote from REDIS_URL', async () => {
+    process.env.REDIS_URL = 'rediss://default:secret@example.upstash.io:6379"'
+    const { enforceRateLimit } = await import('./security')
+    const request = new Request('https://example.com/api/test', { headers: { 'x-real-ip': '198.51.100.10' } })
+
+    const response = await enforceRateLimit(request, { name: 'quoted-redis', limit: 1, windowMs: 60_000 })
+
+    expect(response).toBeNull()
+    expect(redisMock.create).toHaveBeenCalledWith('rediss://default:secret@example.upstash.io:6379')
   })
 
   it('falls back to Redis when Upstash reports a timeout', async () => {

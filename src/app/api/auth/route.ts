@@ -108,11 +108,12 @@ export async function POST(request: Request) {
 
       if (signup.error) {
         const message = signup.error.message.toLowerCase()
+        if (message.includes('rate')) {
+          return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 })
+        }
         const safeError = message.includes('confirm')
           ? 'Please confirm your email before logging in.'
-          : message.includes('rate')
-            ? 'Too many attempts. Please try again later.'
-            : 'Unable to create the account. Check your details and try again.'
+          : 'Unable to create the account. Check your details and try again.'
         return NextResponse.json({ error: safeError }, { status: 400 })
       }
 
@@ -138,11 +139,12 @@ export async function POST(request: Request) {
     const result = await supabase.auth.signInWithPassword({ email, password: parsed.data.password })
     if (result.error) {
       const message = result.error.message.toLowerCase()
+      if (message.includes('rate')) {
+        return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 })
+      }
       const safeError = message.includes('confirm')
         ? 'Please confirm your email before logging in.'
-        : message.includes('rate')
-          ? 'Too many attempts. Please try again later.'
-          : 'Invalid email or password.'
+        : 'Invalid email or password.'
       return NextResponse.json({ error: safeError }, { status: 400 })
     }
 

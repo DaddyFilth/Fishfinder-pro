@@ -7,8 +7,7 @@ import {
   getAuthCallbackUrl,
   getSafeNextPath,
 } from '@/lib/supabase/redirect'
-
-type Mode = 'login' | 'signup'
+import { mapAuthError, type Mode } from './errors'
 
 const fieldStyle = {
   display: 'block',
@@ -33,23 +32,6 @@ function bannerStyle(background: string, color: string) {
     lineHeight: 1.45,
     marginBottom: '12px',
   } as const
-}
-
-function mapAuthError(mode: Mode, message: string) {
-  const lower = message.toLowerCase()
-  if (lower.includes('confirm')) {
-    return new Error('Please confirm your email before logging in.')
-  }
-  if (lower.includes('rate') || lower.includes('too many')) {
-    return new Error('Too many attempts. Please try again later.')
-  }
-  if (mode === 'signup' && (lower.includes('already registered') || lower.includes('already exists'))) {
-    return new Error('An account with this email already exists. Try logging in instead.')
-  }
-  if (mode === 'login' || mode === 'signup') {
-    return new Error(mode === 'login' ? 'Invalid email or password.' : 'Unable to create the account. Check your details and try again.')
-  }
-  return new Error('Authentication failed. Please try again.')
 }
 
 export default function LoginPage() {
@@ -112,7 +94,7 @@ function LoginPageContent() {
         confirmationRequired?: boolean
       }
       if (!response.ok || result.error) {
-        throw mapAuthError(mode, result.error || 'Unable to authenticate.')
+        throw mapAuthError(mode, result.error || 'Unable to authenticate.', response.status)
       }
 
       if (mode === 'signup' && !result.confirmed) {

@@ -8,6 +8,19 @@ export { isHttpUrl, isImageDataUrl } from './urls'
 
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
+/**
+ * Environment values are sometimes pasted with surrounding quotes. A quoted
+ * Upstash URL makes the client throw and a quoted `REDIS_URL` fails to
+ * connect, which previously failed logins closed with a misleading
+ * rate-limit error. Quote characters are never legitimate at either end of
+ * these values.
+ */
+function envValue(value: string | undefined) {
+  const trimmed = value?.trim()
+  if (!trimmed) return undefined
+  return trimmed.replace(/^["']+/, '').replace(/["']+$/, '').trim() || undefined
+}
+
 let redis: Redis | null = null
 let ready: Promise<void> | null = null
 let upstash: UpstashRedis | null = null
@@ -27,7 +40,7 @@ async function ensureReady(client: Redis) {
 }
 
 function getRedis() {
-  const url = process.env.REDIS_URL?.trim()
+  const url = envValue(process.env.REDIS_URL)
   if (!url) return null
   if (!redis) {
     redis = new Redis(url, {
@@ -53,8 +66,8 @@ function clientKey(request: Request) {
 }
 
 function upstashCredentials() {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.NEXT_PUBLIC_KV_REST_API_URL?.trim()
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || process.env.NEXT_PUBLIC_KV_REST_API_TOKEN?.trim()
+  const url = envValue(process.env.UPSTASH_REDIS_REST_URL) || envValue(process.env.NEXT_PUBLIC_KV_REST_API_URL)
+  const token = envValue(process.env.UPSTASH_REDIS_REST_TOKEN) || envValue(process.env.NEXT_PUBLIC_KV_REST_API_TOKEN)
   return url && token ? { url, token } : null
 }
 
@@ -152,7 +165,7 @@ export async function enforceRateLimit(
   options: { limit: number; windowMs: number; name: string },
 ) {
   const redisConfigured = Boolean(
-    process.env.REDIS_URL?.trim() || upstashCredentials(),
+    envValue(process.env.REDIS_URL) || upstashCredentials(),
   )
   if (
     !redisConfigured &&
