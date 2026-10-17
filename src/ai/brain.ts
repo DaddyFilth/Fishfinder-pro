@@ -126,8 +126,11 @@ export async function askBrain(
     ...(options.responseFormat !== undefined && { response_format: options.responseFormat }),
   });
 
+  const text = response.choices[0]?.message?.content?.trim() ?? '';
+  if (!text) throw new Error('AI provider returned no text');
+
   return {
-    text: response.choices[0]?.message?.content?.trim() ?? '',
+    text,
     provider: getAiProviderName(),
     model,
     grounding: buildGroundingReport(context),
@@ -165,8 +168,11 @@ export async function askBrainVision(
     ],
   });
 
+  const text = response.choices[0]?.message?.content?.trim() ?? '';
+  if (!text) throw new Error('AI provider returned no vision text');
+
   return {
-    text: response.choices[0]?.message?.content?.trim() ?? '',
+    text,
     provider: getAiProviderName(),
     model,
     grounding: buildGroundingReport({}),
