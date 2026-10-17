@@ -14,7 +14,7 @@ import { getAuthContext } from '@/lib/auth/server';
 import { hasVerifiedCurrentConditions } from '@/lib/verifiedConditions';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 const RequestSchema = z.object({
   lat: z.number().finite().min(-90).max(90),
