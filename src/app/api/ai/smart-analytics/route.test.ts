@@ -41,7 +41,7 @@ vi.mock('@/lib/auth/server', () => ({
   getAuthContext: vi.fn(async () => null),
 }));
 
-import { POST } from './route';
+import { maxDuration, POST } from './route';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 
 function request(body: unknown) {
@@ -91,6 +91,10 @@ beforeEach(() => {
 });
 
 describe('POST /api/ai/smart-analytics', () => {
+  it('allows enough time for provider retries and source gathering', () => {
+    expect(maxDuration).toBe(120);
+  });
+
   it('returns AI analysis, drops recommendations outside the stored catalog, and reports bootstrap phase', async () => {
     createCompletion.mockResolvedValue({ choices: [{ message: { content: modelJson() } }] });
 
