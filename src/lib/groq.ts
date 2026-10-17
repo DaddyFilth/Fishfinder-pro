@@ -1,7 +1,17 @@
 export type AiProvider = 'groq'
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
-const REQUEST_TIMEOUT_MS = 15_000
+const REQUEST_TIMEOUT_MS = 30_000
+const MAX_ATTEMPTS = 3
+const RETRY_DELAYS_MS = [250, 750] as const
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs))
+}
 
 /** Returns 'groq' regardless of whether credentials are configured. */
 export function getAiProviderName(): AiProvider {
@@ -68,23 +78,41 @@ export function getGroqClient(): GroqClient {
   }
 
   async function create(params: GroqChatCompletionParams): Promise<GroqChatCompletionResult> {
-    const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...params, stream: false }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      cache: 'no-store',
-    })
+    let lastError: unknown
 
-    if (!response.ok) {
-      const detail = await response.text().catch(() => '')
-      throw new Error(`Groq request failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`)
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...params, stream: false }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          const detail = await response.text().catch(() => '')
+          const error = new Error(`Groq request failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`)
+          if (!isRetryableStatus(response.status) || attempt === MAX_ATTEMPTS - 1) throw error
+          lastError = error
+        } else {
+          const result = (await response.json()) as GroqChatCompletionResult
+          if (result.choices?.[0]?.message?.content?.trim()) return result
+          lastError = new Error('Groq returned an empty response')
+          if (attempt === MAX_ATTEMPTS - 1) throw lastError
+        }
+      } catch (error) {
+        lastError = error
+        if (attempt === MAX_ATTEMPTS - 1) throw error
+      }
+
+      await sleep(RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1])
     }
 
-    return (await response.json()) as GroqChatCompletionResult
+    throw lastError instanceof Error ? lastError : new Error('Groq request failed after retries')
   }
 
   return {
