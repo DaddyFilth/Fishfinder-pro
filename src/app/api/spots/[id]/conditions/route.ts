@@ -77,10 +77,10 @@ function writeMemory(id: string, result: BuildResult) {
     }
   }
 
+  // Only a live provider reading is worth keeping for the full window: cached and
+  // degraded payloads expire quickly so the next request tries the providers again.
   const mode = String(result.payload.data_mode ?? '');
-  const ttl = mode === 'fallback' || mode === 'unavailable'
-    ? MEMORY_FALLBACK_TTL_MS
-    : MEMORY_CACHE_TTL_MS;
+  const ttl = mode === 'provider' ? MEMORY_CACHE_TTL_MS : MEMORY_FALLBACK_TTL_MS;
 
   memoryCache.set(id, { ...result, expiresAt: Date.now() + ttl });
 }
@@ -164,6 +164,57 @@ async function resolveSpot(
   };
 }
 
+/** Newest stored snapshot for a spot; `null` when none exists or the read fails. */
+async function readLatestSnapshot(supabase: SupabaseClient | null, id: string) {
+  if (!supabase) return null;
+
+  const { data: snapshot, error } = await supabase
+    .from('environmental_snapshots')
+    .select('*')
+    .eq('spot_id', id)
+    .order('captured_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[API] snapshot cache read error', {
+      provider: 'Supabase',
+      spotId: id,
+      operation: 'read',
+    });
+    return null;
+  }
+
+  return snapshot ?? null;
+}
+
+/**
+ * A stored snapshot plus the two facts the route needs about it: whether it is a
+ * degraded fallback row, and how old it is.
+ */
+function describeSnapshot(snapshot: Record<string, unknown> | null) {
+  if (!snapshot) {
+    return { snapshot: null, isFallback: false, ageMs: Number.POSITIVE_INFINITY };
+  }
+
+  const isFallback = Boolean(
+    snapshot.data_mode === 'fallback' ||
+      (Array.isArray(snapshot.data_sources) &&
+        snapshot.data_sources.some((source: unknown) =>
+          typeof source === 'string' && source.toLowerCase().includes('fallback'),
+        )),
+  );
+  const capturedAt = typeof snapshot.captured_at === 'string'
+    ? Date.parse(snapshot.captured_at)
+    : Number.NaN;
+
+  return {
+    snapshot,
+    isFallback,
+    ageMs: Number.isFinite(capturedAt) ? Date.now() - capturedAt : Number.POSITIVE_INFINITY,
+  };
+}
+
 function unavailablePayload(id: string): Json {
   const neutralScore = calculateFishingScore({
     air_temp_c: null,
@@ -215,27 +266,7 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
       };
     }
 
-    let cached: Record<string, unknown> | null = null;
-
-    if (supabase) {
-      const { data: snapshot, error: cacheReadError } = await supabase
-        .from('environmental_snapshots')
-        .select('*')
-        .eq('spot_id', id)
-        .order('captured_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (cacheReadError) {
-        console.warn('[API] snapshot cache read error', {
-          provider: 'Supabase',
-          spotId: id,
-          operation: 'read',
-        });
-      } else {
-        cached = snapshot ?? null;
-      }
-    }
+    const snapshotState = describeSnapshot(await readLatestSnapshot(supabase, id));
 
     const seamcast = await fetchSeamcastSpotSuggestions(spot.lat, spot.lng);
     const biteScore = typeof seamcast?.overallBite?.score === 'number'
@@ -243,39 +274,8 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
       : null;
     const biteLevel = seamcast?.overallBite?.level ?? null;
 
-    const cachedIsFallback = Boolean(
-      cached && (
-        cached.data_mode === 'fallback' ||
-        (Array.isArray(cached.data_sources) &&
-          cached.data_sources.some((source: unknown) =>
-            typeof source === 'string' && source.toLowerCase().includes('fallback'),
-          ))
-      ),
-    );
-
-    const cachedCapturedAt = typeof cached?.captured_at === 'string'
-      ? Date.parse(cached.captured_at)
-      : Number.NaN;
-    const cacheAgeMs = cached && Number.isFinite(cachedCapturedAt)
-      ? Date.now() - cachedCapturedAt
-      : Number.POSITIVE_INFINITY;
-
-    if (cached && !cachedIsFallback && cacheAgeMs <= CACHE_MAX_AGE_MS) {
-      return {
-        status: 200,
-          payload: {
-            ...cached,
-            bite_score: biteScore,
-            bite_level: biteLevel,
-            ai_micro_spots: seamcast?.microSpots ?? [],
-            cached: true,
-            stale: false,
-            data_mode: 'cached',
-          },
-        cacheControl: 'public, max-age=1800',
-      };
-    }
-
+    // Live providers are asked first on every uncached request: a stored snapshot is a
+    // resilience fallback for provider outages, never a substitute for a live reading.
     const [nws, usgs, marine, tides] = await Promise.allSettled([
       fetchNWSConditions(spot.lat, spot.lng),
       spot.usgs_site_id
@@ -334,6 +334,30 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     ].filter((source): source is string => typeof source === 'string' && source.length > 0);
 
     if (dataSources.length === 0) {
+      // Every provider failed. A recent, non-degraded snapshot still describes the water
+      // well enough to plan with, and is labeled as cached rather than live.
+      if (
+        snapshotState.snapshot &&
+        !snapshotState.isFallback &&
+        snapshotState.ageMs <= CACHE_MAX_AGE_MS
+      ) {
+        return {
+          status: 200,
+          payload: {
+            ...snapshotState.snapshot,
+            bite_score: biteScore,
+            bite_level: biteLevel,
+            ai_micro_spots: seamcast?.microSpots ?? [],
+            cached: true,
+            stale: false,
+            data_mode: 'cached',
+            warning:
+              'Live provider readings are unavailable right now. Showing the most recent stored snapshot.',
+          },
+          cacheControl: 'no-store',
+        };
+      }
+
       return {
         status: 503,
         payload: {
@@ -371,7 +395,7 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
 
     const scoreResult = calculateFishingScore(scoreInput);
 
-    const snapshot = {
+    const reading = {
       spot_id: id,
       air_temp_c: nwsData?.air_temp_c ?? null,
       wind_speed_ms: nwsData?.wind_speed_ms ?? null,
@@ -392,7 +416,7 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
     };
 
     const providerPayload: Json = {
-      ...snapshot,
+      ...reading,
       captured_at: new Date().toISOString(),
       cached: false,
       stale: false,
@@ -400,7 +424,14 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
       data_mode: 'provider',
     };
 
-    if (!supabase) {
+    // Snapshots exist for fallback and history, not one row per request: only store the
+    // reading when the newest row is missing, degraded, or already too old to serve.
+    const shouldStore =
+      !snapshotState.snapshot ||
+      snapshotState.isFallback ||
+      snapshotState.ageMs > CACHE_MAX_AGE_MS;
+
+    if (!supabase || !shouldStore) {
       return {
         status: 200,
         payload: providerPayload,
@@ -410,7 +441,7 @@ async function buildConditions(request: NextRequest, id: string): Promise<BuildR
 
     const { data: inserted, error: insertErr } = await supabase
       .from('environmental_snapshots')
-      .insert(snapshot)
+      .insert(reading)
       .select()
       .single();
 

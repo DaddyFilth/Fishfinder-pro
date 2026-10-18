@@ -13,7 +13,26 @@ type Period = {
   shortForecast: string;
 };
 
+/** Forecast payload plus the coordinates it belongs to, so a stale location is never shown. */
+type Forecast = {
+  key: string;
+  periods: Period[];
+  updatedAt: string | null;
+};
+
+type ForecastError = {
+  key: string;
+  message: string;
+};
+
 const NWS_HEADERS = { Accept: 'application/geo+json' };
+
+/**
+ * How often an open Weather tab re-asks for the hourly forecast. NWS refreshes its hourly
+ * periods about once an hour, so five minutes keeps the tab visibly current without
+ * hammering the provider.
+ */
+const REFRESH_INTERVAL_MS = 5 * 60_000;
 
 function validCoordinates(lat?: number, lng?: number) {
   return typeof lat === 'number' && typeof lng === 'number' &&
@@ -52,24 +71,29 @@ function weatherIcon(forecast: string) {
 }
 
 export default function WeatherTab({ lat, lng, locationLabel }: Props) {
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => validCoordinates(lat, lng));
-  const [error, setError] = useState('');
+  const locationKey = validCoordinates(lat, lng) ? `${lat},${lng}` : null;
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [refreshingKey, setRefreshingKey] = useState<string | null>(null);
+  const [error, setError] = useState<ForecastError | null>(null);
+
   useEffect(() => {
-    if (!validCoordinates(lat, lng)) return;
+    if (!locationKey) return;
 
     const controller = new AbortController();
+    // The first load shows the placeholder; later polls update the forecast in place and
+    // a failed poll keeps the last forecast on screen.
+    let hasForecast = false;
+    let inFlight = false;
 
     const load = async () => {
-      setLoading(true);
-      setError('');
+      if (inFlight) return;
+      inFlight = true;
+
       try {
-        const response = await fetch(`/api/weather?lat=${encodeURIComponent(lat!)}&lng=${encodeURIComponent(lng!)}`, {
-          headers: NWS_HEADERS,
-          cache: 'no-store',
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/weather?lat=${encodeURIComponent(lat!)}&lng=${encodeURIComponent(lng!)}`,
+          { headers: NWS_HEADERS, cache: 'no-store', signal: controller.signal },
+        );
         if (!response.ok) throw new Error('NOAA/NWS forecast request failed');
         const payload = await response.json() as {
           periods?: unknown[];
@@ -79,37 +103,71 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
           ? payload.periods.filter(isPeriod)
           : [];
         if (!next.length) throw new Error('NWS returned no usable forecast periods');
-        setPeriods(next);
-        setUpdatedAt(payload.updatedAt ?? null);
+        hasForecast = true;
+        setForecast({ key: locationKey, periods: next, updatedAt: payload.updatedAt ?? null });
+        setError(null);
       } catch (reason) {
         if (!controller.signal.aborted) {
-          setPeriods([]);
-          setError(reason instanceof Error ? reason.message : 'Unable to load NWS forecast');
+          setError({
+            key: locationKey,
+            message: reason instanceof Error ? reason.message : 'Unable to load NWS forecast',
+          });
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        inFlight = false;
+        if (!controller.signal.aborted) setRefreshingKey(null);
       }
     };
 
-    void load();
-    return () => controller.abort();
-  }, [lat, lng]);
+    // Poll only while the tab is on screen and the device reports a connection; coming
+    // back to the tab or regaining signal refreshes right away instead of waiting.
+    const refreshIfCurrent = () => {
+      if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+      if (hasForecast) setRefreshingKey(locationKey);
+      void load();
+    };
 
-  if (!validCoordinates(lat, lng)) {
+    void load();
+    const intervalId = window.setInterval(refreshIfCurrent, REFRESH_INTERVAL_MS);
+    document.addEventListener('visibilitychange', refreshIfCurrent);
+    window.addEventListener('online', refreshIfCurrent);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshIfCurrent);
+      window.removeEventListener('online', refreshIfCurrent);
+    };
+  }, [lat, lng, locationKey]);
+
+  if (!locationKey) {
     return <p style={{ padding: 16, color: '#94a3b8', fontSize: 13 }}>Provider weather is unavailable until a spot or device location is selected.</p>;
   }
-  if (loading) return <p style={{ padding: 16, color: '#60a5fa', fontSize: 12 }}>Loading NOAA/NWS forecast…</p>;
-  if (error || !periods.length) {
-    return <p role="alert" style={{ padding: 16, color: '#fca5a5', fontSize: 12 }}>{error || 'NWS forecast unavailable.'}</p>;
+
+  const currentForecast = forecast?.key === locationKey ? forecast : null;
+  const currentError = error?.key === locationKey ? error.message : '';
+  const refreshing = refreshingKey === locationKey && currentForecast !== null;
+
+  if (!currentForecast) {
+    return currentError
+      ? <p role="alert" style={{ padding: 16, color: '#fca5a5', fontSize: 12 }}>{currentError}</p>
+      : <p style={{ padding: 16, color: '#60a5fa', fontSize: 12 }}>Loading NOAA/NWS forecast…</p>;
   }
 
-  const current = periods[0];
+  const current = currentForecast.periods[0];
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a', padding: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', marginBottom: 4 }}>Provider Weather</div>
       <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>NOAA/NWS forecast{locationLabel ? ` · ${locationLabel}` : ''}</div>
-      <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>Forecast data, not a live observation. Updated {updatedAt ? new Date(updatedAt).toLocaleString() : 'time unavailable'}.</div>
+      <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 14 }}>
+        Forecast data, not a live observation. Updated {currentForecast.updatedAt ? new Date(currentForecast.updatedAt).toLocaleString() : 'time unavailable'}{refreshing ? ' · refreshing…' : ''}.
+      </div>
+      {currentError && (
+        <div role="status" style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 8, background: 'rgba(120,53,15,0.35)', border: '1px solid #92400e', color: '#fde68a', fontSize: 11 }}>
+          Refresh failed ({currentError}). Showing the last forecast.
+        </div>
+      )}
       <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 14, marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
           <div>
@@ -123,7 +181,7 @@ export default function WeatherTab({ lat, lng, locationLabel }: Props) {
       <div style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: 12, padding: 14 }}>
         <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 10 }}>NWS HOURLY FORECAST</div>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {periods.slice(0, 12).map((period) => (
+          {currentForecast.periods.slice(0, 12).map((period) => (
             <div key={period.startTime} style={{ flexShrink: 0, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 8, textAlign: 'center', minWidth: 66 }}>
               <div style={{ fontSize: 9, color: '#94a3b8' }}>{displayHour(period.startTime)}</div>
               <div style={{ fontSize: 18, margin: '4px 0' }}>{weatherIcon(period.shortForecast)}</div>
