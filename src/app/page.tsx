@@ -621,6 +621,12 @@ export default function MobilePage() {
     [visibleSpots, conditionModes, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
+  // Search spans the whole catalog, including waters the active filter hides, so its
+  // distances are computed from every loaded spot rather than the filtered list.
+  const searchDistanceById = useMemo(
+    () => new Map(sortSpotsByDistance(spots, coordinates).map((spot) => [spot.id, spot.distanceMiles])),
+    [spots, coordinates],
+  );
 
   const handleLocationSearch = (spot: Spot) => {
     // A water hidden by the active filter has no marker to fly to, so reveal it first.
@@ -724,7 +730,7 @@ export default function MobilePage() {
             <div style={{ position:'absolute', top:'10px', left:'12px', right:'12px', zIndex:1800 }}>
               <LocationSearchBar
                 spots={spots}
-                distanceMilesById={distanceById}
+                distanceMilesById={searchDistanceById}
                 onSelect={handleLocationSearch}
                 placeholder={`Search ${visibleSpots.length}${nearbyMode ? ' nearby' : ''}${mapFilter === 'ada' ? ' ADA accessible' : ''} public waters…`}
               />
