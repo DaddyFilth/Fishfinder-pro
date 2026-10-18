@@ -12,6 +12,7 @@ import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import SmartAnalyticsPanel from '@/components/ai/SmartAnalyticsPanel';
 import LocationIntelligence from '@/components/LocationIntelligence';
+import LocationSearchBar from '@/components/LocationSearchBar';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
@@ -88,7 +89,6 @@ const PAGE_STYLES = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '5px', cursor: 'pointer', color: active ? '#67e8f9' : '#78909c', transition: 'color 0.15s, background 0.15s',
   }),
-  mapBadge: { position: 'absolute', top: '14px', left: '14px', background: 'rgba(7,17,27,0.88)', border: '1px solid #294452', borderRadius: '999px', padding: '8px 12px', fontSize: '11px', color: '#c4d7df', zIndex: 10, backdropFilter: 'blur(12px)' } as React.CSSProperties,
   settingsCard: { background: '#0d1c29', border: '1px solid #1d3442', borderRadius: '14px', padding: '16px', marginBottom: '12px' } as React.CSSProperties,
 } as const;
 
@@ -619,6 +619,13 @@ export default function MobilePage() {
     [visibleSpots, conditionModes, conditionScores],
   );
   const distanceById = useMemo(() => new Map(nearbySpots.map((spot) => [spot.id, spot.distanceMiles])), [nearbySpots]);
+
+  const handleLocationSearch = (spot: Spot) => {
+    // A water hidden by the active filter has no marker to fly to, so reveal it first.
+    if (!visibleSpots.some((candidate) => candidate.id === spot.id)) setMapFilter('all');
+    setSelectedSpot(spot);
+    setMapPopupOpen(true);
+  };
   const toggleMapLayer = (key: keyof MapLayers) => {
     setMapLayers((previous) => ({ ...previous, [key]: !previous[key] }));
   };
@@ -708,22 +715,29 @@ export default function MobilePage() {
             {/* The compact intelligence dashboard stays off the map so the map is unobstructed;
                 its destinations (Weather, Bite times, Top spots, Trip help, Settings) live in the bottom nav. */}
 
-            {/* Floating spot count badge */}
-            <div style={{ position:'absolute', top:'12px', left:'12px', right:'12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', zIndex:1700 }}>
-              <div style={PAGE_STYLES.mapBadge}>
-                {visibleSpots.length}{' '}{nearbyMode ? 'nearby ' : ''}{mapFilter === 'ada' ? 'ADA accessible ' : ''}public waters
+            {/* Location search over the map */}
+            <div style={{ position:'absolute', top:'10px', left:'12px', right:'12px', zIndex:1800 }}>
+              <LocationSearchBar
+                spots={spots}
+                distanceMilesById={distanceById}
+                onSelect={handleLocationSearch}
+                placeholder={`Search ${visibleSpots.length}${nearbyMode ? ' nearby' : ''}${mapFilter === 'ada' ? ' ADA accessible' : ''} public waters…`}
+              />
+            </div>
+
+            {/* Filter, GPS, and data-source controls */}
+            <div style={{ position:'absolute', top:'56px', left:'12px', right:'12px', display:'flex', alignItems:'center', gap:'8px', zIndex:1700 }}>
+              <div style={{ flex:'1 1 auto', minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'provider' ? '#86efac' : '#fbbf24', backdropFilter:'blur(8px)' }}>
+                {!authReady ? 'Checking account…' : cacheSource === 'provider' ? 'Provider spot data · not live conditions' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
+                {locationStatus === 'denied' && ' · Location permission denied'}
+                {locationStatus === 'unavailable' && ' · GPS unavailable'}
               </div>
-              <button type="button" aria-pressed={mapFilter === 'ada'} onClick={() => setMapFilter(mapFilter === 'ada' ? 'all' : 'ada')} style={{ background: mapFilter === 'ada' ? '#1d4ed8' : 'rgba(10,15,30,0.94)', border:'1px solid #60a5fa', borderRadius:'20px', padding:'6px 10px', color:'#e0f2fe', fontSize:'11px', fontWeight:700, cursor:'pointer', backdropFilter:'blur(8px)' }}>
+              <button type="button" aria-pressed={mapFilter === 'ada'} onClick={() => setMapFilter(mapFilter === 'ada' ? 'all' : 'ada')} style={{ flexShrink:0, background: mapFilter === 'ada' ? '#1d4ed8' : 'rgba(10,15,30,0.94)', border:'1px solid #60a5fa', borderRadius:'20px', padding:'6px 10px', color:'#e0f2fe', fontSize:'11px', fontWeight:700, cursor:'pointer', backdropFilter:'blur(8px)' }}>
                 {mapFilter === 'ada' ? '♿ ADA only ✓' : '♿ ADA'}
               </button>
-              <button type="button" onClick={startLocationTracking} style={{ background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
+              <button type="button" onClick={startLocationTracking} style={{ flexShrink:0, background:'rgba(10,15,30,0.94)', border:'1px solid #155e75', borderRadius:'20px', padding:'6px 10px', color: locationStatus === 'active' ? '#67e8f9' : '#cbd5e1', fontSize:'10px', cursor:'pointer', backdropFilter:'blur(8px)' }}>
                 {locationStatus === 'locating' ? 'Locating…' : locationStatus === 'active' ? 'Stop GPS' : 'Find nearby'}
               </button>
-            </div>
-            <div style={{ position:'absolute', top:'52px', left:'12px', background:'rgba(10,15,30,0.86)', border:'1px solid #1e293b', borderRadius:'8px', padding:'5px 8px', fontSize:'9px', color: cacheSource === 'provider' ? '#86efac' : '#fbbf24', zIndex:1700, backdropFilter:'blur(8px)' }}>
-              {!authReady ? 'Checking account…' : cacheSource === 'provider' ? 'Provider spot data · not live conditions' : cacheSource === 'cached' ? `Offline cache · ${formatCacheAge(cachedAt) ?? 'saved data'}` : cacheSource === 'fallback' ? 'Bundled offline spot data' : 'Loading spot data…'}
-              {locationStatus === 'denied' && ' · Location permission denied'}
-              {locationStatus === 'unavailable' && ' · GPS unavailable'}
             </div>
 
             {mapLayers.depth && (

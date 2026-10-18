@@ -3,7 +3,7 @@
 
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import HotZoneOverlay from '@/components/HotZoneOverlay';
 
@@ -31,6 +31,7 @@ import {
   resolveSpotPopupFrame,
 } from '@/lib/mapViewport';
 import { deriveFishingCondition, type FishingCondition } from '@/lib/speciesCatalog';
+import { resolvePopupGesture } from '@/lib/popupGesture';
 
 delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -42,9 +43,10 @@ L.Icon.Default.mergeOptions({
 // ─── Shared style constants ───────────────────────────────────────────────────
 const S = {
   popupWrap: {
-    // Visual shell only: the width/height caps are applied per render from `popupFrame` so the
+    // Visual shell for the spot panel: SpotPopupPanel adds its own scroll surface inside this,
+    // and the width/height caps are applied per render from `popupFrame` so the
     // CSS can never exceed the maxWidth/minWidth/maxHeight handed to Leaflet's Popup.
-    overflowY: 'auto',
+    overflow: 'hidden',
     fontFamily: 'system-ui, sans-serif',
     background: 'rgba(3,7,18,0.96)',
     margin: '-12px',
@@ -236,6 +238,151 @@ function scoreBar({ label, value }: { label: string; value: number }) {
       </div>
       <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
         <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: '999px', boxShadow: `0 0 18px ${color}88` }} />
+      </div>
+    </div>
+  );
+}
+
+/** Touch travel before the panel decides between scrolling itself and panning the map. */
+const PANEL_DRAG_DECISION_PX = 6;
+
+/**
+ * Detail panel for the selected spot.
+ *
+ * Leaflet popups stop their touches from reaching the map, so a tall panel used to sit over
+ * the map as a dead zone: the content did not scroll when it fit and the map did not move
+ * when it did. The panel now owns a scroll surface, keeps a close control on top of it, and
+ * hands a gesture to the map as soon as it has nothing left to scroll in that direction.
+ */
+function SpotPopupPanel({
+  maxHeight,
+  minWidth,
+  onClose,
+  children,
+}: {
+  maxHeight: number;
+  minWidth: number;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const map = useMap();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+
+    let tracking = false;
+    let intent: 'idle' | 'scroll' | 'pan' = 'idle';
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastY = 0;
+
+    const reset = () => {
+      tracking = false;
+      intent = 'idle';
+    };
+
+    const handleStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        reset();
+        return;
+      }
+      const touch = event.touches[0];
+      tracking = true;
+      intent = 'idle';
+      startX = lastX = touch.clientX;
+      startY = lastY = touch.clientY;
+    };
+
+    const handleMove = (event: TouchEvent) => {
+      if (!tracking || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+
+      if (intent === 'idle') {
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        if (Math.abs(dx) < PANEL_DRAG_DECISION_PX && Math.abs(dy) < PANEL_DRAG_DECISION_PX) return;
+        intent = resolvePopupGesture({
+          dx,
+          dy,
+          scrollTop: node.scrollTop,
+          scrollHeight: node.scrollHeight,
+          clientHeight: node.clientHeight,
+        });
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+      }
+
+      if (intent !== 'pan') return;
+      if (event.cancelable) event.preventDefault();
+      map.panBy([lastX - touch.clientX, lastY - touch.clientY], { animate: false });
+      lastX = touch.clientX;
+      lastY = touch.clientY;
+    };
+
+    node.addEventListener('touchstart', handleStart, { passive: true });
+    node.addEventListener('touchmove', handleMove, { passive: false });
+    node.addEventListener('touchend', reset);
+    node.addEventListener('touchcancel', reset);
+
+    return () => {
+      node.removeEventListener('touchstart', handleStart);
+      node.removeEventListener('touchmove', handleMove);
+      node.removeEventListener('touchend', reset);
+      node.removeEventListener('touchcancel', reset);
+    };
+  }, [map]);
+
+  return (
+    <div
+      style={{
+        ...S.popupWrap,
+        position: 'relative',
+        padding: 0,
+        minWidth,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close spot details"
+        title="Close spot details"
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 3,
+          width: 30,
+          height: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '999px',
+          border: '1px solid rgba(148,163,184,0.4)',
+          background: 'rgba(15,23,42,0.9)',
+          color: '#e2e8f0',
+          fontSize: 13,
+          lineHeight: 1,
+          cursor: 'pointer',
+        }}
+      >
+        ✕
+      </button>
+
+      <div
+        ref={scrollRef}
+        style={{
+          maxHeight,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch',
+          padding: 12,
+        }}
+      >
+        {children}
       </div>
     </div>
   );
@@ -495,6 +642,10 @@ export default function FishingMap({
           background: transparent;
           box-shadow: none;
         }
+        /* The spot panel renders its own close control so it stays visible against the dark panel. */
+        .premium-map .leaflet-popup-close-button {
+          display: none;
+        }
         .premium-map .leaflet-control-container {
           z-index: ${MAP_Z_INDEX.leafletControls};
         }
@@ -710,9 +861,13 @@ export default function FishingMap({
                   autoPanPaddingBottomRight={[mapInsets.right, mapInsets.bottom]}
                   eventHandlers={{ add: () => onPopupOpen?.(spot), remove: () => onPopupClose?.() }}
                 >
-                  <div style={{ ...S.popupWrap, minWidth: popupFrame.minWidth, maxHeight: popupFrame.maxHeight }}>
+                  <SpotPopupPanel
+                    minWidth={popupFrame.minWidth}
+                    maxHeight={popupFrame.maxHeight}
+                    onClose={() => markerRefs.current[spot.id]?.getPopup()?.close()}
+                  >
                     <div style={{ marginBottom: 10 }}>
-                      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{spot.name}</h3>
+                      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, paddingRight: 34 }}>{spot.name}</h3>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{spot.water_type} • {spot.spot_type} • {spot.access_type ?? 'Public access'}</div>
                       {spot.ada?.accessible ? (
                         <div role="note" aria-label="ADA accessible fishing" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#1e3a8a', border: '1px solid #60a5fa', color: '#e0f2fe', fontSize: 11 }}>
@@ -887,7 +1042,7 @@ export default function FishingMap({
                         </div>
                       </>
                     )}
-                  </div>
+                  </SpotPopupPanel>
                 </Popup>
 
               </Marker>
