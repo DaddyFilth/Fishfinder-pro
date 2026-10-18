@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const { text: raw, provider: answeredProvider } = await runBrainPromptCompletion({
-      max_tokens: 400,
+      // Enough room for the model's hidden reasoning plus the three-sentence answer;
+      // a tighter cap made Groq return empty generations that failed JSON validation.
+      max_tokens: 900,
       temperature: 0.3,
       response_format: { type: 'json_object' },
       messages: [{

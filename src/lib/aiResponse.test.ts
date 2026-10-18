@@ -54,6 +54,18 @@ describe('model JSON parsing', () => {
     )
   })
 
+  it('keeps the outermost object when a free-form reply wraps it in prose', () => {
+    expect(
+      cleanModelJson('Sure! Here is the analysis:\n{"summary":"ok","emoji_rating":"Good"}\nHope that helps.'),
+    ).toBe('{"summary":"ok","emoji_rating":"Good"}')
+  })
+
+  it('keeps the outermost array when a free-form reply wraps predictions in prose', () => {
+    expect(cleanModelJson('Here you go:\n[{"spot_name":"Lake Hefner"}]\nDone.')).toBe(
+      '[{"spot_name":"Lake Hefner"}]',
+    )
+  })
+
   it('parses and validates an analysis response', () => {
     expect(
       parseModelJson(

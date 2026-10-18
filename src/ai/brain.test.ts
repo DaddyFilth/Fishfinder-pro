@@ -17,9 +17,12 @@ vi.mock('@/lib/groq', () => ({
   getAiVisionModel: vi.fn(() => 'vision-model'),
 }));
 
-import { askBrain, askBrainVision, buildFallbackReply, runBrainPromptCompletion } from './brain';
+import { askBrain, askBrainVision, buildFallbackReply, isJsonModeRejection, runBrainPromptCompletion } from './brain';
 
-function addTarget(provider: AiProvider, impl: (params: { model: string }) => Promise<unknown>): ReturnType<typeof vi.fn> {
+function addTarget(
+  provider: AiProvider,
+  impl: (params: { model: string; response_format?: { type: 'json_object' }; max_tokens?: number }) => Promise<unknown>,
+): ReturnType<typeof vi.fn> {
   const create = vi.fn(impl);
   targets.push({
     provider,
@@ -31,14 +34,17 @@ function addTarget(provider: AiProvider, impl: (params: { model: string }) => Pr
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
+let consoleWarn: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   targets.length = 0;
   consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
   consoleError.mockRestore();
+  consoleWarn.mockRestore();
 });
 
 describe('askBrain provider fallback', () => {
@@ -126,6 +132,71 @@ describe('runBrainPromptCompletion', () => {
 
     expect(completion).toEqual({ text: 'Checklist from OpenCode', provider: 'opencode', model: 'opencode-model' });
     expect(answering).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('JSON mode recovery', () => {
+  it('retries the same provider without forced JSON when it rejects JSON mode', async () => {
+    const create = addTarget('groq', async (params) => {
+      if (params.response_format) {
+        throw new Error(
+          'Groq request failed (400): {"error":{"message":"Failed to validate JSON. Please adjust your prompt.","code":"json_validate_failed"}}',
+        );
+      }
+      return { choices: [{ message: { content: '{"summary":"Fish are active.","emoji_rating":"Good"}' } }] };
+    });
+
+    const completion = await runBrainPromptCompletion({
+      messages: [{ role: 'user', content: 'Analyze these conditions.' }],
+      max_tokens: 400,
+      response_format: { type: 'json_object' },
+    });
+
+    expect(completion.text).toContain('"summary":"Fish are active."');
+    expect(completion.provider).toBe('groq');
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[0][0].response_format).toEqual({ type: 'json_object' });
+    expect(create.mock.calls[1][0].response_format).toBeUndefined();
+    // The rejected attempt burned budget on hidden reasoning; the retry gets more room.
+    expect(create.mock.calls[1][0].max_tokens).toBeGreaterThanOrEqual(1024);
+  });
+
+  it('keeps falling through the chain when the free-form retry also fails', async () => {
+    const failing = addTarget('groq', async () => {
+      throw new Error('Groq request failed (400): json_validate_failed');
+    });
+    addTarget('openai', async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }));
+
+    const completion = await runBrainPromptCompletion({
+      messages: [{ role: 'user', content: 'Analyze these conditions.' }],
+      response_format: { type: 'json_object' },
+    });
+
+    expect(completion.provider).toBe('openai');
+    expect(failing).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry unrelated provider failures', async () => {
+    const failing = addTarget('groq', async () => {
+      throw new Error('groq outage');
+    });
+
+    await expect(
+      runBrainPromptCompletion({
+        messages: [{ role: 'user', content: 'Analyze these conditions.' }],
+        response_format: { type: 'json_object' },
+      }),
+    ).rejects.toThrow('groq outage');
+
+    expect(failing).toHaveBeenCalledTimes(1);
+  });
+
+  it('recognizes the provider JSON-mode rejection messages', () => {
+    expect(isJsonModeRejection(new Error('code json_validate_failed'))).toBe(true);
+    expect(isJsonModeRejection(new Error('Failed to generate JSON. See failed_generation.'))).toBe(true);
+    expect(isJsonModeRejection(new Error('Groq returned an empty response'))).toBe(true);
+    expect(isJsonModeRejection(new Error('groq outage'))).toBe(false);
+    expect(isJsonModeRejection('json_validate_failed')).toBe(false);
   });
 });
 

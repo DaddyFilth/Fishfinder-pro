@@ -103,11 +103,24 @@ export const SmartAnalysisSchema = z.object({
 export type SmartAnalysis = z.infer<typeof SmartAnalysisSchema>
 
 export function cleanModelJson(content: string): string {
-  return content
+  const cleaned = content
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim()
+
+  // Free-form retries (used when a provider rejects forced JSON mode) can wrap the
+  // value in a sentence; keep the outermost JSON value so the parse still succeeds.
+  if (!/^(?:\[|\{)/.test(cleaned)) {
+    const objectStart = cleaned.indexOf('{')
+    const arrayStart = cleaned.indexOf('[')
+    const useArray = arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)
+    const start = useArray ? arrayStart : objectStart
+    const end = useArray ? cleaned.lastIndexOf(']') : cleaned.lastIndexOf('}')
+    if (start !== -1 && end > start) return cleaned.slice(start, end + 1)
+  }
+
+  return cleaned
 }
 
 export function parseModelJson<T>(content: string, schema: z.ZodType<T>): T {

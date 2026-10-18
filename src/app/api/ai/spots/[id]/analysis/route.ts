@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
 import { SPECIES } from '@/lib/speciesCatalog'
+import { cleanModelJson } from '@/lib/aiResponse'
 import { askBrain, type BrainContext } from '@/ai/brain'
 import { enforceRateLimit, isSameOrigin, readJsonBody } from '@/lib/security'
 
@@ -89,7 +90,7 @@ Rules: keep confidence lower when provider conditions are missing; never call ca
       responseFormat: { type: 'json_object' },
     })
     const raw = text || '{}'
-    const parsedJson = JSON.parse(raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, ''))
+    const parsedJson = JSON.parse(cleanModelJson(raw))
     const analysis = AnalysisSchema.parse(parsedJson)
     if (analysis.spot_id !== spot.id || analysis.spot_name !== spot.name) {
       return NextResponse.json({ error: 'AI returned a mismatched spot identity.' }, { status: 502 })

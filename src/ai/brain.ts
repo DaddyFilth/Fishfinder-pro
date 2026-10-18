@@ -71,6 +71,18 @@ export interface ProviderCompletion {
 }
 
 /**
+ * Groq's forced-JSON mode intermittently rejects prompts it cannot coerce into an
+ * object (`json_validate_failed`, sometimes with an empty generation) even though the
+ * prompt demands JSON, and the failure class also surfaces as an empty completion
+ * once the client's own retries are spent. Detected provider-agnostically from the
+ * error message so every provider in the chain gets the same recovery.
+ */
+export function isJsonModeRejection(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return /json_validate_failed|failed to (?:validate|generate) json|returned an empty response/i.test(error.message)
+}
+
+/**
  * Walks the configured provider chain (Groq, then OpenAI, then OpenCode) and
  * returns the first non-empty completion. Each provider is tried with its own
  * model, so a model name valid for one provider is never sent to another.
@@ -84,16 +96,34 @@ async function completeChat(params: BrainParams, useVision = false): Promise<Pro
   for (let index = 0; index < targets.length; index += 1) {
     const target = targets[index];
     const model = index === 0 && params.model ? params.model : useVision ? target.visionModel : target.model;
+    const baseParams = {
+      model,
+      messages: params.messages,
+      ...(params.temperature !== undefined && { temperature: params.temperature }),
+      ...(params.max_tokens !== undefined && { max_tokens: params.max_tokens }),
+      ...(params.top_p !== undefined && { top_p: params.top_p }),
+      stream: false as const,
+    };
+
     try {
-      const response = await target.client.chat.completions.create({
-        model,
-        messages: params.messages,
-        ...(params.temperature !== undefined && { temperature: params.temperature }),
-        ...(params.max_tokens !== undefined && { max_tokens: params.max_tokens }),
-        ...(params.top_p !== undefined && { top_p: params.top_p }),
-        ...(params.response_format !== undefined && { response_format: params.response_format }),
-        stream: false,
-      });
+      let response: BrainProviderResult;
+      try {
+        response = await target.client.chat.completions.create({
+          ...baseParams,
+          ...(params.response_format !== undefined && { response_format: params.response_format }),
+        });
+      } catch (error) {
+        if (params.response_format === undefined || !isJsonModeRejection(error)) throw error;
+        // Ask again without the forced JSON mode: the prompt still demands JSON and
+        // callers parse the answer leniently, so a rejected coercion is recoverable.
+        // The rejected attempt usually spent its budget on hidden reasoning, so the
+        // retry gets enough room to finish an object.
+        console.warn(`[brain] ${target.provider} rejected JSON mode; retrying without forced JSON`);
+        response = await target.client.chat.completions.create({
+          ...baseParams,
+          max_tokens: Math.max(params.max_tokens ?? 0, 1024),
+        });
+      }
       const text = response.choices[0]?.message?.content?.trim();
       if (text) return { text, provider: target.provider, model };
       lastError = new Error(`${target.provider} returned no text`);
