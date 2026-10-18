@@ -396,6 +396,7 @@ export default function FishingMap({
   spotDataStatusLabel,
   userLocation,
   selectedSpot,
+  spotFocusSignal = 0,
   sheetOpen = false,
   onSpotSelect,
   onPopupOpen,
@@ -408,6 +409,8 @@ export default function FishingMap({
   spotDataStatusLabel: string;
   userLocation?: { latitude: number; longitude: number } | null;
   selectedSpot?: Spot | null;
+  /** Bumped by the parent so picking the already-selected spot still flies to it and opens its panel. */
+  spotFocusSignal?: number;
   sheetOpen?: boolean;
   onSpotSelect?: (spot: Spot) => void;
   onPopupOpen?: (spot: Spot) => void;
@@ -1059,6 +1062,7 @@ export default function FishingMap({
 
           <SpotFocusController
             spot={selectedSpot ?? null}
+            focusSignal={spotFocusSignal}
             insets={mapInsets}
             size={mapSize}
             markerRefs={markerRefs}

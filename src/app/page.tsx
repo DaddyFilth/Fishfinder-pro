@@ -303,6 +303,8 @@ export default function MobilePage() {
   const [backHint, setBackHint] = useState(false);
   const lastBackAtRef = useRef(0);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  /** Incremented on a search pick so the map re-focuses even when the same spot was already selected. */
+  const [spotFocusSignal, setSpotFocusSignal] = useState(0);
   const [, setMapPopupOpen] = useState(false);
   const [mapFilter, setMapFilter] = useState<SpotFilter>('all');
   const [conditionScores, setConditionScores] = useState<Record<string, number>>({});
@@ -624,6 +626,8 @@ export default function MobilePage() {
     // A water hidden by the active filter has no marker to fly to, so reveal it first.
     if (!visibleSpots.some((candidate) => candidate.id === spot.id)) setMapFilter('all');
     setSelectedSpot(spot);
+    // Searching the same water twice must still fly over and reopen its panel.
+    setSpotFocusSignal((signal) => signal + 1);
     setMapPopupOpen(true);
   };
   const toggleMapLayer = (key: keyof MapLayers) => {
@@ -695,6 +699,7 @@ export default function MobilePage() {
               spotDataStatusLabel={mapStatusLabel(cacheSource, isOnline)}
               userLocation={coordinates}
               selectedSpot={selectedSpot}
+              spotFocusSignal={spotFocusSignal}
               sheetOpen={sheetOpen}
               onSpotSelect={(spot) => {
                 setSelectedSpot(spot);

@@ -34,6 +34,7 @@ const SETTLE_TOLERANCE_PX = 2;
  */
 export default function SpotFocusController({
   spot,
+  focusSignal = 0,
   insets,
   size,
   markerRefs,
@@ -41,6 +42,8 @@ export default function SpotFocusController({
   maxZoom = MAP_MAX_ZOOM,
 }: {
   spot?: FocusTarget | null;
+  /** Changes whenever the parent forces a re-focus, even if the spot itself did not change. */
+  focusSignal?: number;
   insets: ViewportInsets;
   size: { width: number; height: number };
   markerRefs: SpotMarkerRegistry;
@@ -105,7 +108,7 @@ export default function SpotFocusController({
       window.clearTimeout(timer);
       map.off('moveend', openPopupOnce);
     };
-  }, [bottom, height, left, map, markerRefs, maxZoom, minZoom, right, spotId, spotLat, spotLng, top, width]);
+  }, [bottom, focusSignal, height, left, map, markerRefs, maxZoom, minZoom, right, spotId, spotLat, spotLng, top, width]);
 
   return null;
 }
