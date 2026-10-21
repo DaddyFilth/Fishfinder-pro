@@ -269,10 +269,26 @@ CREATE TABLE IF NOT EXISTS public.environmental_snapshots (
   air_temp_c numeric,
   wind_speed_ms numeric,
   water_temp_c numeric,
+  water_level_m numeric,
+  flow_rate_cfs numeric,
+  dissolved_oxygen_mgl numeric,
+  wave_height_m numeric,
+  wave_period_s numeric,
+  swell_direction_deg numeric,
+  tide_height_m numeric,
+  fishing_score numeric,
+  score_breakdown jsonb NOT NULL DEFAULT '{}'::jsonb,
+  data_sources jsonb NOT NULL DEFAULT '[]'::jsonb,
+  data_mode text,
+  bite_score numeric,
+  bite_level text,
+  ai_micro_spots jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
   raw_data jsonb
 );
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_spot_time ON public.environmental_snapshots (spot_id, captured_at DESC);
+CREATE INDEX IF NOT EXISTS environmental_snapshots_captured_at_idx ON public.environmental_snapshots (captured_at DESC);
 ALTER TABLE public.environmental_snapshots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "environmental_snapshots_read_public" ON public.environmental_snapshots;
