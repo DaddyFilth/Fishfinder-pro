@@ -100,11 +100,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         url: siteUrl,
         description,
         inLanguage: 'en-US',
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: `${siteUrl}/fishing-spots?query={search_term_string}`,
-          'query-input': 'required name=search_term_string',
-        },
       },
     ],
   };
