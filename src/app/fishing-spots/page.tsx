@@ -15,7 +15,26 @@ export const metadata: Metadata = {
   },
 }
 
-export default function FishingSpotsIndexPage() {
+function matchesQuery(spot: (typeof DEFAULT_SPOTS)[number], query: string) {
+  const haystack = [spot.name, spot.region, spot.spot_type, spot.access_type, spot.description, spot.notes]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => haystack.includes(term))
+}
+
+export default async function FishingSpotsIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string | string[] }>
+}) {
+  const { query: rawQuery } = await searchParams
+  const query = (Array.isArray(rawQuery) ? rawQuery[0] : rawQuery)?.trim().slice(0, 100) ?? ''
+  const spots = query ? DEFAULT_SPOTS.filter((spot) => matchesQuery(spot, query)) : DEFAULT_SPOTS
   return (
     <main className="seo-page">
       <header className="seo-page__header">
@@ -27,7 +46,8 @@ export default function FishingSpotsIndexPage() {
       <section aria-labelledby="spot-directory-heading">
         <h2 id="spot-directory-heading">Public waters by location</h2>
         <div className="seo-card-grid">
-          {DEFAULT_SPOTS.map((spot) => (
+          {spots.length === 0 ? <p>No public waters match “{query}”.</p> : null}
+          {spots.map((spot) => (
             <article className="seo-card" key={spot.id}>
               <h3><Link href={`/fishing-spots/${spotSlug(spot)}`}>{spot.name}</Link></h3>
               <p>{spot.region} · {spot.spot_type} · {spot.access_type}</p>
