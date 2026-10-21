@@ -17,6 +17,32 @@ export const OKLAHOMA_BOUNDS = {
   maxLng: -94.430,
 } as const;
 
+const SPECIES_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
+  ['Largemouth bass', /largemouth|\bbass\b/i],
+  ['Channel catfish', /catfish/i],
+  ['Bluegill', /bluegill/i],
+  ['Redear sunfish', /redear/i],
+  ['Rainbow trout', /trout/i],
+];
+
+const AMENITY_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
+  ['Boat ramp', /ramp|launch|marina/i],
+  ['Fishing pier/dock', /pier|dock|jett(?:y|ies)|pads/i],
+  ['Camping', /camp/i],
+  ['Shoreline access', /shore/i],
+  ['Wheelchair-accessible fishing', /accessible/i],
+];
+
+/** Last review of the bundled catalog metadata; bump when the catalog is refreshed. */
+export const CATALOG_METADATA_UPDATED_AT = '2026-10-21';
+
+export function deriveSpotTags(
+  notes: string,
+  patterns: ReadonlyArray<readonly [string, RegExp]>,
+): string[] {
+  return patterns.filter(([, re]) => re.test(notes)).map(([label]) => label);
+}
+
 const spot = (
   id: number,
   name: string,
@@ -39,6 +65,9 @@ const spot = (
   notes,
   depth_metadata: depthMetadata(spot_type),
   ada: deriveAdaInfo(notes),
+  species: deriveSpotTags(notes, SPECIES_PATTERNS),
+  amenities: deriveSpotTags(notes, AMENITY_PATTERNS),
+  metadata_updated_at: CATALOG_METADATA_UPDATED_AT,
 });
 
 function depthMetadata(spotType: Spot['spot_type']): SpotDepthMetadata {
@@ -176,6 +205,9 @@ export function mergeWithDefaultSpots(providerSpots: readonly Spot[]): Spot[] {
       region: providerSpot?.region ?? catalogSpot.region,
       notes: providerSpot?.notes ?? catalogSpot.notes,
       description: providerSpot?.description ?? catalogSpot.description,
+      species: providerSpot?.species?.length ? providerSpot.species : catalogSpot.species,
+      amenities: providerSpot?.amenities?.length ? providerSpot.amenities : catalogSpot.amenities,
+      metadata_updated_at: providerSpot?.metadata_updated_at ?? catalogSpot.metadata_updated_at,
     };
   });
 }

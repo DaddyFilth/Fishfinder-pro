@@ -1,9 +1,9 @@
 -- Reconstructed from the deployed schema on project dkafqgapepebzjtoghos.
 --
--- This migration was applied straight to the remote database and had no file in
--- the repo, which made `supabase db push` / the Supabase Preview check fail with
--- "Remote migration versions not found in local migrations directory". The file
--- below reproduces the deployed shape so local and remote agree.
+-- This migration was applied straight to the remote database without a file in
+-- the repo, which made `supabase db push` fail with "Remote migration versions
+-- not found in local migrations directory". This reproduces the deployed shape
+-- so local and remote agree.
 --
 -- environmental_snapshots stores the conditions sampled for a spot at a point in
 -- time and backs the /api/spots/[id]/conditions history view. Additive and safe to

@@ -1,59 +1,41 @@
+import { createClient } from '@supabase/supabase-js';
+import { loadLocalEnv } from './env';
 import type { ScrapeRecord } from './lib';
 
 const BATCH = 200;
-const WORKER_URL_ENVS = ['CLOUDFLARE_WORKER_URL', 'WORKER_URL', 'SPOTS_WORKER_URL'] as const;
-const WORKER_TOKEN_ENVS = ['CLOUDFLARE_WORKER_TOKEN', 'INGEST_TOKEN', 'SPOTS_WORKER_TOKEN'] as const;
 
 function resolveEnv(names: readonly string[]): string | undefined {
   for (const name of names) {
-    const value = process.env[name];
-    if (value && value.trim()) return value.trim();
+    const value = process.env[name]?.trim();
+    if (value) return value;
   }
   return undefined;
 }
 
-export async function pushToWorker(records: ScrapeRecord[]): Promise<void> {
-  const rawUrl = resolveEnv(WORKER_URL_ENVS);
-  const token = resolveEnv(WORKER_TOKEN_ENVS);
+/** Upsert scraped records into public.spot_metadata using the Supabase service role. */
+export async function pushToSupabase(records: ScrapeRecord[]): Promise<void> {
+  loadLocalEnv();
+  const url = resolveEnv(['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']);
+  const key = resolveEnv(['SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY']);
 
-  if (!rawUrl || !token) {
+  if (!url || !key) {
     console.warn(
-      'Cloudflare worker URL or token is not configured (expected one of %s / %s) — skipping push.',
-      WORKER_URL_ENVS.join(', '),
-      WORKER_TOKEN_ENVS.join(', '),
+      'Supabase is not configured (need SUPABASE_URL and SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY) — skipping push.',
     );
     return;
   }
 
-  let workerUrl: string;
-  try {
-    const parsed = new URL(rawUrl);
-    workerUrl = parsed.toString().replace(/\/+$/, '');
-  } catch {
-    console.warn('Invalid Cloudflare worker URL (%s) - skipping push.', rawUrl);
-    return;
-  }
-
-  const endpoint = `${workerUrl}/ingest`;
+  const supabase = createClient(url, key, { auth: { persistSession: false } });
   let total = 0;
 
   for (let i = 0; i < records.length; i += BATCH) {
     const batch = records.slice(i, i + BATCH);
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ records: batch }),
-      signal: AbortSignal.timeout(30_000),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => '(unreadable)');
-      throw new Error(`ingest failed ${res.status}: ${body.slice(0, 500)}`);
-    }
-
-    const data = (await res.json()) as { upserted?: number };
-    total += data.upserted ?? batch.length;
+    const { error } = await supabase
+      .from('spot_metadata')
+      .upsert(batch, { onConflict: 'source_url,name' });
+    if (error) throw new Error(`spot_metadata upsert failed: ${error.message}`);
+    total += batch.length;
   }
 
-  console.log(`pushed ${total} records -> ${endpoint}`);
+  console.log(`pushed ${total} records -> supabase public.spot_metadata`);
 }

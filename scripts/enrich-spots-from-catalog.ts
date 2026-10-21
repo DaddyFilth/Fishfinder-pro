@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { loadLocalEnv } from './scrape/env';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 
 /**
@@ -28,6 +29,8 @@ type SpotRow = {
   access_type: string | null;
   region: string | null;
   notes: string | null;
+  species?: string[] | null;
+  amenities?: string[] | null;
 };
 
 type CoordRow = { id: string; name: string; lat: number | null; lng: number | null };
@@ -38,13 +41,14 @@ function short(value: string | null | undefined): string {
 }
 
 async function main() {
+  loadLocalEnv();
   const dryRun = process.argv.includes('--dry-run');
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SECRET_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Set SUPABASE_URL and SUPABASE_SECRET_KEY in the environment.');
+    throw new Error('Set SUPABASE_URL and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) in the environment.');
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -52,7 +56,7 @@ async function main() {
 
   const { data: rows, error } = await supabase
     .from('spots')
-    .select('id, name, spot_type, access_type, region, notes')
+    .select('id, name, spot_type, access_type, region, notes, species, amenities')
     .order('id', { ascending: true });
 
   if (error) throw error;
@@ -68,16 +72,22 @@ async function main() {
       continue;
     }
 
-    const patch: Record<string, string | null> = {};
+    const patch: Record<string, string | string[] | null> = {};
     if (row.spot_type !== known.spot_type) patch.spot_type = known.spot_type;
     if ((row.access_type ?? null) !== (known.access_type ?? null)) patch.access_type = known.access_type ?? null;
     if ((row.region ?? null) !== (known.region ?? null)) patch.region = known.region ?? null;
     if ((row.notes ?? null) !== (known.notes ?? null)) patch.notes = known.notes ?? null;
 
+    const sameList = (a?: string[] | null, b?: string[] | null) =>
+      JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+    if (!sameList(row.species, known.species)) patch.species = known.species ?? [];
+    if (!sameList(row.amenities, known.amenities)) patch.amenities = known.amenities ?? [];
+    if (Object.keys(patch).length > 0) patch.metadata_updated_at = new Date().toISOString();
+
     if (Object.keys(patch).length === 0) continue;
 
     const changed = Object.entries(patch)
-      .map(([field, value]) => `${field}=${short(value)}`)
+      .map(([field, value]) => `${field}=${short(Array.isArray(value) ? value.join('|') : value)}`)
       .join(', ');
     console.log(`${dryRun ? '[dry-run] ' : ''}updating ${row.id} ${known.name}: ${changed}`);
 

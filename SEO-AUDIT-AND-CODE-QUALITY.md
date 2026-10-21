@@ -42,7 +42,7 @@ No content-cluster or locale chart is generated because no landing-page traffic 
 
 ## Site Architecture
 
-**Verdict: the crawl architecture is clean but intentionally shallow; it helps index control while limiting discovery.** `robots.ts` allows the public root and disallows private/API/auth paths. `sitemap.ts` contains only the root, avoiding low-value application routes. The new `public/manus-routes.json` declares the public page route for preview diagnostics.
+**Verdict: the crawl architecture is clean but intentionally shallow; it helps index control while limiting discovery.** `robots.ts` allows the public root and disallows private/API/auth paths. `sitemap.ts` contains only the root, avoiding low-value application routes. The new `public/manus-routes.json` declares the public page route for deployment diagnostics.
 
 There are no crawl exports to measure click depth, orphan pages, internal-link equity, or crawl waste. The observed structural gap is that the 76 locations and species catalog are application state, not linked public documents. The fix is a server-rendered public route hierarchy, for example `/fishing-spots/[slug]` and `/species/[slug]`, only after the data and access claims are verified.
 

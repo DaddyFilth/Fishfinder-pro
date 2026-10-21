@@ -52,7 +52,7 @@
 - [ ] Name: `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] Value: (Supabase service role secret from Settings → API)
 - [ ] Check: **Production ONLY** ⚠️
-- [ ] DO NOT check Preview or Development
+- [ ] DO NOT check Development
 - [ ] Click Add
 
 **Variable 4: REDIS_URL**
@@ -117,10 +117,6 @@
 - [ ] Verify SUPABASE_SERVICE_ROLE_KEY is set in Production
 - [ ] Check Supabase API is accessible
 - [ ] Review Vercel function logs
-
-### Preview deployments fail
-- [ ] Add public Supabase variables to Preview only if you intend to run preview deployments
-- [ ] Secret keys should be Production only
 
 ### Slow first request
 - [ ] Normal for Next.js serverless functions

@@ -45,6 +45,9 @@ export interface Spot {
   description?: string;
   depth_metadata?: SpotDepthMetadata;
   ada?: SpotAdaInfo;
+  species?: string[];
+  amenities?: string[];
+  metadata_updated_at?: string;
   usgs_site_id?: string;
   noaa_station_id?: string;
   biteScore?: { score: number; level: string; reasons?: string[] } | null;

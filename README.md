@@ -81,7 +81,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key
 ```
 
-The profile role migration is additive and backfills existing profiles as `angler`. The supported roles are `angler`, `moderator`, and `admin`; only administrators can change roles, and the final administrator cannot demote themselves. Profile management is available at `/account`, while `/admin/users` and `/api/admin/users` require the `admin` role. In Supabase **Authentication → URL Configuration**, set the production Site URL, add the deployed callback URL `https://your-domain.example/auth/callback`, and add any preview or staging callback URLs that should be able to complete email confirmation and password-reset flows. For local development, add `http://localhost:3000/auth/callback`.
+The profile role migration is additive and backfills existing profiles as `angler`. The supported roles are `angler`, `moderator`, and `admin`; only administrators can change roles, and the final administrator cannot demote themselves. Profile management is available at `/account`, while `/admin/users` and `/api/admin/users` require the `admin` role. In Supabase **Authentication → URL Configuration**, set the production Site URL and add the deployed callback URL `https://your-domain.example/auth/callback` so email confirmation and password-reset flows can complete. For local development, add `http://localhost:3000/auth/callback`.
 
 To deploy from the Codespaces terminal, import the repository into Vercel and configure the same environment variables there. Vercel detects the Next.js build automatically; do not add `.env.local` or any credentials to the repository.
 

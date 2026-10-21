@@ -17,7 +17,7 @@ interface IDResult {
 
 export default function FishIdentifier() {
   const [result, setResult] = useState<IDResult | null>(null)
-  const [preview, setPreview] = useState('')
+  const [selectedImage, setSelectedImage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [cameraOpen, setCameraOpen] = useState(false)
@@ -81,7 +81,7 @@ export default function FishIdentifier() {
     const reader = new FileReader()
     reader.onload = (loadEvent) => {
       const dataUrl = typeof loadEvent.target?.result === 'string' ? loadEvent.target.result : ''
-      if (dataUrl) { setPreview(dataUrl); void identify(dataUrl) }
+      if (dataUrl) { setSelectedImage(dataUrl); void identify(dataUrl) }
     }
     reader.readAsDataURL(file)
   }
@@ -100,14 +100,14 @@ export default function FishIdentifier() {
     if (!context) { setError('Could not capture the camera frame.'); return }
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
-    setPreview(dataUrl)
+    setSelectedImage(dataUrl)
     stopCamera()
     void identify(dataUrl)
   }
 
   const reset = () => {
     stopCamera()
-    setPreview('')
+    setSelectedImage('')
     setResult(null)
     setError('')
     if (fileRef.current) fileRef.current.value = ''
@@ -117,7 +117,7 @@ export default function FishIdentifier() {
     <div style={{ fontFamily: 'system-ui,sans-serif', color: 'white' }}>
       <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold', marginBottom: '6px' }}>AI FISH IDENTIFIER</div>
       <p style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.45, margin: '0 0 10px' }}>Allow camera access to scan a catch, or upload a photo. The image is sent to the AI identification route only after you capture or choose it.</p>
-      {!preview && !cameraOpen && (
+      {!selectedImage && !cameraOpen && (
         <div style={{ display: 'grid', gap: 8 }}>
           <button type="button" onClick={() => void openCamera()} disabled={cameraStatus === 'requesting'} style={{ width: '100%', background: 'linear-gradient(135deg,#0369a1,#7c3aed)', color: 'white', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
             {cameraStatus === 'requesting' ? 'Requesting camera permission…' : 'Open Camera to Scan Catch'}
@@ -128,16 +128,16 @@ export default function FishIdentifier() {
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
       {cameraOpen && (
         <div style={{ marginBottom: 8 }}>
-          <video ref={videoRef} autoPlay playsInline muted aria-label="Live camera preview of catch" style={{ width: '100%', borderRadius: 8, maxHeight: 260, objectFit: 'cover', background: '#020617' }} />
+          <video ref={videoRef} autoPlay playsInline muted aria-label="Live camera view of catch" style={{ width: '100%', borderRadius: 8, maxHeight: 260, objectFit: 'cover', background: '#020617' }} />
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button type="button" onClick={capturePhoto} style={{ flex: 1, background: '#0891b2', color: 'white', border: 0, padding: 10, borderRadius: 8, fontWeight: 700 }}>Capture and identify</button>
             <button type="button" onClick={stopCamera} style={{ background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', padding: '10px 12px', borderRadius: 8 }}>Cancel</button>
           </div>
         </div>
       )}
-      {preview && (
+      {selectedImage && (
         <div style={{ position: 'relative', marginBottom: 8 }}>
-          <img src={preview} alt="Catch photo for species identification" style={{ width: '100%', borderRadius: 8, maxHeight: 220, objectFit: 'cover' }} />
+          <img src={selectedImage} alt="Catch photo for species identification" style={{ width: '100%', borderRadius: 8, maxHeight: 220, objectFit: 'cover' }} />
           {loading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#7dd3fc', fontSize: 12 }}>AI identifying species…</span></div>}
         </div>
       )}
