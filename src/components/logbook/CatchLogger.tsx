@@ -145,7 +145,7 @@ export default function CatchLogger({ spotId, spotName, lat, lng }: Props) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display:'none' }} />
           </div>
           {form.photo_url && (
-            <img src={form.photo_url} alt="Catch photo preview" style={{ width:'100%', borderRadius:'6px', maxHeight:'100px', objectFit:'cover', marginBottom:'6px' }} />
+            <img src={form.photo_url} alt="Catch photo" style={{ width:'100%', borderRadius:'6px', maxHeight:'100px', objectFit:'cover', marginBottom:'6px' }} />
           )}
           <button onClick={save} disabled={saving}
             style={{ width:'100%', background: saving?'#1e3a5f':'#0369a1', color:'white', border:'none', padding:'7px', borderRadius:'6px', fontSize:'12px', fontWeight:'bold', cursor: saving?'default':'pointer' }}>

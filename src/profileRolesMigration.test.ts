@@ -1,5 +1,5 @@
-// Guards the profile-roles migration that Supabase preview branches and the
-// production migration workflow both execute. It previously assumed the
+// Guards the profile-roles migration that local and production checks execute.
+// It previously assumed the
 // `profiles.role` column already existed, which failed those checks with
 // `column "role" does not exist (SQLSTATE 42703)`. Assertions on migration
 // source match the style of androidSdkWorkflows.test.ts.
