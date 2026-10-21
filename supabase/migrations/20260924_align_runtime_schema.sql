@@ -102,12 +102,28 @@ ALTER TABLE public.catches
 ALTER TABLE public.catches DROP CONSTRAINT IF EXISTS catches_spot_id_fkey;
 
 -- `catches` already exists on deployments that predate this file, so the
--- CREATE TABLE IF NOT EXISTS above is a no-op there. Add the visibility field
--- with the conservative private default before app queries rely on it.
+-- CREATE TABLE IF NOT EXISTS above is a no-op there. Legacy deployments may
+-- lack is_public or store it as text; normalize it to boolean before setting
+-- the default so the migration cannot abort and skip later hardening.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'catches'
+      AND column_name = 'is_public'
+      AND data_type <> 'boolean'
+  ) THEN
+    ALTER TABLE public.catches ALTER COLUMN is_public DROP DEFAULT;
+    ALTER TABLE public.catches
+      ALTER COLUMN is_public TYPE boolean
+      USING (lower(btrim(is_public::text)) IN ('true', 't', '1', 'yes', 'y', 'on'));
+  END IF;
+END $$;
+
 UPDATE public.catches SET is_public = false WHERE is_public IS NULL;
-ALTER TABLE public.catches
-  ALTER COLUMN is_public SET DEFAULT false,
-  ALTER COLUMN is_public SET NOT NULL;
+ALTER TABLE public.catches ALTER COLUMN is_public SET DEFAULT false;
+ALTER TABLE public.catches ALTER COLUMN is_public SET NOT NULL;
 DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_update_policy" ON public.catches;
