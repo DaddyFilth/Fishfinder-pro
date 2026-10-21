@@ -36,6 +36,7 @@ type AnalysisResult = {
 type Props = {
   spot?: { id?: string; name?: string; lat?: number; lng?: number; water_type?: string } | null;
   coordinates?: { latitude: number; longitude: number } | null;
+  targetSpecies?: string | null;
 };
 
 const statusColor: Record<SourceRow['status'], string> = {
@@ -44,8 +45,9 @@ const statusColor: Record<SourceRow['status'], string> = {
   unavailable: '#f87171',
 };
 
-export default function SmartAnalyticsPanel({ spot, coordinates }: Props) {
+export default function SmartAnalyticsPanel({ spot, coordinates, targetSpecies: initialTargetSpecies }: Props) {
   const [loading, setLoading] = useState(false);
+  const [targetSpecies, setTargetSpecies] = useState(initialTargetSpecies ?? '');
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +70,7 @@ export default function SmartAnalyticsPanel({ spot, coordinates }: Props) {
           lng,
           saltwater: spot?.water_type === 'saltwater',
           ...(spot?.name ? { region: spot.name } : {}),
+          ...(targetSpecies.trim() ? { targetSpecies: targetSpecies.trim() } : {}),
         }),
       });
       const payload: unknown = await response.json().catch(() => ({}));
@@ -104,6 +107,15 @@ export default function SmartAnalyticsPanel({ spot, coordinates }: Props) {
           <div style={styles.title}>Smart analysis</div>
           <div style={styles.muted}>{label} · provider conditions, stored history, catalog, catch log and research compared by Fishbot</div>
         </div>
+        <label style={{ display: 'block', marginTop: 8, fontSize: 11, color: '#94a3b8' }}>
+          Target species (optional)
+          <input
+            value={targetSpecies}
+            onChange={(event) => setTargetSpecies(event.target.value)}
+            placeholder="e.g. Largemouth Bass"
+            style={{ width: '100%', marginTop: 4, background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', color: '#e2e8f0', fontSize: 12, boxSizing: 'border-box' }}
+          />
+        </label>
         <button type="button" onClick={() => void run()} disabled={loading} style={{ ...styles.button, opacity: loading ? 0.6 : 1 }}>
           {loading ? 'Analyzing…' : result ? 'Re-run' : 'Run analysis'}
         </button>
