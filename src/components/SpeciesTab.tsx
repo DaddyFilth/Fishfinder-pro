@@ -125,6 +125,20 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
     return matchesFilter && matchesGroup && matchesStatus && matchesState && matchesSearch;
   });
 
+  const groupedSpecies = useMemo(() => {
+    const groups = new Map<string, Species[]>();
+    filtered.forEach((species) => {
+      const group = groups.get(species.group) ?? [];
+      group.push(species);
+      groups.set(species.group, group);
+    });
+    return [...groups.entries()];
+  }, [filtered]);
+
+  function identificationHint(species: Species) {
+    return species.imageAlt.replace(/^(?:A|An) /, '').replace(/\.$/, '');
+  }
+
   if (selected) {
     return (
       <div style={{ height: '100%', overflowY: 'auto', background: '#060d1a' }}>
@@ -324,43 +338,29 @@ export default function SpeciesTab({ coordinates }: { coordinates?: Coordinates 
           </div>
         </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {filtered.map((species) => (
-          <button
-            key={species.id}
-            onClick={() => setSelected(species)}
-            style={{ background: '#0a0f1e', border: '1px solid #1e293b', borderRadius: '12px', padding: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.2s' }}
-          >
-            <img
-              src={species.image}
-onError={(event) => {
-                  const image = event.currentTarget;
-                  const remoteFallback = getFallbackImage(species.name);
-                  if (image.src.endsWith(remoteFallback)) {
-                    image.src = OFFLINE_FISH_IMAGE;
-                  } else if (!image.src.endsWith(OFFLINE_FISH_IMAGE)) {
-                    image.src = remoteFallback;
-                  }
-                }}
-              alt={species.imageAlt}
-              width={72}
-              height={56}
-              style={{ width: '72px', height: '56px', flexShrink: 0, borderRadius: '8px', objectFit: 'cover', border: '1px solid #1e4080' }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '2px' }}>{species.name}</div>
-              <div style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic', marginBottom: '6px' }}>{species.scientificName}</div>
-              <div style={{ fontSize: '10px', color: '#67e8f9', marginBottom: '6px' }}>Bite rate {biteRateFor(species, condition)}/100 · {species.bestTime}</div>
-              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                <span style={{ background: '#0c4a6e', color: '#7dd3fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.habitat}</span>
-                <span style={{ background: '#312e81', color: '#c4b5fd', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.group}</span>
-                <span style={{ background: species.oklahomaStatus === 'Game fish' ? '#14532d' : species.oklahomaStatus === 'Special concern' ? '#7f1d1d' : '#164e63', color: species.oklahomaStatus === 'Game fish' ? '#86efac' : species.oklahomaStatus === 'Special concern' ? '#fecaca' : '#a5f3fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.oklahomaStatus}</span>
-                <span style={{ background: species.difficulty === 'Easy' ? '#14532d' : species.difficulty === 'Medium' ? '#713f12' : '#7f1d1d', color: species.difficulty === 'Easy' ? '#4ade80' : species.difficulty === 'Medium' ? '#fbbf24' : '#f87171', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.difficulty}</span>
-                <span style={{ background: '#1e1b4b', color: '#a5b4fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>Record: {species.record}</span>
-              </div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {groupedSpecies.map(([group, speciesInGroup]) => (
+          <section key={group} aria-labelledby={`species-group-${group}`}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <h2 id={`species-group-${group}`} style={{ margin: 0, color: '#e2e8f0', fontSize: '13px', letterSpacing: '0.04em' }}>{group}</h2>
+              <span style={{ color: '#64748b', fontSize: '10px' }}>{speciesInGroup.length} guide {speciesInGroup.length === 1 ? 'entry' : 'entries'}</span>
             </div>
-            <div aria-hidden="true" style={{ color: '#64748b', fontSize: '16px' }}>❯</div>
-          </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {speciesInGroup.map((species) => (
+                <button key={species.id} onClick={() => setSelected(species)} style={{ background: 'linear-gradient(105deg, #0a0f1e 0%, #0d1726 100%)', border: '1px solid #1e293b', borderRadius: '12px', padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'stretch', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                  <img src={species.image} onError={(event) => { const image = event.currentTarget; const remoteFallback = getFallbackImage(species.name); if (image.src.endsWith(remoteFallback)) image.src = OFFLINE_FISH_IMAGE; else if (!image.src.endsWith(OFFLINE_FISH_IMAGE)) image.src = remoteFallback; }} alt={species.imageAlt} width={104} height={132} style={{ width: '104px', minHeight: '132px', flexShrink: 0, objectFit: 'cover', borderRight: '1px solid #1e4080' }} />
+                  <div style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><div style={{ fontSize: '14px', fontWeight: 'bold', color: '#f8fafc' }}>{species.name}</div><div aria-hidden="true" style={{ color: '#64748b', fontSize: '15px' }}>›</div></div>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic', margin: '2px 0 8px' }}>{species.scientificName}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: 1.45, marginBottom: '7px' }}><strong style={{ color: '#67e8f9' }}>Identify:</strong> {identificationHint(species)}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '10px', lineHeight: 1.45, marginBottom: '7px' }}><strong style={{ color: '#a5b4fc' }}>Habitat:</strong> {species.habitatNotes}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '10px', lineHeight: 1.45, marginBottom: '8px' }}><strong style={{ color: '#86efac' }}>Try:</strong> {species.bestBait.slice(0, 2).join(' · ')} · {species.bestTime}</div>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}><span style={{ background: '#0c4a6e', color: '#7dd3fc', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.depth}</span><span style={{ background: '#312e81', color: '#c4b5fd', fontSize: '9px', padding: '2px 6px', borderRadius: '8px' }}>{species.difficulty}</span></div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
         {filtered.length === 0 && <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0', fontSize: '13px' }}>No species found</div>}
       </div>
