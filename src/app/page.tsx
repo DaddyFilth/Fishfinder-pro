@@ -16,6 +16,7 @@ import LocationIntelligence from '@/components/LocationIntelligence';
 import LocationSearchBar from '@/components/LocationSearchBar';
 import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
+import { readCachedSpots as readOfflineCachedSpots, writeCachedSpots as writeOfflineCachedSpots } from '@/lib/offlineCache';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
 import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
@@ -379,6 +380,7 @@ export default function MobilePage() {
         setConditionScores({});
         setConditionModes({});
         setLoadingScores({});
+      void writeOfflineCachedSpots(result.spots);
 
       setCacheSource(result.source);
       setCachedAt(result.savedAt);
@@ -443,6 +445,39 @@ export default function MobilePage() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void readOfflineCachedSpots().then((cached) => {
+      if (cancelled || !cached || cached.length === 0) return;
+      setSpots(cached);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authReady || isAuthenticated) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/spots/public', { cache: 'no-store' });
+        if (!res.ok || cancelled) return;
+        const payload = await res.json();
+        if (cancelled || !Array.isArray(payload?.spots)) return;
+        setSpots(payload.spots);
+        setCacheSource('fallback');
+      } catch {
+        // Keep the bundled catalog that is already in state.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, isAuthenticated]);
 
   useEffect(() => {
     if (!authReady || !isAuthenticated) return;

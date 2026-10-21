@@ -16,7 +16,12 @@ const CatchSchema = z.object({
   lng: z.number().finite().min(-180).max(180).optional(),
   latitude: z.number().finite().min(-90).max(90).optional(),
   longitude: z.number().finite().min(-180).max(180).optional(),
-  photo_url: z.string().max(10_000_000).optional(),
+  photo_url: z.string().max(10_000_000).refine((value) => {
+    if (!value) return true;
+    if (!value.startsWith('data:image/')) return false;
+    const mime = value.slice(5, value.indexOf(';'));
+    return ['image/jpeg', 'image/png', 'image/webp'].includes(mime);
+  }, 'photo_url must be a JPEG, PNG, or WebP data URL.').optional(),
   caught_at: z.string().datetime().optional(),
 }).strict().refine(data =>
   (typeof data.lat === 'number' || typeof data.latitude === 'number') &&

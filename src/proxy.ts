@@ -25,6 +25,8 @@ const PUBLIC_PATHS = [
 export function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
+    pathname === '/api/spots/public' ||
+    pathname === '/api/errors' ||
     pathname.startsWith('/api/ai/') ||
     pathname === '/locations' ||
     pathname.startsWith('/locations/') ||

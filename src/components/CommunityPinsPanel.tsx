@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 type PinType = 'structure' | 'hazard' | 'ramp' | 'shore_access' | 'tip';
 
@@ -109,6 +110,32 @@ export default function CommunityPinsPanel({
 
     return () => {
       active = false;
+    };
+  }, [knownSpotId]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel(`community-pins:${knownSpotId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'community_map_pins', filter: `known_spot_id=eq.${knownSpotId}` },
+        () => {
+          // Reload the full list so filters/expiry stay consistent.
+          void fetch(`/api/community-pins?knownSpotId=${encodeURIComponent(knownSpotId)}`, { cache: 'no-store' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (Array.isArray(data)) setPins(data);
+            })
+            .catch(() => {});
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
     };
   }, [knownSpotId]);
 

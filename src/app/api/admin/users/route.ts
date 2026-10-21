@@ -53,5 +53,13 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.code === 'PGRST116' ? 'User not found.' : 'Unable to update user.' }, { status: error.code === 'PGRST116' ? 404 : 500 })
+
+  await context.supabase.from('admin_audit_log').insert({
+    actor_id: context.user.id,
+    action: 'update_role',
+    target_user_id: parsed.data.user_id,
+    details: { role: parsed.data.role },
+  })
+
   return NextResponse.json({ user: data })
 }
