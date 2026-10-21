@@ -20,6 +20,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,16 +29,16 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install Chromium for scrapers
-        if: env.SUPABASE_SECRET_KEY != ''
+        if: (env.SUPABASE_SECRET_KEY != '' || env.VERCEL_TOKEN != '')
         run: npx playwright-core install --with-deps chromium
       - name: Scrape ODWC accessible fishing
-        if: env.SUPABASE_SECRET_KEY != ''
+        if: (env.SUPABASE_SECRET_KEY != '' || env.VERCEL_TOKEN != '')
         run: npm run scrape:odwc -- --push
         continue-on-error: true
       - name: Scrape USACE Tulsa District lakes
-        if: env.SUPABASE_SECRET_KEY != ''
+        if: (env.SUPABASE_SECRET_KEY != '' || env.VERCEL_TOKEN != '')
         run: npm run scrape:usace -- --push
         continue-on-error: true
       - name: Enrich stored spots from catalog
-        if: env.SUPABASE_SECRET_KEY != ''
+        if: (env.SUPABASE_SECRET_KEY != '' || env.VERCEL_TOKEN != '')
         run: npx tsx scripts/enrich-spots-from-catalog.ts

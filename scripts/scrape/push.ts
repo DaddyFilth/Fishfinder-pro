@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { loadLocalEnv } from './env';
 import type { ScrapeRecord } from './lib';
 
 const BATCH = 200;
@@ -13,6 +14,7 @@ function resolveEnv(names: readonly string[]): string | undefined {
 
 /** Upsert scraped records into public.spot_metadata using the Supabase service role. */
 export async function pushToSupabase(records: ScrapeRecord[]): Promise<void> {
+  loadLocalEnv();
   const url = resolveEnv(['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']);
   const key = resolveEnv(['SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY']);
 

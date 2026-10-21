@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { loadLocalEnv } from './scrape/env';
 import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
 
 /**
@@ -40,6 +41,7 @@ function short(value: string | null | undefined): string {
 }
 
 async function main() {
+  loadLocalEnv();
   const dryRun = process.argv.includes('--dry-run');
 
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
