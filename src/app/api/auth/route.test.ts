@@ -30,7 +30,7 @@ function loginRequest() {
   })
 }
 
-function previewLoginRequest(origin = 'https://fishfinder-pro-git-feature.vercel.app') {
+function deploymentLoginRequest(origin = 'https://fishfinder-pro-git-feature.vercel.app') {
   return new Request('https://fishfinder-pro-git-feature.vercel.app/api/auth', {
     method: 'POST',
     headers: {
@@ -103,10 +103,10 @@ describe('POST /api/auth login confirmation', () => {
     await expect(response.json()).resolves.toEqual({ confirmed: false })
   })
 
-  it('accepts preview deployment origins for login requests', async () => {
+  it('accepts Vercel deployment origins for login requests', async () => {
     mockLoginResult({ session: { access_token: 'test-token' } })
 
-    const response = await POST(previewLoginRequest())
+    const response = await POST(deploymentLoginRequest())
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ confirmed: true })

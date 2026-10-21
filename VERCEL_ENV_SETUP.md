@@ -48,29 +48,29 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
   1. Go to <https://app.supabase.com/project/[your-project]/settings/api>
   2. Find "service_role secret" key
   3. Copy the full key value
-- **Vercel Environment:** Production ONLY (do not expose in preview/dev)
+- **Vercel Environment:** Production ONLY (do not expose in development)
 - **⚠️ SECURITY:** This is a secret - never commit to Git
 
 ### REDIS_URL (Required for production API rate limiting)
 - **Value Type:** Secret Redis connection URL
 - **How to Get:** Copy the connection URL from your Redis provider.
-- **Vercel Environment:** Production REQUIRED; Preview recommended when testing protected API routes.
+- **Vercel Environment:** Production REQUIRED.
 - **⚠️ SECURITY:** Keep this value secret and never commit it to Git.
 - **Note:** Rate-limited API routes return HTTP 503 if Redis is unavailable or this variable is missing. To intentionally allow weaker, per-instance production limits, set `RATE_LIMIT_ALLOW_LOCAL_FALLBACK=true`.
 
 ### GROQ_API_KEY (Required for AI features)
 - **Value Type:** Secret API Key
-- **Environment:** Production (and Preview if AI is needed there)
+- **Environment:** Production
 - **Security:** Never expose in `NEXT_PUBLIC_*` variables or commit it.
 - **Purpose:** Current production AI provider is Groq.
 
 ### GROQ_MODEL (Optional)
 - **Default:** `openai/gpt-oss-120b`
 - **Note:** `llama-3.3-70b-versatile` is enterprise-only on Groq; set a model your plan can access.
-- **Environment:** Production/Preview as needed.
+- **Environment:** Production
 
 ### GROQ_VISION_MODEL (Required for fish-image identification)
-- **Environment:** Production/Preview as needed.
+- **Environment:** Production
 - **Purpose:** Vision model used by `/api/ai/identify`.
 
 ### OLLAMA_BASE_URL (Legacy/Local-only)
@@ -79,21 +79,21 @@ This file contains the environment variables needed for Fishfinder-Pro on Vercel
 - **Format:** Base URL to your Ollama instance
 - **Only needed if:** Using local Ollama for AI inference
 - **If omitted:** Will use OpenAI (requires OPENAI_API_KEY)
-- **Vercel Environment:** Development, Preview, Production
+- **Vercel Environment:** Development, Production
 
 ### OLLAMA_MODEL (Optional)
 - **Value Type:** String
 - **Default:** `llama3.1`
 - **Examples:** `llama3.1`, `llama2`, `mistral`
 - **Only needed if:** Using Ollama for AI
-- **Vercel Environment:** Development, Preview, Production
+- **Vercel Environment:** Development, Production
 
 ### OLLAMA_VISION_MODEL (Optional)
 - **Value Type:** String
 - **Default:** `llama3.2-vision`
 - **Examples:** `llama3.2-vision`, `llava`
 - **Only needed if:** Using Ollama for image analysis
-- **Vercel Environment:** Development, Preview, Production
+- **Vercel Environment:** Development, Production
 
 ### OPENAI_API_KEY (Only for spot discovery)
 - **Value Type:** Secret API Key
@@ -132,12 +132,12 @@ https://vercel.com/dashboard
 - **Name:** `SUPABASE_SERVICE_ROLE_KEY`
 - **Value:** Your Supabase service role secret key
 - **Environments:** Check Production ONLY
-- **⚠️ Security:** Do NOT check Development/Preview
+- **⚠️ Security:** Do NOT check Development
 
 ### 5. Add REDIS_URL
 - **Name:** `REDIS_URL`
 - **Value:** Your Redis provider's connection URL
-- **Environments:** Required in Production; recommended for Preview
+- **Environments:** Required in Production
 
 ### 6. Configure production AI
 Use the Groq variables above for the current deployed application. Do not set `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel; localhost refers to the Vercel runtime, not your personal computer.
@@ -170,12 +170,10 @@ If `/api/spots/discover` is enabled, add `OPENAI_API_KEY` to Production. Other A
 | Scope | Purpose | Recommended |
 |-------|---------|-------------|
 | **Development** | Local `npm run dev` | Optional - use local .env.local |
-| **Preview** | Pull request previews | Recommended |
 | **Production** | Live deployment | Required |
 
 ### Recommendation
 - Development: Skip (use local .env.local instead)
-- Preview: Add public Supabase keys only if you intend to run preview deployments
 - Production: Add all required variables
 
 ---
@@ -248,10 +246,6 @@ curl https://your-vercel-url.vercel.app/api/catches
 - **Cause:** Wrong API key or invalid service role
 - **Fix:** Verify you're using the correct key from <https://app.supabase.com/project/_/settings/api>
 
-### Preview deployments fail but production works
-- **Cause:** Missing environment variables in Preview scope
-- **Fix:** Add at least the public Supabase variables to Preview environment
-
 ### Long deployment times
 - **Cause:** Vercel rebuilding with new environment variables
 - **Fix:** Normal - first deployment with new secrets rebuilds
@@ -300,5 +294,5 @@ OLLAMA_VISION_MODEL = llama3.2-vision
 ## Automatic environment sync (no secrets in git)
 
 1. In Vercel: Project → Integrations → add **Supabase** and link this project. The integration injects `SUPABASE_*` / `NEXT_PUBLIC_SUPABASE_*` into Vercel automatically.
-2. Locally: `npx vercel link`, then `npm run env:sync` (optionally `npm run env:sync -- preview`). This writes the git-ignored `.env.local` (mode 600) and never prints values.
+2. Locally: `npx vercel link`, then `npm run env:sync`. This writes the git-ignored `.env.local` (mode 600) and never prints values.
 3. `.env.example` lists variable names only. Never commit `.env.local`; never expose service-role keys via `NEXT_PUBLIC_*`.

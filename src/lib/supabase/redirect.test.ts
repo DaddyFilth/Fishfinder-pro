@@ -42,7 +42,7 @@ describe('auth callback and reset URLs', () => {
     expect(getAuthCallbackUrl('http://localhost:3000/')).toBe('http://localhost:3000/auth/callback')
   })
 
-  it('keeps preview and custom HTTPS origins for callbacks', () => {
+  it('keeps Vercel and custom HTTPS origins for callbacks', () => {
     expect(getAuthCallbackUrl('https://fishfinder-pro-git-feature.vercel.app', '/account')).toBe(
       'https://fishfinder-pro-git-feature.vercel.app/auth/callback?next=%2Faccount',
     )
@@ -69,9 +69,9 @@ describe('auth callback and reset URLs', () => {
 
 describe('auth request origins', () => {
   it('accepts same-origin auth requests', () => {
-    const previewUrl = new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth')
-    expect(isAllowedAuthRequestOrigin(previewUrl.origin, previewUrl)).toBe(true)
-    expect(isAllowedAuthRequestOrigin(null, previewUrl, 'same-origin')).toBe(true)
+    const deploymentUrl = new URL('https://fishfinder-pro-git-feature.vercel.app/api/auth')
+    expect(isAllowedAuthRequestOrigin(deploymentUrl.origin, deploymentUrl)).toBe(true)
+    expect(isAllowedAuthRequestOrigin(null, deploymentUrl, 'same-origin')).toBe(true)
   })
 
   it('rejects unrelated cross-site origins', () => {
