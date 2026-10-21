@@ -67,6 +67,7 @@ describe('proxy public path allowlist', () => {
     '/sw.js',
     '/robots.txt',
     '/sitemap.xml',
+    '/llms.txt',
     '/auth/login',
     '/auth/reset',
     '/auth/callback',
