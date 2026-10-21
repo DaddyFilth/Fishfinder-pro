@@ -1,0 +1,35 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
+      - run: npx cap sync ios
+      - name: Build iOS (no signing)
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -20
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ios-app-build
+          path: ios/App/build/Build/Products/Debug-iphonesimulator/App.app
+          if-no-files-found: error
