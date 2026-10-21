@@ -1,5 +1,5 @@
 import { withBrowser, gotoPolite, writeOutputs, debugDump, type ScrapeRecord } from './lib';
-import { pushToWorker } from './push';
+import { pushToSupabase } from './push';
 
 const URL = 'https://www.wildlifedepartment.com/fishing/wheretofish/access';
 const DEBUG = process.argv.includes('--debug');
@@ -66,7 +66,7 @@ const run = withBrowser(async (ctx) => {
     console.warn('0 records - rerun with --debug and verify selectors against the dump.');
   }
   writeOutputs(records, 'odwc-accessible-fishing');
-  if (process.argv.includes('--push')) await pushToWorker(records);
+  if (process.argv.includes('--push')) await pushToSupabase(records);
   await page.close();
 });
 
