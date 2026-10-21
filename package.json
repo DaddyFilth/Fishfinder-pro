@@ -23,7 +23,8 @@
     "android:runner:setup": "bash scripts/setup-self-hosted-runner.sh",
     "scrape:odwc": "tsx scripts/scrape/odwc-accessible.ts --debug",
     "scrape:usace": "tsx scripts/scrape/usace-lakes.ts --debug",
-    "postinstall": "node scripts/termux-rolldown-fix.mjs"
+    "postinstall": "node scripts/termux-rolldown-fix.mjs",
+    "scrape:environmental-history": "tsx scripts/scrape/environmental-history.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
