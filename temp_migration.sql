@@ -46,7 +46,10 @@ ALTER TABLE public.achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.realtime_alerts ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "achievements_read_public" ON public.achievements;
 CREATE POLICY "achievements_read_public" ON public.achievements FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "badges_read_own" ON public.user_badges;
 CREATE POLICY "badges_read_own" ON public.user_badges FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "alerts_read_public" ON public.realtime_alerts;
 CREATE POLICY "alerts_read_public" ON public.realtime_alerts FOR SELECT TO authenticated USING (true);
 `
