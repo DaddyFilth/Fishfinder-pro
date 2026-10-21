@@ -9,6 +9,7 @@ import BiteTimesTab from "@/components/BiteTimesTab";
 import WeatherTab from "@/components/WeatherTab";
 import LogbookTab from '@/components/logbook/LogbookTab';
 import PhotoGalleryTab from "@/components/logbook/PhotoGalleryTab";
+import SpeciesTab from '@/components/SpeciesTab';
 import SpotSuggester from '@/components/ai/SpotSuggester';
 import SmartAnalyticsPanel from '@/components/ai/SmartAnalyticsPanel';
 import LocationIntelligence from '@/components/LocationIntelligence';
@@ -646,6 +647,7 @@ export default function MobilePage() {
   { id: 'top', icon: '⭐', label: 'Top spots' },
   { id: 'weather', icon: '🌤️', label: 'Weather' },
   { id: 'bitetime', icon: '🌙', label: 'Bite times' },
+  { id: 'species', icon: '🐟', label: 'Species' },
     { id: 'gallery', icon: '📸', label: 'Gallery' },
     { id: 'ai', icon: '🧭', label: 'Trip help' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
@@ -803,6 +805,8 @@ export default function MobilePage() {
         )}
 
         {/* SPECIES TAB */}
+        {tab === 'species' && <SpeciesTab coordinates={coordinates} />}
+
 {/* CATCHES TAB */}
 
         {/* BITE TIMES TAB */}
