@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
     const user = auth.user;
 
-    const bodyResult = await readJsonBody(req, 32_768);
+    const bodyResult = await readJsonBody(req, 10_000_000);
     if (!bodyResult.ok) return bodyResult.response;
     const body = bodyResult.value as { catchData?: unknown };
     const parsed = CatchSchema.safeParse(body.catchData);

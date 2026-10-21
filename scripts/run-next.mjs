@@ -39,10 +39,9 @@ for (const name of [
   }
 }
 
-// Production must fail fast when required services are absent. Development and
-// v0 previews can still render public routes that gracefully handle an
-// unavailable Supabase client, so do not turn a missing local secret into a
-// gateway-level 502.
+// Production must fail fast when required services are absent. Development
+// routes can gracefully handle an unavailable Supabase client, so do not turn
+// a missing local secret into a gateway-level 502.
 if (process.env.NODE_ENV === 'production') validateRuntimeEnvironment()
 
 const nextBin = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url))

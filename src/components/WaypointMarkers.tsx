@@ -61,7 +61,7 @@ export default function WaypointMarkers() {
 
   return (
     <>
-      {/* Double-click placement preview */}
+      {/* Pending double-click waypoint placement */}
       {pending && (
         <Marker position={[pending.lat, pending.lng]} icon={WaypointIcon(form.type)}>
           <Popup>

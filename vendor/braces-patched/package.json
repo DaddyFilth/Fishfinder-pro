@@ -1,0 +1,19 @@
+{
+  "name": "braces",
+  "version": "3.0.4",
+  "description": "Bash-like brace expansion. Vendored copy of micromatch/braces@3.0.3 with a brace-nesting depth guard for GHSA-vfj7-8cjw-p6xm / CVE-2026-93687.",
+  "homepage": "https://github.com/micromatch/braces",
+  "repository": "micromatch/braces",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib"
+  ],
+  "engines": {
+    "node": ">=8"
+  },
+  "dependencies": {
+    "fill-range": "^7.1.1"
+  }
+}

@@ -60,10 +60,9 @@ NEXT_PUBLIC_SUPABASE_URL=          [SET REQUIRED]
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY= [SET REQUIRED]
 SUPABASE_SERVICE_ROLE_KEY=         [SET REQUIRED]
 
-# Optional - defaults provided
-OLLAMA_BASE_URL=http://localhost:11434/v1
-OLLAMA_MODEL=llama3.1
-OLLAMA_VISION_MODEL=llama3.2-vision
+# Optional - AI provider (hosted; the app never reads OLLAMA_* vars)
+GROQ_API_KEY=                          [OPTIONAL - AI features]
+OPENAI_API_KEY=                        [OPTIONAL - fallback provider]
 
 # APIs - no auth needed
 NWS_BASE=https://api.weather.gov
@@ -72,8 +71,7 @@ OPEN_METEO_MARINE=https://marine-api.open-meteo.com/v1/marine
 ```
 
 ### 📍 Location
-- Development: `/workspaces/Fishfinder-pro/.env.local`
-- Template: `.env.local` with all required keys
+- Template: `.env.example` → copy to `.env.local` at the repository root with all required keys
 
 ---
 
@@ -128,8 +126,7 @@ Next.js 16.3.4
 ```
 Next.js API Routes (Node.js)
 ├── Supabase (PostgreSQL database)
-├── OpenAI API (LLM inference)
-├── Ollama (local AI models)
+├── Groq API / OpenAI API (LLM inference, hosted)
 ├── Redis (caching)
 └── Rate limiting & Security
 ```

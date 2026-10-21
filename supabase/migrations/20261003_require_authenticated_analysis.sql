@@ -3,6 +3,7 @@
 
 ALTER TABLE public.spots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "spots_select_all" ON public.spots;
+DROP POLICY IF EXISTS "spots_select_authenticated" ON public.spots;
 CREATE POLICY "spots_select_authenticated"
   ON public.spots FOR SELECT
   TO authenticated
@@ -12,6 +13,7 @@ GRANT SELECT ON public.spots TO authenticated, service_role;
 
 ALTER TABLE public.achievements ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "achievements_read_public" ON public.achievements;
+DROP POLICY IF EXISTS "achievements_read_authenticated" ON public.achievements;
 CREATE POLICY "achievements_read_authenticated"
   ON public.achievements FOR SELECT
   TO authenticated
@@ -23,6 +25,7 @@ REVOKE ALL ON public.user_badges FROM anon;
 
 ALTER TABLE public.realtime_alerts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "alerts_read_public" ON public.realtime_alerts;
+DROP POLICY IF EXISTS "alerts_read_authenticated" ON public.realtime_alerts;
 CREATE POLICY "alerts_read_authenticated"
   ON public.realtime_alerts FOR SELECT
   TO authenticated

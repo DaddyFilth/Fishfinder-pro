@@ -99,7 +99,23 @@ ALTER TABLE public.catches
   ADD COLUMN IF NOT EXISTS bait text,
   ADD COLUMN IF NOT EXISTS spot_name text;
 ALTER TABLE public.catches DROP CONSTRAINT IF EXISTS catches_spot_id_fkey;
-ALTER TABLE public.catches ALTER COLUMN is_public SET DEFAULT false;
+
+-- `catches` already exists on deployments that predate this file, so the
+-- CREATE TABLE IF NOT EXISTS above is a no-op there and never adds is_public.
+-- Older deployments track visibility as a text column instead, so guard the
+-- default: the ALTER would otherwise abort the whole migration with
+-- "column is_public does not exist" and block every later statement.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'catches'
+      AND column_name = 'is_public'
+  ) THEN
+    ALTER TABLE public.catches ALTER COLUMN is_public SET DEFAULT false;
+  END IF;
+END $$;
 DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_update_policy" ON public.catches;

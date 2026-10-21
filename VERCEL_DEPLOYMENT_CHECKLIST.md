@@ -52,7 +52,7 @@
 - [ ] Name: `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] Value: (Supabase service role secret from Settings → API)
 - [ ] Check: **Production ONLY** ⚠️
-- [ ] DO NOT check Preview or Development
+- [ ] DO NOT check Development
 - [ ] Click Add
 
 **Variable 4: REDIS_URL**
@@ -70,10 +70,8 @@
 - [ ] Optional: `GROQ_VISION_MODEL` = vision-capable Groq model (defaults to `qwen/qwen3.8-27b`)
 - [ ] Do **not** use `OLLAMA_BASE_URL=http://localhost:11434/v1` on Vercel.
 
-**Legacy/local Ollama:**
-- [ ] Add: `OLLAMA_BASE_URL` = `http://localhost:11434/v1`
-- [ ] Add: `OLLAMA_MODEL` = `llama3.1`
-- [ ] Add: `OLLAMA_VISION_MODEL` = `llama3.2-vision`
+**Legacy/local Ollama (no longer read by the app — do not set):**
+- [ ] ~~Add: `OLLAMA_BASE_URL` = `http://localhost:11434/v1`~~ — the AI layer only reads `GROQ_API_KEY`/`OPENAI_API_KEY`; these variables have no effect.
 
 **Optional fallback providers: OpenAI and OpenCode Console**
 - [ ] Optional: `OPENAI_API_KEY` = your OpenAI key starting with `sk-`
@@ -119,10 +117,6 @@
 - [ ] Verify SUPABASE_SERVICE_ROLE_KEY is set in Production
 - [ ] Check Supabase API is accessible
 - [ ] Review Vercel function logs
-
-### Preview deployments fail
-- [ ] Add public Supabase variables to Preview only if you intend to run preview deployments
-- [ ] Secret keys should be Production only
 
 ### Slow first request
 - [ ] Normal for Next.js serverless functions

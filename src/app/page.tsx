@@ -582,7 +582,7 @@ export default function MobilePage() {
           if (!result.ok) {
             setConditionScores((prev) => {
               const next = { ...prev };
-              delete next[spot.id];
+              next[spot.id] = 0;
               return next;
             });
             setConditionModes((prev) => ({ ...prev, [spot.id]: undefined }));
@@ -698,7 +698,7 @@ export default function MobilePage() {
         {/* MAP TAB */}
 {tab === "map" && <NextBestAction spotCount={nearbySpots.length} selectedSpotName={selectedSpot?.name ?? null} isOnline={isOnline} hasConditions={Object.keys(conditionScores).length > 0} onOpenAi={() => setTab("ai")} onOpenLogbook={() => setTab("log")} onRefresh={() => { void loadSpotData(false) }} />}
         {tab === 'map' && (
-          <div style={{ position:'absolute', inset:0 }}>
+          <div style={{ position:'absolute', inset:0, zIndex: -1 }}>
             <MapWrapper
               spots={visibleSpots}
               baseLayer={baseLayer}
