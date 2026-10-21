@@ -34,14 +34,17 @@ BEGIN
     DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
     DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 
+DROP POLICY IF EXISTS "profiles_select_public" ON public.profiles;
     CREATE POLICY "profiles_select_public"
       ON public.profiles FOR SELECT
       USING (true);
 
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
     CREATE POLICY "profiles_insert_own"
       ON public.profiles FOR INSERT
       WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
     CREATE POLICY "profiles_update_own"
       ON public.profiles FOR UPDATE
       USING (auth.uid() = id)
@@ -66,6 +69,7 @@ BEGIN
     DROP POLICY IF EXISTS "catches_update_own" ON public.catches;
     DROP POLICY IF EXISTS "catches_delete_own" ON public.catches;
 
+DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
     CREATE POLICY "catches_select_policy"
       ON public.catches FOR SELECT
       USING (
@@ -73,15 +77,18 @@ BEGIN
         OR (auth.uid() IS NOT NULL AND auth.uid() = user_id)
       );
 
+DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
     CREATE POLICY "catches_insert_policy"
       ON public.catches FOR INSERT
       WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "catches_update_policy" ON public.catches;
     CREATE POLICY "catches_update_policy"
       ON public.catches FOR UPDATE
       USING (auth.uid() = user_id)
       WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "catches_delete_policy" ON public.catches;
     CREATE POLICY "catches_delete_policy"
       ON public.catches FOR DELETE
       USING (auth.uid() = user_id);
@@ -104,19 +111,23 @@ BEGIN
     DROP POLICY IF EXISTS "community_pins_update" ON public.community_pins;
     DROP POLICY IF EXISTS "community_pins_delete" ON public.community_pins;
 
+DROP POLICY IF EXISTS "community_pins_select" ON public.community_pins;
     CREATE POLICY "community_pins_select"
       ON public.community_pins FOR SELECT
       USING (true);
 
+DROP POLICY IF EXISTS "community_pins_insert" ON public.community_pins;
     CREATE POLICY "community_pins_insert"
       ON public.community_pins FOR INSERT
       WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "community_pins_update" ON public.community_pins;
     CREATE POLICY "community_pins_update"
       ON public.community_pins FOR UPDATE
       USING (auth.uid() = created_by)
       WITH CHECK (auth.uid() = created_by);
 
+DROP POLICY IF EXISTS "community_pins_delete" ON public.community_pins;
     CREATE POLICY "community_pins_delete"
       ON public.community_pins FOR DELETE
       USING (auth.uid() = created_by);
@@ -133,6 +144,7 @@ BEGIN
     DROP POLICY IF EXISTS "environmental_snapshots_write_service" ON public.environmental_snapshots;
     DROP POLICY IF EXISTS "Anyone can view snapshots" ON public.environmental_snapshots;
 
+DROP POLICY IF EXISTS "environmental_snapshots_read_public" ON public.environmental_snapshots;
     CREATE POLICY "environmental_snapshots_read_public"
       ON public.environmental_snapshots FOR SELECT
       USING (true);

@@ -61,6 +61,7 @@ BEGIN
   IF to_regclass('public.logbook_trips') IS NOT NULL THEN
     EXECUTE 'DROP POLICY IF EXISTS "logbook_trips_owner" ON public.logbook_trips';
     EXECUTE $policy$
+DROP POLICY IF EXISTS "logbook_trips_owner" ON public.logbook_trips;
       CREATE POLICY "logbook_trips_owner"
         ON public.logbook_trips FOR ALL TO authenticated
         USING (auth.uid() = user_id)

@@ -65,12 +65,16 @@ DROP POLICY IF EXISTS "community_map_pins_select" ON public.community_map_pins;
 DROP POLICY IF EXISTS "community_map_pins_insert" ON public.community_map_pins;
 DROP POLICY IF EXISTS "community_map_pins_update" ON public.community_map_pins;
 DROP POLICY IF EXISTS "community_map_pins_delete" ON public.community_map_pins;
+DROP POLICY IF EXISTS "community_map_pins_select" ON public.community_map_pins;
 CREATE POLICY "community_map_pins_select" ON public.community_map_pins
   FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "community_map_pins_insert" ON public.community_map_pins;
 CREATE POLICY "community_map_pins_insert" ON public.community_map_pins
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "community_map_pins_update" ON public.community_map_pins;
 CREATE POLICY "community_map_pins_update" ON public.community_map_pins
   FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "community_map_pins_delete" ON public.community_map_pins;
 CREATE POLICY "community_map_pins_delete" ON public.community_map_pins
   FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
@@ -128,12 +132,16 @@ DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_update_policy" ON public.catches;
 DROP POLICY IF EXISTS "catches_delete_policy" ON public.catches;
+DROP POLICY IF EXISTS "catches_select_policy" ON public.catches;
 CREATE POLICY "catches_select_policy" ON public.catches
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "catches_insert_policy" ON public.catches;
 CREATE POLICY "catches_insert_policy" ON public.catches
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "catches_update_policy" ON public.catches;
 CREATE POLICY "catches_update_policy" ON public.catches
   FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "catches_delete_policy" ON public.catches;
 CREATE POLICY "catches_delete_policy" ON public.catches
   FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
@@ -156,8 +164,10 @@ DROP POLICY IF EXISTS "profiles_select_admin" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_select_public" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 CREATE POLICY "profiles_select_own" ON public.profiles
   FOR SELECT TO authenticated USING (auth.uid() = id);
+DROP POLICY IF EXISTS "profiles_select_admin" ON public.profiles;
 CREATE POLICY "profiles_select_admin" ON public.profiles
   FOR SELECT TO authenticated USING (public.is_admin());
 
