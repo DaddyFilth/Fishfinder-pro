@@ -97,16 +97,14 @@ CREATE TABLE IF NOT EXISTS public.catches (
 
 ALTER TABLE public.catches
   ADD COLUMN IF NOT EXISTS bait text,
-  ADD COLUMN IF NOT EXISTS spot_name text;
+  ADD COLUMN IF NOT EXISTS spot_name text,
+  ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT false;
 ALTER TABLE public.catches DROP CONSTRAINT IF EXISTS catches_spot_id_fkey;
 
 -- `catches` already exists on deployments that predate this file, so the
 -- CREATE TABLE IF NOT EXISTS above is a no-op there. Legacy deployments may
 -- lack is_public or store it as text; normalize it to boolean before setting
 -- the default so the migration cannot abort and skip later hardening.
-ALTER TABLE public.catches
-  ADD COLUMN IF NOT EXISTS is_public boolean;
-
 DO $$
 BEGIN
   IF EXISTS (

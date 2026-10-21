@@ -21,7 +21,10 @@ describe('runtime schema alignment migration', () => {
 
   it('aligns catches table schema and locks down select policy to owner', () => {
     expect(migration).toContain('CREATE TABLE IF NOT EXISTS public.catches');
-    expect(migration).toContain('ALTER TABLE public.catches ALTER COLUMN is_public SET DEFAULT false');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT false');
+    expect(migration).toContain('UPDATE public.catches SET is_public = false WHERE is_public IS NULL');
+    expect(migration).toContain('ALTER COLUMN is_public SET DEFAULT false');
+    expect(migration).toContain('ALTER COLUMN is_public SET NOT NULL');
     expect(migration).toContain('CREATE POLICY "catches_select_policy" ON public.catches');
     expect(migration).toContain('USING (auth.uid() = user_id)');
   });
