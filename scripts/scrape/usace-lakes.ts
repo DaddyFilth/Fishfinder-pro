@@ -1,5 +1,5 @@
 import { withBrowser, gotoPolite, writeOutputs, debugDump, type ScrapeRecord } from './lib';
-import { pushToWorker } from './push';
+import { pushToSupabase } from './push';
 import type { Page } from 'playwright-core';
 
 const INDEX = 'https://www.swt.usace.army.mil/Locations/Tulsa-District-Lakes/Oklahoma/';
@@ -109,7 +109,7 @@ const run = withBrowser(async (ctx) => {
   }
 
   writeOutputs(all, 'usace-ok-lakes');
-  if (process.argv.includes('--push')) await pushToWorker(all);
+  if (process.argv.includes('--push')) await pushToSupabase(all);
   await page.close();
 });
 

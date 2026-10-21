@@ -1,7 +1,6 @@
 name: Refresh spots metadata
 
-# Weekly refresh: scrape ODWC/USACE public-water metadata, push it to the spots
-# worker, and re-enrich stored Supabase spot rows from the bundled catalog.
+# Weekly refresh: scrape ODWC/USACE public-water metadata, push it to Supabase, and re-enrich stored Supabase spot rows from the bundled catalog.
 on:
   schedule:
     - cron: '0 6 * * 1'
@@ -19,10 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL }}
-      CLOUDFLARE_WORKER_TOKEN: ${{ secrets.CLOUDFLARE_WORKER_TOKEN }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,14 +27,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install Chromium for scrapers
+        if: env.SUPABASE_SECRET_KEY != ''
+        run: npx playwright-core install --with-deps chromium
       - name: Scrape ODWC accessible fishing
-        if: env.CLOUDFLARE_WORKER_URL != ''
-        run: npm run scrape:odwc
+        if: env.SUPABASE_SECRET_KEY != ''
+        run: npm run scrape:odwc -- --push
         continue-on-error: true
       - name: Scrape USACE Tulsa District lakes
-        if: env.CLOUDFLARE_WORKER_URL != ''
-        run: npm run scrape:usace
+        if: env.SUPABASE_SECRET_KEY != ''
+        run: npm run scrape:usace -- --push
         continue-on-error: true
       - name: Enrich stored spots from catalog
-        if: env.SUPABASE_SERVICE_ROLE_KEY != ''
+        if: env.SUPABASE_SECRET_KEY != ''
         run: npx tsx scripts/enrich-spots-from-catalog.ts
