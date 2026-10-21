@@ -45,6 +45,19 @@ export default async function FishingSpotsIndexPage({
       </header>
       <section aria-labelledby="spot-directory-heading">
         <h2 id="spot-directory-heading">Public waters by location</h2>
+        <form action="/fishing-spots" method="get" role="search" aria-label="Filter public fishing spots">
+          <label htmlFor="spot-query">Search by name, region, water type, access, or description</label>
+          <input
+            id="spot-query"
+            name="query"
+            type="search"
+            defaultValue={query}
+            maxLength={100}
+          />
+          <button type="submit">Search</button>
+          {query ? <Link href="/fishing-spots">Clear search</Link> : null}
+        </form>
+        <p>Showing {spots.length} of {DEFAULT_SPOTS.length} public waters.</p>
         <div className="seo-card-grid">
           {spots.length === 0 ? <p>No public waters match “{query}”.</p> : null}
           {spots.map((spot) => (
