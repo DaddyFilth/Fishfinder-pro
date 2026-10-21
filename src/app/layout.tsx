@@ -75,12 +75,38 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Oklahoma SeamCast',
-    url: siteUrl,
-    applicationCategory: 'SportsApplication',
-    operatingSystem: 'Any',
-    description,
+    '@graph': [
+      {
+        '@type': 'WebApplication',
+        '@id': `${siteUrl}/#application`,
+        name: 'Oklahoma SeamCast',
+        url: siteUrl,
+        applicationCategory: 'SportsApplication',
+        operatingSystem: 'Any',
+        description,
+        isAccessibleForFree: true,
+        inLanguage: 'en-US',
+        audience: { '@type': 'Audience', audienceType: 'Anglers' },
+        about: [
+          'Oklahoma public fishing locations',
+          'Provider-reported fishing conditions',
+          'Oklahoma fish species guidance',
+        ],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
+        name: 'Oklahoma SeamCast',
+        url: siteUrl,
+        description,
+        inLanguage: 'en-US',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${siteUrl}/fishing-spots?query={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
   };
   return (
     <html lang="en" style={{ height: "100%" }}>
