@@ -26,8 +26,9 @@ jobs:
       - run: npx cap sync ios
       - name: Build iOS (no signing)
         run: |
+          set -o pipefail
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -20
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -20
       - uses: actions/upload-artifact@v7
         with:
           name: ios-app-build
