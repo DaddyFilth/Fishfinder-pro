@@ -17,7 +17,7 @@ jobs:
     # block a Play Store build. Override globally with:
     #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
     # Prefer no CI at all? bash scripts/build-android-apk.sh --release
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || '["self-hosted","linux","x64"]') }}
     timeout-minutes: 35
 
     steps:
