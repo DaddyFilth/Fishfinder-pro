@@ -1,6 +1,6 @@
 /**
  * Local fishing spot analytics - seamcast-spots API dependency removed.
- * All data sourced from Oklahoma public fishing catalog (76 spots) and
+ * All data sourced from Oklahoma public fishing catalog (68 spots) and
  * AI-powered analysis using local environmental conditions.
  *
  * The following functions are preserved for compatibility but will

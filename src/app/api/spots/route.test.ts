@@ -119,7 +119,7 @@ describe('spots route provenance', () => {
 
     expect(payload.live).toBe(false)
     expect(payload.observed_at).toBeUndefined()
-    expect(payload.spots.length).toBeGreaterThanOrEqual(76)
+    expect(payload.spots.length).toBeGreaterThanOrEqual(68)
     expect(payload.spots[0]).toMatchObject({
       source: 'bundled-public-water-catalog',
       live: false,

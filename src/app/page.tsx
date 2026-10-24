@@ -18,7 +18,7 @@ import type { BaseLayer, MapLayers } from '@/components/MapWrapper';
 import { filterSpots, rankSpots, type Spot, type SpotFilter } from '@/lib/mapFilters';
 import { readCachedSpots as readOfflineCachedSpots, writeCachedSpots as writeOfflineCachedSpots } from '@/lib/offlineCache';
 import { watchDeviceLocation, type Coordinates, type LocationStatus } from '@/lib/region';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS, toFallbackSpot } from '@/lib/defaultSpots';
 import AuthAccountButton from '@/components/AuthAccountButton';
 import { createClient } from '@/lib/supabase/client';
 import { cacheSpots, formatCacheAge, readCachedSpots } from '@/lib/offlineSpots';
@@ -239,7 +239,7 @@ async function getSpots(): Promise<SpotLoadResult> {
       }
 
       // The map uses the complete statewide catalog. A provider response with
-      // only a few micro-spots must never replace the 76 stable map markers.
+      // only a few micro-spots must never replace the 68 stable map markers.
       if (dataMode !== 'provider' || filtered.length < DEFAULT_SPOTS.length) {
         throw new Error('Spot provider feed incomplete');
       }
@@ -260,26 +260,20 @@ async function getSpots(): Promise<SpotLoadResult> {
     ) ?? [];
 
     // A partial cache is not a valid map catalog. It can be left behind by an
-    // older provider response and must never replace the complete 76-spot map.
+    // older provider response and must never replace the complete 68-spot map.
     if (cached && cachedSpots.length >= DEFAULT_SPOTS.length) {
       return { spots: cachedSpots, source: 'cached', savedAt: cached.savedAt };
     }
 
     return {
-      spots: DEFAULT_SPOTS.map((spot) => ({
-        ...spot,
-        live: false,
-        data_mode: 'fallback' as const,
-      })),
+      spots: DEFAULT_SPOTS.map(toFallbackSpot),
       source: 'fallback',
       savedAt: null,
     };
   }
 
   return {
-    spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-      id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
-    })),
+    spots: DEFAULT_SPOTS.map(toFallbackSpot),
     source: 'fallback',
     savedAt: null,
   };
@@ -291,9 +285,7 @@ async function getSpots(): Promise<SpotLoadResult> {
  */
 export default function MobilePage() {
   // Coordinates are permanent map anchors; live AI conditions are loaded separately.
-  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-  id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
-  })));
+  const [spots, setSpots] = useState<Spot[]>(() => DEFAULT_SPOTS.map(toFallbackSpot));
   const [authReady, setAuthReady] = useState(() => false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);

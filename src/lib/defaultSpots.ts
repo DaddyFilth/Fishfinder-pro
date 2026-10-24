@@ -120,17 +120,10 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(24, 'Skiatook Lake', 36.370, -96.110, 'reservoir', 'Boat ramp', 'Northeast', 'Public lake access near Tulsa and Osage County.'),
   spot(25, 'Fort Supply Lake', 36.560, -99.570, 'reservoir', 'Public shore', 'Northwest', 'Public pull-offs and dam-area fishing access.'),
   spot(26, 'Canton Lake', 36.080, -98.580, 'reservoir', 'Boat ramp', 'Northwest', 'Public lake, spillway, and accessible fishing areas.'),
-  spot(27, 'Foss Lake', 35.470, -99.190, 'reservoir', 'Fishing pier', 'Southwest', 'Public lake with marina dock and shoreline access.'),
   spot(28, 'Great Salt Plains Lake', 36.800, -98.120, 'lake', 'Fishing pier', 'Northwest', 'Public lake, spillway jetty, and refuge-area access.'),
   spot(29, 'Lake Carl Blackwell', 36.150, -97.350, 'lake', 'Fishing pier', 'Central', 'Public lake west of Stillwater with park and Turtle Pond access.'),
   spot(30, 'Lake Murray', 34.080, -97.090, 'lake', 'State park', 'Southwest', 'Public state park lake in Carter and Love counties.'),
-  spot(31, 'Lake Arbuckle', 34.425, -97.040, 'lake', 'State park', 'Southwest', 'Public lake in the Chickasaw National Recreation Area region.'),
-  spot(32, 'Lake McGee Creek', 34.330, -96.760, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir and wildlife management access.'),
-  spot(33, 'Lake Sardis', 34.690, -95.620, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir in the Kiamichi region.'),
-  spot(34, 'Lake Hugo', 34.030, -95.520, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir with state park and Corps access.'),
   spot(35, 'Lake Wister', 34.860, -94.720, 'reservoir', 'Boat ramp', 'Southeast', 'Public reservoir and state park access.'),
-  spot(36, 'Lawtonka Lake', 34.870, -98.500, 'lake', 'Boat ramp', 'Southwest', 'Public lake north of Lawton with shoreline and ramp access.'),
-  spot(37, 'Altus-Lugert Lake', 34.930, -99.270, 'reservoir', 'Boat ramp', 'Southwest', 'Public western Oklahoma reservoir; verify current water access.'),
   spot(38, 'Boomer Lake', 36.140, -97.070, 'municipal', 'Fishing pier', 'Central', 'Stillwater municipal lake with public dock access.'),
   spot(39, 'Government Springs Park Lake', 36.395, -97.880, 'municipal', 'Fishing pier', 'Northwest', 'Enid public fishing docks.'),
   spot(40, 'Hominy Municipal Lake', 36.420, -96.390, 'municipal', 'Fishing pier', 'Northeast', 'Public municipal lake with accessible fishing dock.'),
@@ -178,14 +171,13 @@ export const DEFAULT_SPOTS: readonly Spot[] = [
   spot(47, 'Lake Carl Blackwell Turtle Pond', 36.160, -97.350, 'trout', 'Fishing pier', 'Central', 'Seasonal trout water with heated dock near the park office.'),
   spot(48, 'Arkansas River — Tulsa', 36.145, -96.006, 'river', 'Public shore', 'Northeast', 'Public river access through the Tulsa urban corridor.'),
   spot(49, 'Neosho River — Miami', 36.890, -94.880, 'river', 'Public shore', 'Northeast', 'Public river corridor; verify access at the selected launch or park.'),
-  spot(50, 'Red River — Lake Texoma', 33.817, -96.610, 'river', 'Boat ramp', 'Southwest', 'Public river/reservoir access near the Oklahoma-Texas border.'),
 ];
 
 /**
  * Keep the public map anchored to the complete catalog even when an upstream
  * provider returns only a regional subset or AI micro-spots. Provider fields
  * (sensor ids, scores, and provenance) are merged onto the matching catalog
- * water; the catalog remains the source of truth for the 76 public locations.
+ * water; the catalog remains the source of truth for the 68 public locations.
  */
 export function mergeWithDefaultSpots(providerSpots: readonly Spot[]): Spot[] {
   const byId = new Map(providerSpots.map((spot) => [spot.id, spot]));
@@ -210,6 +202,26 @@ export function mergeWithDefaultSpots(providerSpots: readonly Spot[]): Spot[] {
       metadata_updated_at: providerSpot?.metadata_updated_at ?? catalogSpot.metadata_updated_at,
     };
   });
+}
+
+/**
+ * Convert a bundled catalog spot into the shape used by fallback/offline
+ * responses. Preserves ADA and amenity metadata so the bundled catalog
+ * produces one consistent shape across every load path.
+ */
+export function toFallbackSpot(spot: Spot) {
+  return {
+    id: spot.id,
+    name: spot.name,
+    lat: spot.lat,
+    lng: spot.lng,
+    water_type: spot.water_type,
+    spot_type: spot.spot_type,
+    ada: spot.ada,
+    amenities: spot.amenities,
+    live: false as const,
+    data_mode: 'fallback' as const,
+  };
 }
 
 /** Export Spot type from mapFilters for use in other modules. */
