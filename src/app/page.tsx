@@ -266,8 +266,10 @@ async function getSpots(): Promise<SpotLoadResult> {
     }
 
     return {
-      spots: DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-        id, name, lat, lng, water_type, spot_type, live: false, data_mode: 'fallback' as const,
+      spots: DEFAULT_SPOTS.map((spot) => ({
+        ...spot,
+        live: false,
+        data_mode: 'fallback' as const,
       })),
       source: 'fallback',
       savedAt: null,
