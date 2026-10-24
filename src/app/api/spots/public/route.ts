@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, toFallbackSpot } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
@@ -9,16 +9,9 @@ export async function GET(req: NextRequest) {
   const limited = await enforceRateLimit(req, { name: 'public-spots', limit: 60, windowMs: 60_000 });
   if (limited) return limited;
 
-  const catalogSpots = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-    id,
-    name,
-    lat,
-    lng,
-    water_type,
-    spot_type,
+  const catalogSpots = DEFAULT_SPOTS.map((spot) => ({
+    ...toFallbackSpot(spot),
     source: 'bundled-public-water-catalog',
-    live: false,
-    data_mode: 'fallback',
   }));
 
   return NextResponse.json(

@@ -5,7 +5,7 @@ import { spotSlug, catalogSourceLabel } from '@/lib/publicSeo'
 
 export const metadata: Metadata = {
   title: 'Oklahoma Public Fishing Spots',
-  description: 'Browse 76 Oklahoma public fishing waters with access notes, region, coordinates, and source-labeled depth metadata.',
+  description: 'Browse 68 Oklahoma public fishing waters with access notes, region, coordinates, and source-labeled depth metadata.',
   alternates: { canonical: '/fishing-spots' },
   openGraph: {
     title: 'Oklahoma Public Fishing Spots',
@@ -40,7 +40,7 @@ export default async function FishingSpotsIndexPage({
       <header className="seo-page__header">
         <p className="seo-page__eyebrow">Oklahoma SeamCast directory</p>
         <h1>Oklahoma Public Fishing Spots</h1>
-        <p>Explore 76 cataloged public waters with access notes, region, coordinates, and clearly labeled depth provenance. Catalog details are not live measurements; verify access, regulations, closures, and water conditions before traveling.</p>
+        <p>Explore 68 cataloged public waters with access notes, region, coordinates, and clearly labeled depth provenance. Catalog details are not live measurements; verify access, regulations, closures, and water conditions before traveling.</p>
         <Link className="seo-page__back" href="/">Open the live fishing dashboard →</Link>
       </header>
       <section aria-labelledby="spot-directory-heading">

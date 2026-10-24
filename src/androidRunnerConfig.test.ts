@@ -15,14 +15,11 @@ const androidWorkflows = [
 describe.each(androidWorkflows)('%s runner selection', (workflowPath) => {
   const workflow = read(workflowPath);
 
-  it('defaults to a self-hosted runner that billing cannot meter', () => {
-    expect(workflow).toContain(
-      "runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON ||",
-    );
-    expect(workflow).toContain('\'["self-hosted","linux","x64"]\'');
-    expect(workflow).not.toContain('inputs.runner');
-    // A GitHub-hosted runner must never be the unconditional default.
-    expect(workflow).not.toMatch(/runs-on:\s*ubuntu-latest/);
+  it('defaults to a GitHub-hosted runner for public repo CI minutes', () => {
+    expect(workflow).toContain('runs-on: ubuntu-latest');
+    expect(workflow).toContain('ANDROID_RUNNER_JSON');
+    // Self-hosted runner reference appears only in comments, not in YAML.
+    expect(workflow).not.toMatch(/runs-on:\s*self-hosted/);
   });
 
   it('documents the repository-variable override', () => {

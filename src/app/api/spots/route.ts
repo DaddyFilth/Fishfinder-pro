@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS } from '@/lib/defaultSpots';
+import { DEFAULT_SPOTS, OKLAHOMA_BOUNDS, toFallbackSpot } from '@/lib/defaultSpots';
 import { enforceRateLimit } from '@/lib/security';
 import { getAuthContext } from '@/lib/auth/server';
 import { fetchSeamcastResponse } from '@/lib/seamcastSpotsClient';
@@ -112,7 +112,7 @@ function normalize(payload: unknown): AnyRec {
   // `microSpots` are AI-generated structure suggestions for one queried area,
   // not the application's statewide spot catalog. Treating them as spot rows
   // collapses the map to the provider's three suggestions. Full provider spot
-  // rows still win when supplied; otherwise the bundled 76-water catalog is
+  // rows still win when supplied; otherwise the bundled 68-water catalog is
   // used and each selected spot gets live conditions from its conditions route.
   const rawList =
     (Array.isArray(root.spots) && root.spots.length > 0 && root.spots) ||
@@ -223,16 +223,9 @@ export async function GET(req: NextRequest) {
   const { payload, reason } = await fetchRemoteSpots(key, new URLSearchParams({ lat: String(lat), lon: String(lon) }));
 
   if (reason || !Array.isArray(payload.spots) || payload.spots.length === 0) {
-    const catalogSpots = DEFAULT_SPOTS.map(({ id, name, lat, lng, water_type, spot_type }) => ({
-      id,
-      name,
-      lat,
-      lng,
-      water_type,
-      spot_type,
+    const catalogSpots = DEFAULT_SPOTS.map((spot) => ({
+      ...toFallbackSpot(spot),
       source: 'bundled-public-water-catalog',
-      live: false,
-      data_mode: 'fallback',
     }));
 
     return NextResponse.json(
