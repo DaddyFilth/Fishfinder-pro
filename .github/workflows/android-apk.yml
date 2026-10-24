@@ -17,8 +17,7 @@ jobs:
   build-debug-apk:
     name: Build debug APK
     # Self-hosted by default: self-hosted runners are never metered, so billing
-    # or a spent Actions quota cannot block an APK build. Pull requests use a
-    # GitHub-hosted runner because those minutes are free for public repositories.
+    # or a spent Actions quota cannot block an APK build.
     #
     # Force every run (including pull requests) onto your own hardware with:
     #   gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
@@ -26,7 +25,7 @@ jobs:
     #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
     #
     # Prefer no CI at all? bash scripts/build-android-apk.sh
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || '["self-hosted","linux","x64"]') }}
     timeout-minutes: 30
 
     steps:
