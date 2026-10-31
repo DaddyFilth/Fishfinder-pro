@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     spot_name: parsed.data.spot_name,
     latitude: parsed.data.lat,
     longitude: parsed.data.lng,
+    caught_at: parsed.data.caught_at,
     created_at: parsed.data.caught_at,
     photo_url: parsed.data.photo_url ?? null,
     user_id: context.user.id,

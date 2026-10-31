@@ -1,36 +1,42 @@
-import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
-import LocationsPage from './page'
-import LocationPage, { generateMetadata, generateStaticParams } from './[slug]/page'
-import { PUBLIC_LOCATIONS } from '@/lib/publicCatalog'
+import { describe, expect, it, vi } from 'vitest'
+import { PUBLIC_LOCATIONS, findPublicLocation } from '@/lib/publicCatalog'
+import { PUBLIC_SPOTS } from '@/lib/publicSeo'
 
-describe('public location pages', () => {
-  it('renders a crawlable directory with links and source context', () => {
-    const markup = renderToStaticMarkup(<LocationsPage />)
+const permanentRedirectMock = vi.fn((url: string): never => {
+  throw new Error(`NEXT_REDIRECT:308:${url}`)
+})
+const notFoundMock = vi.fn((): never => {
+  throw new Error('NEXT_NOT_FOUND')
+})
 
-    expect(markup).toContain('Oklahoma public fishing locations')
-    expect(markup).toContain('Source: Bundled Oklahoma public-water catalog')
-    expect(markup).toContain('/locations/lake-hefner')
-    expect(markup).toContain('not live access reports')
+vi.mock('next/navigation', () => ({
+  permanentRedirect: (url: string) => permanentRedirectMock(url),
+  notFound: () => notFoundMock(),
+}))
+
+const { default: LocationsPage } = await import('./page')
+const { default: LocationPage, generateStaticParams } = await import('./[slug]/page')
+
+describe('legacy /locations canonical redirects and unified catalog', () => {
+  it('shares the exact same catalog array and slugs as PUBLIC_SPOTS so they cannot drift', () => {
+    expect(PUBLIC_LOCATIONS).toBe(PUBLIC_SPOTS)
+    expect(findPublicLocation('lake-hefner')?.slug).toBe('lake-hefner')
   })
 
-  it('statically generates only catalog-backed locations', () => {
-    const params = generateStaticParams()
+  it('308-redirects /locations to /fishing-spots', () => {
+    expect(() => LocationsPage()).toThrow('NEXT_REDIRECT:308:/fishing-spots')
+  })
 
+  it('statically generates catalog slugs and 308-redirects /locations/[slug] to /fishing-spots/[slug]', async () => {
+    const params = generateStaticParams()
     expect(params).toHaveLength(PUBLIC_LOCATIONS.length)
     expect(params).toContainEqual({ slug: 'lake-hefner' })
-    expect(new Set(params.map(({ slug }) => slug)).size).toBe(params.length)
-  })
 
-  it('renders unique catalog notes, coordinates, provenance, and canonical metadata', async () => {
-    const params = Promise.resolve({ slug: 'lake-hefner' })
-    const markup = renderToStaticMarkup(await LocationPage({ params }))
-    const metadata = await generateMetadata({ params })
-
-    expect(markup).toContain('Lake Hefner')
-    expect(markup).toContain('35.588, -97.588')
-    expect(markup).toContain('Bundled Oklahoma public-water catalog')
-    expect(markup).toContain('not live access or environmental measurements')
-    expect(metadata.alternates?.canonical).toBe('/locations/lake-hefner')
+    await expect(LocationPage({ params: Promise.resolve({ slug: 'lake-hefner' }) })).rejects.toThrow(
+      'NEXT_REDIRECT:308:/fishing-spots/lake-hefner',
+    )
+    await expect(LocationPage({ params: Promise.resolve({ slug: 'unknown-water' }) })).rejects.toThrow(
+      'NEXT_NOT_FOUND',
+    )
   })
 })

@@ -3,29 +3,6 @@ import { NextRequest } from 'next/server'
 
 const routeModules = import.meta.glob('./**/route.ts', { eager: false })
 
-/**
- * The environmental fetchers use axios rather than fetch, so stubbing fetch
- * alone would let smoke requests leave the process and hang on real provider
- * timeouts. Axios is disabled here for the same reason fetch is.
- */
-vi.mock('axios', () => {
-  class AxiosError extends Error {
-    isAxiosError = true;
-    code?: string;
-    response?: unknown;
-  }
-  return {
-    default: {
-      get: vi.fn(async () => {
-        throw new AxiosError('network disabled');
-      }),
-      isAxiosError: (error: unknown): error is AxiosError =>
-        Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError === true),
-    },
-    AxiosError,
-  };
-})
-
 type RouteHandler = (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>
 
 async function loadHandler(mod: string, method: string): Promise<RouteHandler> {
@@ -52,12 +29,14 @@ const routes: Array<[string, string, string, Record<string, string>?]> = [
   ['ai/suggest-spots', 'POST', 'ai/suggest-spots/route'],
   ['auth/recover', 'POST', 'auth/recover/route'],
   ['auth', 'POST', 'auth/route'],
+  ['bathymetry', 'GET', 'bathymetry/route'],
   ['catches', 'GET', 'catches/route'],
   ['catches', 'POST', 'catches/route'],
   ['community-pins', 'GET', 'community-pins/route'],
   ['community-pins', 'POST', 'community-pins/route'],
   ['community-spots', 'GET', 'community-spots/route'],
   ['community-spots', 'POST', 'community-spots/route'],
+  ['errors', 'POST', 'errors/route'],
   ['feed/cloudflare', 'GET', 'feed/cloudflare/route'],
   ['feed/cloudflare', 'POST', 'feed/cloudflare/route'],
   ['health', 'GET', 'health/route'],
@@ -67,8 +46,15 @@ const routes: Array<[string, string, string, Record<string, string>?]> = [
   ['pro-logger', 'POST', 'pro-logger/route'],
   ['profile', 'GET', 'profile/route'],
   ['profile', 'PATCH', 'profile/route'],
+  ['profile', 'DELETE', 'profile/route'],
+  ['rum/vitals', 'GET', 'rum/vitals/route'],
+  ['rum/vitals', 'POST', 'rum/vitals/route'],
+  ['saved-spots', 'GET', 'saved-spots/route'],
+  ['saved-spots', 'POST', 'saved-spots/route'],
+  ['saved-spots', 'DELETE', 'saved-spots/route'],
   ['spots/x/conditions', 'GET', 'spots/[id]/conditions/route', { id: 'x' }],
   ['spots/discover', 'POST', 'spots/discover/route'],
+  ['spots/public', 'GET', 'spots/public/route'],
   ['spots', 'GET', 'spots/route'],
   ['water-heatmap', 'GET', 'water-heatmap/route'],
   ['weather', 'GET', 'weather/route'],

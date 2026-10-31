@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { DEFAULT_SPOTS } from '@/lib/defaultSpots'
-import { spotSlug, catalogSourceLabel } from '@/lib/publicSeo'
+import { PUBLIC_SPOTS, catalogSourceLabel } from '@/lib/publicSeo'
 
 export const metadata: Metadata = {
   title: 'Oklahoma Public Fishing Spots',
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
   },
 }
 
-function matchesQuery(spot: (typeof DEFAULT_SPOTS)[number], query: string) {
+function matchesQuery(spot: (typeof PUBLIC_SPOTS)[number], query: string) {
   const haystack = [spot.name, spot.region, spot.spot_type, spot.access_type, spot.description, spot.notes]
     .filter(Boolean)
     .join(' ')
@@ -34,7 +33,7 @@ export default async function FishingSpotsIndexPage({
 }) {
   const { query: rawQuery } = await searchParams
   const query = (Array.isArray(rawQuery) ? rawQuery[0] : rawQuery)?.trim().slice(0, 100) ?? ''
-  const spots = query ? DEFAULT_SPOTS.filter((spot) => matchesQuery(spot, query)) : DEFAULT_SPOTS
+  const spots = query ? PUBLIC_SPOTS.filter((spot) => matchesQuery(spot, query)) : PUBLIC_SPOTS
   return (
     <main className="seo-page">
       <header className="seo-page__header">
@@ -57,19 +56,22 @@ export default async function FishingSpotsIndexPage({
           <button type="submit">Search</button>
           {query ? <Link href="/fishing-spots">Clear search</Link> : null}
         </form>
-        <p>Showing {spots.length} of {DEFAULT_SPOTS.length} public waters.</p>
+        <p>Showing {spots.length} of {PUBLIC_SPOTS.length} public waters.</p>
         <div className="seo-card-grid">
           {spots.length === 0 ? <p>No public waters match “{query}”.</p> : null}
           {spots.map((spot) => (
             <article className="seo-card" key={spot.id}>
-              <h3><Link href={`/fishing-spots/${spotSlug(spot)}`}>{spot.name}</Link></h3>
+              <h3><Link href={`/fishing-spots/${spot.slug}`}>{spot.name}</Link></h3>
               <p>{spot.region} · {spot.spot_type} · {spot.access_type}</p>
               <p>{spot.description ?? spot.notes}</p>
             </article>
           ))}
         </div>
       </section>
-      <p className="seo-page__source">Source: {catalogSourceLabel}. The catalog is a planning reference, not a guarantee of access, fish presence, depth, or current conditions.</p>
+      <p className="seo-page__source">
+        Source: {catalogSourceLabel}. The catalog is a planning reference, not a guarantee of access, fish presence, depth, or current conditions.{' '}
+        <Link href="/species">Species guide</Link> · <Link href="/privacy">Privacy Policy</Link> · <Link href="/terms">Terms of Use</Link>
+      </p>
     </main>
   )
 }

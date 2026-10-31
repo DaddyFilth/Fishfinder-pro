@@ -3,6 +3,8 @@ import { SPECIES } from '@/lib/speciesCatalog'
 import type { Spot } from '@/lib/mapFilters'
 import type { Species } from '@/lib/speciesCatalog'
 
+export type PublicSpot = Spot & { slug: string }
+
 export function slugify(value: string): string {
   return value
     .normalize('NFKD')
@@ -13,7 +15,34 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function spotSlug(spot: Pick<Spot, 'name'>): string {
+function buildPublicSpots(spots: readonly Spot[]): PublicSpot[] {
+  const counts = new Map<string, number>()
+  return spots.map((spot) => {
+    const baseSlug = slugify(spot.name)
+    const count = (counts.get(baseSlug) ?? 0) + 1
+    counts.set(baseSlug, count)
+    return {
+      ...spot,
+      slug: count === 1 ? baseSlug : `${baseSlug}-${count}`,
+    }
+  })
+}
+
+export const PUBLIC_SPOTS: PublicSpot[] = buildPublicSpots(DEFAULT_SPOTS)
+
+const spotSlugById = new Map<string, string>(
+  PUBLIC_SPOTS.map((spot) => [spot.id, spot.slug]),
+)
+
+const spotBySlug = new Map<string, PublicSpot>(
+  PUBLIC_SPOTS.map((spot) => [spot.slug, spot]),
+)
+
+export function spotSlug(spot: Pick<Spot, 'name'> & { id?: string }): string {
+  if (spot.id) {
+    const known = spotSlugById.get(spot.id)
+    if (known) return known
+  }
   return slugify(spot.name)
 }
 
@@ -21,17 +50,31 @@ export function speciesSlug(species: Pick<Species, 'id' | 'name'>): string {
   return slugify(species.id || species.name)
 }
 
-export function findSpotBySlug(slug: string): Spot | undefined {
-  const normalizedSlug = slugify(decodeURIComponent(slug))
-  return DEFAULT_SPOTS.find((spot) => spotSlug(spot) === normalizedSlug)
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+export function findSpotBySlug(slug: string): PublicSpot | undefined {
+  const decoded = safeDecode(slug)
+  const normalizedSlug = slugify(decoded)
+  if (!normalizedSlug) return undefined
+  return spotBySlug.get(normalizedSlug)
 }
 
 export function findSpeciesBySlug(slug: string): Species | undefined {
-  const normalizedSlug = slugify(decodeURIComponent(slug))
-  return SPECIES.find((species) => speciesSlug(species) === normalizedSlug)
+  const decoded = safeDecode(slug)
+  const normalizedSlug = slugify(decoded)
+  if (!normalizedSlug) return undefined
+  return SPECIES.find(
+    (species) => species.id === decoded || speciesSlug(species) === normalizedSlug,
+  )
 }
 
-export const publicSpotSlugs = DEFAULT_SPOTS.map(spotSlug)
+export const publicSpotSlugs = PUBLIC_SPOTS.map((spot) => spot.slug)
 export const publicSpeciesSlugs = SPECIES.map(speciesSlug)
 
 export const catalogSourceLabel = 'Bundled Oklahoma public-water catalog'

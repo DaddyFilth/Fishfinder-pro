@@ -5,7 +5,7 @@ vi.mock('./lib/supabase/middleware', () => ({
   updateSession: vi.fn(),
 }))
 
-const { config, isPublicPath, proxy } = await import('./proxy')
+const { config, isPublicPath, proxy, resolveLegacyLocationRedirect } = await import('./proxy')
 const { updateSession } = await import('./lib/supabase/middleware')
 
 const updateSessionMock = vi.mocked(updateSession)
@@ -39,6 +39,7 @@ describe('proxy matcher', () => {
     '/_next/static/chunks/app.js',
     '/_next/image?url=%2Flogo.png&w=64&q=75',
     '/favicon.ico',
+    '/apple-touch-icon.png',
     '/manifest.json',
     '/robots.txt',
     '/sitemap.xml',
@@ -62,23 +63,32 @@ describe('proxy matcher', () => {
 
 describe('proxy public path allowlist', () => {
   it.each([
+    '/',
+    '/fishing-spots',
+    '/fishing-spots/lake-hefner',
+    '/species',
+    '/species/largemouth-bass',
+    '/privacy',
+    '/terms',
     '/offline',
     '/manifest.json',
     '/sw.js',
     '/robots.txt',
     '/sitemap.xml',
     '/llms.txt',
+    '/google9b802e8e87b013ca.html',
+    '/apple-touch-icon.png',
+    '/apple-touch-icon-precomposed.png',
+    '/fish/largemouth-bass.jpg',
+    '/icons/icon-192.png',
+    '/favicon.ico',
     '/auth/login',
     '/auth/reset',
     '/auth/callback',
     '/api/auth',
     '/api/auth/recover',
-    '/locations',
-    '/locations/lake-texoma',
-    '/species',
-    '/species/largemouth-bass',
-    '/favicon.ico',
-    '/icons/icon-192.png',
+    '/api/spots/public',
+    '/api/rum/vitals',
     '/_next/static/chunks/app.js',
   ])('lets anonymous visitors reach %s', (pathname) => {
     expect(isPublicPath(pathname)).toBe(true)
@@ -92,20 +102,47 @@ describe('proxy public path allowlist', () => {
     '/api/admin/users',
     '/account',
     '/admin/users',
-    '/locationsX',
+    '/fishing-spotsX',
     '/speciesX',
+    '/fishX',
     '/api/spots/lake-9/conditions/extra',
   ])('still requires authentication for %s', (pathname) => {
     expect(isPublicPath(pathname)).toBe(false)
   })
 })
 
+describe('legacy /locations canonical 308 redirects', () => {
+  it('maps /locations and /locations/:slug to /fishing-spots equivalents', () => {
+    expect(resolveLegacyLocationRedirect('/locations')).toBe('/fishing-spots')
+    expect(resolveLegacyLocationRedirect('/locations/lake-hefner')).toBe('/fishing-spots/lake-hefner')
+    expect(resolveLegacyLocationRedirect('/fishing-spots')).toBeNull()
+  })
+
+  it('308-redirects /locations/:slug to /fishing-spots/:slug with security headers', async () => {
+    updateSessionMock.mockResolvedValue({ response: NextResponse.next(), user: null })
+
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/locations/lake-hefner'))
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://www.fishfinder-pro.online/fishing-spots/lake-hefner')
+    expect(response.headers.get('Content-Security-Policy')).toContain('script-src')
+  })
+
+  it('combines apex host canonicalization and /locations redirect into a single 308 hop', async () => {
+    const response = await proxy(
+      makeRequest('http://fishfinder-pro.online/locations/lake-texoma', {
+        headers: { host: 'fishfinder-pro.online', 'x-forwarded-proto': 'http' },
+      }),
+    )
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://www.fishfinder-pro.online/fishing-spots/lake-texoma')
+  })
+})
+
 describe('proxy CSP nonce propagation', () => {
-  // Regression: the policy is only effective if Next.js can read the nonce off the *request*
-  // headers. Because `script-src` carries a nonce source, `'strict-dynamic'` makes browsers ignore
-  // `'self'`, so a response-only policy blocks every framework script in production.
   it('forwards the CSP on the request headers so Next.js can stamp the nonce onto its scripts', async () => {
-    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/locations'))
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/fishing-spots'))
 
     const forwardedPolicy = response.headers.get('x-middleware-request-content-security-policy')
     expect(forwardedPolicy).toBeTruthy()
@@ -115,22 +152,31 @@ describe('proxy CSP nonce propagation', () => {
   })
 
   it('sends the same policy on the response and reuses the forwarded nonce', async () => {
-    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/locations'))
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/fishing-spots'))
 
     const forwardedNonce = response.headers.get('x-middleware-request-x-nonce')
     const responsePolicy = response.headers.get('Content-Security-Policy')
 
     expect(responsePolicy).toBeTruthy()
     expect(responsePolicy).toContain(`'nonce-${forwardedNonce}'`)
-    // A nonce must be unique per request.
-    const other = await proxy(makeRequest('https://www.fishfinder-pro.online/locations'))
+    const other = await proxy(makeRequest('https://www.fishfinder-pro.online/fishing-spots'))
     expect(other.headers.get('x-middleware-request-x-nonce')).not.toBe(forwardedNonce)
   })
 })
 
 describe('proxy access control', () => {
-  it('lets an authenticated request through untouched', async () => {
+  it('lets anonymous visitors load the public homepage / without calling auth session or redirecting', async () => {
+    updateSessionMock.mockResolvedValue({ response: NextResponse.next(), user: null })
+
     const response = await proxy(makeRequest('https://www.fishfinder-pro.online/'))
+
+    expect(response.headers.get('location')).toBeNull()
+    expect(response.status).toBe(200)
+    expect(updateSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('lets an authenticated request to /account through untouched', async () => {
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/account'))
 
     expect(response.headers.get('location')).toBeNull()
     expect(response.status).toBe(200)
@@ -145,7 +191,7 @@ describe('proxy access control', () => {
     await expect(response.json()).resolves.toMatchObject({ error: 'Authentication required.' })
   })
 
-  it('sends anonymous page visits to login while preserving the target path', async () => {
+  it('sends anonymous protected page visits to login while preserving the target path', async () => {
     updateSessionMock.mockResolvedValue({ response: NextResponse.next(), user: null })
 
     const response = await proxy(makeRequest('https://www.fishfinder-pro.online/account?tab=logs'))
@@ -156,12 +202,12 @@ describe('proxy access control', () => {
     expect(location.searchParams.get('next')).toBe('/account?tab=logs')
   })
 
-  it('fails closed with 503 when Supabase is not configured', async () => {
+  it('fails closed with 503 on protected routes when Supabase is not configured', async () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
 
-    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/'))
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/account'))
 
     expect(response.status).toBe(503)
     expect(updateSessionMock).not.toHaveBeenCalled()

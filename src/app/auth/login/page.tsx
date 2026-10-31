@@ -54,7 +54,11 @@ function LoginPageContent() {
       ? 'Your login link expired or could not be verified. Please try again.'
       : '',
   )
-  const [successMessage, setSuccessMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState(
+    searchParams.get('deleted') === '1'
+      ? 'Your account and saved data have been permanently deleted.'
+      : '',
+  )
 
   const nextPath = useMemo(() => {
     return getSafeNextPath(searchParams.get('next'))
@@ -290,7 +294,14 @@ function LoginPageContent() {
           </Link>
         ) : null}
         <p style={{ margin: '18px 0 0', color: '#64748b', fontSize: '11px', lineHeight: 1.5 }}>
-          Accounts are stored by Supabase Auth.
+          Accounts are stored by Supabase Auth.{' '}
+          <Link href="/privacy" style={{ color: '#7dd3fc', textDecoration: 'none' }}>
+            Privacy Policy
+          </Link>
+          {' · '}
+          <Link href="/terms" style={{ color: '#7dd3fc', textDecoration: 'none' }}>
+            Terms of Use
+          </Link>
         </p>
       </section>
     </main>

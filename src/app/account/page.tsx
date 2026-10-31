@@ -20,6 +20,23 @@ type ProfileResponse = {
   role: AppRole
 }
 
+function clearLocalUserData() {
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i)
+      if (key && key !== 'seamcast_storage_notice_ack_v1') {
+        keysToRemove.push(key)
+      }
+    }
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key)
+    }
+  } catch {
+    // Ignore storage cleanup errors.
+  }
+}
+
 export default function AccountPage() {
   const [data, setData] = useState<ProfileResponse | null>(null)
   const [username, setUsername] = useState('')
@@ -28,6 +45,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; kind: 'error' | 'success' } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/profile', { cache: 'no-store' })
@@ -65,10 +85,41 @@ export default function AccountPage() {
       if (!response.ok) throw new Error(body.error || 'Unable to save profile.')
       setData((current) => current ? { ...current, profile: body.profile, role: body.role } : current)
       setMessage({ text: 'Profile saved.', kind: 'success' })
-    } catch {
-      setMessage({ text: 'Unable to save profile.', kind: 'error' })
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Unable to save profile.',
+        kind: 'error',
+      })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function deleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (deleteConfirm.trim() !== 'DELETE') {
+      setDeleteError('Type DELETE in uppercase to confirm permanent account removal.')
+      return
+    }
+
+    setDeleting(true)
+    setDeleteError(null)
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE' }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(body.error || 'Unable to delete account right now.')
+      }
+      clearLocalUserData()
+      window.location.replace('/auth/login?deleted=1')
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Unable to delete account right now.')
+      setDeleting(false)
     }
   }
 
@@ -110,8 +161,63 @@ export default function AccountPage() {
             </form>
 
             {data.role === 'admin' && <Link href="/admin/users" style={{ display: 'block', marginTop: '18px', color: '#7dd3fc', fontSize: '13px', textDecoration: 'none' }}>Open user management →</Link>}
+
+            <section
+              aria-labelledby="delete-account-heading"
+              style={{
+                marginTop: '28px',
+                paddingTop: '22px',
+                borderTop: '1px solid #1e293b',
+              }}
+            >
+              <h2 id="delete-account-heading" style={{ margin: '0 0 6px', fontSize: '16px', color: '#fca5a5' }}>
+                Delete account
+              </h2>
+              <p style={{ ...mutedStyle, fontSize: '12px', marginBottom: '12px' }}>
+                Permanently removes your SeamCast login, profile, logged catches, trip journal, saved spots, community pins, and private photos. This action cannot be undone.
+              </p>
+              <form onSubmit={deleteAccount}>
+                <label style={labelStyle}>
+                  Type <strong>DELETE</strong> to confirm
+                  <input
+                    value={deleteConfirm}
+                    onChange={(event) => setDeleteConfirm(event.target.value)}
+                    placeholder="DELETE"
+                    autoComplete="off"
+                    style={inputStyle}
+                  />
+                </label>
+                {deleteError && (
+                  <div role="alert" style={noticeStyle('#7f1d1d', '#fecaca')}>
+                    {deleteError}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={deleting || deleteConfirm.trim() !== 'DELETE'}
+                  style={{
+                    border: '1px solid #991b1b',
+                    borderRadius: '10px',
+                    padding: '11px 14px',
+                    width: '100%',
+                    background: deleteConfirm.trim() === 'DELETE' ? '#991b1b' : '#1e293b',
+                    color: deleteConfirm.trim() === 'DELETE' ? '#fef2f2' : '#64748b',
+                    fontWeight: 800,
+                    cursor: deleting ? 'wait' : deleteConfirm.trim() === 'DELETE' ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {deleting ? 'Deleting account…' : 'Permanently delete account'}
+                </button>
+              </form>
+            </section>
           </>
         )}
+
+        <footer style={{ marginTop: '22px', paddingTop: '14px', borderTop: '1px solid #1e293b', fontSize: '12px', color: '#64748b' }}>
+          <Link href="/privacy" style={{ color: '#7dd3fc', textDecoration: 'none' }}>Privacy Policy</Link>
+          {' · '}
+          <Link href="/terms" style={{ color: '#7dd3fc', textDecoration: 'none' }}>Terms of Use</Link>
+        </footer>
       </section>
     </main>
   )

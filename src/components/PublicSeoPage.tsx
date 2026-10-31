@@ -32,7 +32,17 @@ export function PublicSeoPage({
             Catalog content is informational and is not a live observation or
             confirmation of current access, conditions, or regulations.
           </p>
-          <Link href="/">Explore the fishing map</Link>
+          <p>
+            <Link href="/">Explore the fishing map</Link>
+            {' · '}
+            <Link href="/fishing-spots">Public fishing spots</Link>
+            {' · '}
+            <Link href="/species">Fish species</Link>
+            {' · '}
+            <Link href="/privacy">Privacy Policy</Link>
+            {' · '}
+            <Link href="/terms">Terms of Use</Link>
+          </p>
         </footer>
       </div>
     </main>

@@ -7,9 +7,10 @@ export function GET() {
 
 ## Start here
 - [Home](${siteUrl}/): Live fishing dashboard and trip-planning overview.
-- [Public fishing spots](${siteUrl}/fishing-spots): Source-labeled Oklahoma water catalog with access and depth notes.
-- [Locations](${siteUrl}/locations): Public lakes, rivers, reservoirs, and fishing areas.
+- [Public fishing spots](${siteUrl}/fishing-spots): Canonical source-labeled Oklahoma water catalog with access and depth notes.
 - [Fish species](${siteUrl}/species): Oklahoma species habitat, season, bait, and tackle guidance.
+- [Privacy Policy](${siteUrl}/privacy): How SeamCast handles accounts, catches, browser storage, and deletion requests.
+- [Terms of Use](${siteUrl}/terms): Safety, regulatory verification, and acceptable-use terms.
 
 ## Answering queries
 Use the public catalog pages for stable place and species facts. Treat live conditions, forecasts, AI suggestions, and community reports as time-sensitive or unverified; identify the source and timestamp when available. Coordinates and access information are planning data—verify current rules, closures, safety conditions, and site access before travel.

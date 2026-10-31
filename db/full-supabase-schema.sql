@@ -1,6 +1,6 @@
 -- ============================================================================
 -- FISHFINDER PRO - UNIFIED SUPABASE SCHEMA
--- Project Reference: ediqyixbyqrojvgktxky
+-- Project Reference: dkafqgapepebzjtoghos
 -- ============================================================================
 
 -- Enable required extensions
@@ -69,26 +69,65 @@ CREATE POLICY "profiles_update_admin"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- Automatically create profile on new user signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, full_name, avatar_url)
+  IF auth.role() = 'service_role' OR public.is_admin() THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF COALESCE(NEW.role, 'angler') <> 'angler' THEN
+      RAISE EXCEPTION 'Only administrators can insert elevated profile roles.';
+    END IF;
+    NEW.role := 'angler';
+    RETURN NEW;
+  END IF;
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Only administrators can change user roles.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS prevent_profile_role_escalation ON public.profiles;
+CREATE TRIGGER prevent_profile_role_escalation
+  BEFORE INSERT OR UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_profile_role_escalation();
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.prevent_profile_role_escalation() FROM PUBLIC;
+
+-- Automatically create profile on new user signup
+CREATE OR REPLACE FUNCTION public.seamcast_handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, avatar_url, role)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')), ''),
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')), ''),
+    'angler'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
+REVOKE ALL ON FUNCTION public.seamcast_handle_new_user() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS seamcast_on_auth_user_created ON auth.users;
+CREATE TRIGGER seamcast_on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.seamcast_handle_new_user();
 
 -- ============================================================================
 -- 2. SPOTS TABLE (Oklahoma lakes, rivers, reservoirs, boat ramps)

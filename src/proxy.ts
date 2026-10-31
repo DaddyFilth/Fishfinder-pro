@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
 import { getSupabaseProjectUrl, getSupabasePublishableKey } from './lib/supabase/config';
+import { findSpotBySlug } from './lib/publicSeo';
 
 const CANONICAL_HOST = 'www.fishfinder-pro.online';
 const APEX_HOST = 'fishfinder-pro.online';
 
 const PUBLIC_PATHS = [
+  '/',
+  '/fishing-spots',
+  '/species',
+  '/privacy',
+  '/terms',
   '/robots.txt',
   '/sitemap.xml',
   '/llms.txt',
@@ -17,24 +23,45 @@ const PUBLIC_PATHS = [
   '/api/feed/cloudflare',
   '/api/health',
   '/api/ai',
+  '/api/spots/public',
+  '/api/errors',
+  '/api/rum/vitals',
   '/offline',
   '/manifest.json',
   '/sw.js',
+  '/favicon.ico',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/google9b802e8e87b013ca.html',
 ];
+
+const GOOGLE_VERIFICATION_FILE_RE = /^\/google[0-9a-f]{10,64}\.html$/i;
+
+export function resolveLegacyLocationRedirect(pathname: string): string | null {
+  if (pathname === '/locations') {
+    return '/fishing-spots';
+  }
+  if (pathname.startsWith('/locations/')) {
+    const rawSlug = pathname.slice('/locations/'.length);
+    if (!rawSlug || rawSlug.includes('/')) {
+      return '/fishing-spots';
+    }
+    const spot = findSpotBySlug(rawSlug);
+    return spot ? `/fishing-spots/${spot.slug}` : `/fishing-spots/${encodeURIComponent(rawSlug)}`;
+  }
+  return null;
+}
 
 export function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
-    pathname === '/api/spots/public' ||
-    pathname === '/api/errors' ||
+    GOOGLE_VERIFICATION_FILE_RE.test(pathname) ||
     pathname.startsWith('/api/ai/') ||
-    pathname === '/locations' ||
-    pathname.startsWith('/locations/') ||
-    pathname === '/species' ||
+    pathname.startsWith('/fishing-spots/') ||
     pathname.startsWith('/species/') ||
+    pathname.startsWith('/fish/') ||
     pathname.startsWith('/icons/') ||
-    pathname.startsWith('/_next/') ||
-    pathname === '/favicon.ico'
+    pathname.startsWith('/_next/')
   );
 }
 
@@ -98,6 +125,8 @@ export async function proxy(request: NextRequest) {
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0].trim();
   const host = forwardedHost ?? request.headers.get('host')?.split(',')[0].trim();
 
+  const legacyRedirectPath = resolveLegacyLocationRedirect(request.nextUrl.pathname);
+
   if (host === CANONICAL_HOST || host === APEX_HOST) {
     const forwardedProtocol = request.headers.get('x-forwarded-proto')?.split(',')[0].trim();
 
@@ -106,12 +135,25 @@ export async function proxy(request: NextRequest) {
       url.protocol = 'https:';
       url.hostname = CANONICAL_HOST;
       url.port = '';
+      if (legacyRedirectPath) {
+        url.pathname = legacyRedirectPath;
+      }
       return applySecurityHeaders(
         NextResponse.redirect(url, 308),
         request.nextUrl.protocol,
         contentSecurityPolicy,
       );
     }
+  }
+
+  if (legacyRedirectPath) {
+    const targetUrl = request.nextUrl.clone();
+    targetUrl.pathname = legacyRedirectPath;
+    return applySecurityHeaders(
+      NextResponse.redirect(targetUrl, 308),
+      request.nextUrl.protocol,
+      contentSecurityPolicy,
+    );
   }
 
   if (isPublicPath(request.nextUrl.pathname)) {
@@ -167,5 +209,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|robots\\.txt|sitemap\\.xml|\\.well-known/.*).*)',
+  matcher: '/((?!_next/static|_next/image|favicon.ico|apple-touch-icon\\.png|manifest\\.json|robots\\.txt|sitemap\\.xml|\\.well-known/.*).*)',
 };
