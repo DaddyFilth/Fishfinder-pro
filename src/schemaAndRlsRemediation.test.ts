@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -53,5 +53,25 @@ describe('production Supabase schema & RLS audit remediation', () => {
     expect(schema).toContain('dkafqgapepebzjtoghos')
     expect(schema).not.toContain('ediqyixbyqrojvgktxky')
     expect(schema).toContain('BEFORE INSERT OR UPDATE ON public.profiles')
+  })
+
+  it('ensures every file in supabase/migrations has a unique numeric version prefix', () => {
+    const files = readdirSync(resolve(process.cwd(), 'supabase/migrations')).filter((f) => f.endsWith('.sql'))
+    const versions = files.map((file) => {
+      const match = /^([0-9]+)_([a-zA-Z0-9_-]+)\.sql$/.exec(file)
+      expect(match, `Invalid migration filename: ${file}`).not.toBeNull()
+      return match![1]
+    })
+    expect(new Set(versions).size).toBe(versions.length)
+  })
+
+  it('points ios-build.yml at Capacitor SPM App.xcodeproj with shared App scheme', () => {
+    const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/ios-build.yml'), 'utf8')
+    expect(workflow).toContain('-project App.xcodeproj')
+    expect(workflow).not.toContain('-workspace App.xcworkspace')
+    expect(workflow).toContain('set -euo pipefail')
+    expect(
+      existsSync(resolve(process.cwd(), 'ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme')),
+    ).toBe(true)
   })
 })

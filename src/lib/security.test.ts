@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const originalRedisUrl = process.env.REDIS_URL
 const originalLocalFallback = process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
+const originalServerKvUrl = process.env.KV_REST_API_URL
+const originalServerKvToken = process.env.KV_REST_API_TOKEN
 const originalKvUrl = process.env.NEXT_PUBLIC_KV_REST_API_URL
 const originalKvToken = process.env.NEXT_PUBLIC_KV_REST_API_TOKEN
 const originalUpstashUrl = process.env.UPSTASH_REDIS_REST_URL
@@ -103,6 +105,8 @@ vi.mock('@upstash/redis', () => ({
 
 beforeEach(() => {
   process.env.REDIS_URL = 'redis://localhost:6379'
+  delete process.env.KV_REST_API_URL
+  delete process.env.KV_REST_API_TOKEN
   delete process.env.NEXT_PUBLIC_KV_REST_API_URL
   delete process.env.NEXT_PUBLIC_KV_REST_API_TOKEN
   delete process.env.UPSTASH_REDIS_REST_URL
@@ -130,6 +134,10 @@ afterEach(() => {
   else process.env.REDIS_URL = originalRedisUrl
   if (originalLocalFallback === undefined) delete process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK
   else process.env.RATE_LIMIT_ALLOW_LOCAL_FALLBACK = originalLocalFallback
+  if (originalServerKvUrl === undefined) delete process.env.KV_REST_API_URL
+  else process.env.KV_REST_API_URL = originalServerKvUrl
+  if (originalServerKvToken === undefined) delete process.env.KV_REST_API_TOKEN
+  else process.env.KV_REST_API_TOKEN = originalServerKvToken
   if (originalKvUrl === undefined) delete process.env.NEXT_PUBLIC_KV_REST_API_URL
   else process.env.NEXT_PUBLIC_KV_REST_API_URL = originalKvUrl
   if (originalKvToken === undefined) delete process.env.NEXT_PUBLIC_KV_REST_API_TOKEN

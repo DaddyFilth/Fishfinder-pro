@@ -23,11 +23,26 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: example-anon-key
+          REDIS_URL: redis://localhost:6379
+          NWS_BASE: https://api.weather.gov
+          USGS_BASE: https://api.waterdata.usgs.gov
+          OPEN_METEO_MARINE: https://marine-api.open-meteo.com/v1/marine
       - run: npx cap sync ios
       - name: Build iOS (no signing)
+        shell: bash
         run: |
+          set -euo pipefail
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -20
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
       - uses: actions/upload-artifact@v7
         with:
           name: ios-app-build
