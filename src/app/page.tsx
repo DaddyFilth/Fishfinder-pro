@@ -315,6 +315,7 @@ export default function MobilePage() {
     waterTemp: false,
     conditionMarkers: true,
     waypoints: true,
+    waterBodies: false,
   });
   const scoreFetchInFlight = useRef<Record<string, boolean>>({});
   const refreshInFlightRef = useRef(false);
@@ -900,6 +901,7 @@ export default function MobilePage() {
                 ['waterTemp', '🌡 Sampled water temperature'],
                 ['conditionMarkers', '🎯 Condition-score markers'],
                 ['waypoints', '📍 Waypoints'],
+                ['waterBodies', '💧 Water body access labels'],
               ] as [keyof MapLayers, string][]).map(([key, label]) => (
                 <button key={key} onClick={() => toggleMapLayer(key)} style={{ width:'100%', background:'none', border:'none', borderTop:'1px solid #1e293b', color:'#cbd5e1', padding:'10px 0', display:'flex', justifyContent:'space-between', cursor:'pointer', fontSize:'12px', textAlign:'left' }}>
                   <span>{label}</span><span style={{ color:mapLayers[key] ? '#22d3ee' : '#64748b' }}>{mapLayers[key] ? 'ON' : 'OFF'}</span>

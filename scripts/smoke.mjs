@@ -17,6 +17,28 @@ async function getAvailablePort() {
   return address.port
 }
 
+async function assertDirectOk(baseUrl, path) {
+  const res = await fetch(`${baseUrl}${path}`, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(8_000),
+  })
+  if (res.status !== 200) {
+    const location = res.headers.get('location')
+    throw new Error(
+      `Expected HTTP 200 for ${path} without redirects, received HTTP ${res.status}${location ? ` -> ${location}` : ''}.`,
+    )
+  }
+  return res
+}
+
+function extractSitemapPaths(xml) {
+  const matches = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)]
+  return matches.map((match) => {
+    const url = new URL(match[1])
+    return `${url.pathname}${url.search}`
+  })
+}
+
 async function smoke() {
   const port = await getAvailablePort()
   const server = spawn(
@@ -35,19 +57,57 @@ async function smoke() {
       if (server.exitCode !== null) throw new Error('The production server exited before becoming ready.')
 
       try {
-        const health = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(2_000) })
+        const health = await fetch(`${baseUrl}/api/health`, {
+          redirect: 'manual',
+          signal: AbortSignal.timeout(2_000),
+        })
         const payload = await health.json()
         if (!health.ok || payload.status !== 'ok') {
           throw new Error(`Health check failed: HTTP ${health.status}.`)
         }
 
-        const home = await fetch(baseUrl, { signal: AbortSignal.timeout(5_000) })
-        if (!home.ok) throw new Error(`Home page returned HTTP ${home.status}.`)
-        console.log('Production smoke check passed: / and /api/health responded.')
+        const sitemapRes = await assertDirectOk(baseUrl, '/sitemap.xml')
+        const sitemapXml = await sitemapRes.text()
+        const sitemapPaths = extractSitemapPaths(sitemapXml)
+        if (sitemapPaths.length === 0) {
+          throw new Error('Expected /sitemap.xml to contain public URLs.')
+        }
+
+        for (const path of sitemapPaths) {
+          await assertDirectOk(baseUrl, path)
+        }
+
+        for (const assetPath of [
+          '/apple-touch-icon.png',
+          '/google9b802e8e87b013ca.html',
+          '/fish/blue-catfish.jpg',
+          '/llms.txt',
+          '/robots.txt',
+        ]) {
+          await assertDirectOk(baseUrl, assetPath)
+        }
+
+        const legacyRedirect = await fetch(`${baseUrl}/locations/lake-hefner`, {
+          redirect: 'manual',
+          signal: AbortSignal.timeout(5_000),
+        })
+        if (legacyRedirect.status !== 308 || !legacyRedirect.headers.get('location')?.endsWith('/fishing-spots/lake-hefner')) {
+          throw new Error(
+            `Expected /locations/lake-hefner to 308-redirect to /fishing-spots/lake-hefner, received HTTP ${legacyRedirect.status} -> ${legacyRedirect.headers.get('location')}.`,
+          )
+        }
+
+        console.log(
+          `Production smoke check passed: ${sitemapPaths.length}/${sitemapPaths.length} sitemap URLs and public assets returned HTTP 200 directly; /locations redirected with HTTP 308.`,
+        )
         return
       } catch (error) {
-        if (error instanceof Error && error.message.startsWith('Health check failed')) throw error
-        if (error instanceof Error && error.message.startsWith('Home page returned')) throw error
+        if (
+          error instanceof Error &&
+          (error.message.startsWith('Health check failed') || error.message.startsWith('Expected '))
+        ) {
+          throw error
+        }
         await delay(500)
       }
     }
