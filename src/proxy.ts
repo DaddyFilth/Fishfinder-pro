@@ -36,6 +36,7 @@ const PUBLIC_PATHS = [
 ];
 
 const GOOGLE_VERIFICATION_FILE_RE = /^\/google[0-9a-f]{10,64}\.html$/i;
+const PROTECTED_PAGE_PATHS = ['/account', '/admin', '/audit', '/auth', '/dev'];
 
 export function resolveLegacyLocationRedirect(pathname: string): string | null {
   if (pathname === '/locations') {
@@ -63,6 +64,10 @@ export function isPublicPath(pathname: string) {
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/_next/')
   );
+}
+
+function isProtectedPagePath(pathname: string) {
+  return PROTECTED_PAGE_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function createNonce() {
@@ -171,6 +176,15 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
+    // Let Next.js resolve unknown browser routes while private pages and APIs fail closed.
+    if (!request.nextUrl.pathname.startsWith('/api/') && !isProtectedPagePath(request.nextUrl.pathname)) {
+      return applySecurityHeaders(
+        NextResponse.next({ request: { headers: requestHeaders } }),
+        request.nextUrl.protocol,
+        contentSecurityPolicy,
+      );
+    }
+
     return applySecurityHeaders(
       NextResponse.json(
         { error: 'Authentication is unavailable because Supabase is not configured.' },
