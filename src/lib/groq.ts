@@ -136,7 +136,7 @@ export interface GroqClient {
  * empty completions up to `MAX_ATTEMPTS`, then rejects with the last error.
  * Client creation does not send a request; only `chat.completions.create` does.
  */
-function createOpenAiCompatibleClient(baseURL: string, apiKey: string, label: string): GroqClient {
+export function createOpenAiCompatibleClient(baseURL: string, apiKey: string, label: string): GroqClient {
   async function create(params: GroqChatCompletionParams): Promise<GroqChatCompletionResult> {
     let lastError: unknown
 
