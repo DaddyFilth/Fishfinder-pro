@@ -42,7 +42,7 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" | tail -20
       - uses: actions/upload-artifact@v7
         with:
           name: ios-app-build
