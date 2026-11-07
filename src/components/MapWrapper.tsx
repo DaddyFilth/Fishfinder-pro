@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import HotZoneOverlay from '@/components/HotZoneOverlay';
+import { fetchWaterBodies, type WaterBodyLabel } from '@/lib/waterBodies';
 
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
@@ -173,6 +174,9 @@ interface Cond {
 /** The HUD and the overlay badge share one data-mode vocabulary. */
 type SpotDataMode = MapDataSourceMode;
 
+// Water body label data mode (separate from spot data mode)
+type WaterBodyDataMode = 'provider' | 'cached' | 'fallback';
+
 type Tab =
   | 'score'
   | 'water'
@@ -191,8 +195,9 @@ export interface MapLayers {
   hotspots: boolean;
   depth: boolean;
   waterTemp: boolean;
- conditionMarkers: boolean;
+  conditionMarkers: boolean;
   waypoints: boolean;
+  waterBodies: boolean;
 }
 
 const scoreColor = (s: number) => (s >= 75 ? '#22c55e' : s >= 50 ? '#eab308' : s >= 25 ? '#f97316' : '#ef4444');
@@ -436,6 +441,9 @@ export default function FishingMap({
     width: typeof window === 'undefined' ? 0 : window.innerWidth,
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
   }));
+  const [waterBodyLabels, setWaterBodyLabels] = useState<WaterBodyLabel[]>([]);
+  const [waterBodyDataMode, setWaterBodyDataMode] = useState<'provider' | 'cached' | 'fallback'>('fallback');
+  const [waterBodyLastVerified, setWaterBodyLastVerified] = useState<string | null>(null);
   // The hot-zone overlay is keyed to real provider conditions from the
   // nearest spot that has a loaded conditions payload. Nothing is assumed.
   const overlayCondition = useMemo<FishingCondition | null>(() => {
@@ -503,6 +511,69 @@ export default function FishingMap({
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
+
+  // Fetch water body labels when the map viewport settles.
+  // Debounced so we don't hammer the API during continuous dragging.
+  useEffect(() => {
+    let debounceTimeout: NodeJS.Timeout | null = null;
+    const debounceFetch = async () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(async () => {
+        const isOnline = navigator.onLine;
+        let waterBodies: WaterBodyLabel[];
+
+        if (!isOnline) {
+          // Offline: try cached data
+          const cached = readCachedWaterBodies();
+          if (cached && cached.waterBodies.length > 0) {
+            waterBodies = cached.waterBodies;
+            setWaterBodyDataMode('offline-cached');
+            setWaterBodyLastVerified(cached.savedAt);
+          } else {
+            setWaterBodyDataMode('fallback');
+            return;
+          }
+        } else {
+          // Online: fetch from API
+          try {
+            const result = await fetchWaterBodies(
+              userLocation.latitude,
+              userLocation.longitude,
+              5 // radius in miles
+            );
+            waterBodies = result;
+            setWaterBodyDataMode('provider');
+            setWaterBodyLastVerified(new Date().toISOString());
+            // Cache for offline use
+            cacheWaterBodies(result, new Date().toISOString());
+          } catch (error) {
+            console.warn('[water-bodies] fetchWaterBodies failed', error);
+            // Fall back to cached if available
+            const cached = readCachedWaterBodies();
+            if (cached && cached.waterBodies.length > 0) {
+              waterBodies = cached.waterBodies;
+              setWaterBodyDataMode('offline-cached');
+              setWaterBodyLastVerified(cached.savedAt);
+            } else {
+              setWaterBodyDataMode('fallback');
+              return;
+            }
+          }
+        }
+
+        setWaterBodyLabels(waterBodies);
+      }, 500); // 500ms after user stops interacting
+    };
+
+    const map = useMap();
+    map.on('moveend', debounceFetch);
+    map.on('zoomend', debounceFetch);
+
+    return () => {
+      map.off('moveend', debounceFetch);
+      map.off('zoomend', debounceFetch);
+    };
+  }, [userLocation]);
 
   const temperaturePoints = useMemo(
     () =>
@@ -730,6 +801,37 @@ export default function FishingMap({
 
         <MapDataSourceBadge mode={spotDataMode} />
 
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 18,
+            left: 18,
+            zIndex: MAP_Z_INDEX.chrome,
+            background: 'rgba(3,7,18,0.78)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: 10,
+            color: '#cbd5e1',
+            lineHeight: 1.5,
+            maxWidth: 'ch(40ex)',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: '4px' }}>Legend</div>
+          <div style={{ fontSize: 10, color: '#64748b' }}>
+            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 6, marginRight: 6, flexShrink: 0 }}></span>
+            <span>Green: Public access (boat ramp, park, leisure=fishing, government-managed)</span><br/>
+            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 6, marginRight: 6, background: '#ef4444', flexShrink: 0 }}></span>
+            <span>Red: Private access (access=no, private)</span><br/>
+            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 6, marginRight: 6, background: '#6b728c', flexShrink: 0 }}></span>
+            <span>Gray: Unknown (insufficient tag data)</span><br/>
+            <div style={{ fontSize: 9, marginTop: '4px', color: '#9ca3af' }}>
+              Labels from OpenStreetMap data + AI classification. Unknown means insufficient data — verify before fishing.
+            </div>
+          </div>
+        </div>
+
       <MapContainer
         center={[OKLAHOMA_MAP_VIEW.center.lat, OKLAHOMA_MAP_VIEW.center.lng]}
           zoom={OKLAHOMA_MAP_VIEW.zoom}
@@ -815,6 +917,53 @@ export default function FishingMap({
               </Popup>
             </CircleMarker>
           ))}
+
+          {layers.waterBodies && waterBodyLabels.map((wb) => {
+            // Display rule: if AI confidence < 60, show as UNKNOWN regardless of model output
+            const displayAccessStatus = wb.ai_confidence < 60 ? 'UNKNOWN' : wb.access_status;
+            // Pin color: green=PUBLIC, red=PRIVATE, gray=UNKNOWN (incl. confidence<60)
+            const color = displayAccessStatus === 'PUBLIC'
+              ? '#22c55e'
+              : displayAccessStatus === 'PRIVATE'
+                ? '#ef4444'
+                : '#6b728c';
+            return (
+              <CircleMarker
+                key={`waterbody-${wb.osm_id}`}
+                center={[wb.lat, wb.lng]}
+                radius={6}
+                pathOptions={{
+                  color: color,
+                  fillColor: color,
+                  fillOpacity: 0.8,
+                  weight: 2,
+                }}
+              >
+                <Popup>
+                  <div style={{ minWidth: 180 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>{wb.name ?? 'Unnamed water'}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      {/* Access status badge, gray when confidence < 60 */}
+                      <span style={{ display: 'inline-block', background: color, color: 'white', borderRadius: 999, padding: '2px 6px', fontSize: 9, marginRight: 4 }}>{displayAccessStatus}</span>
+                      {/* Confidence percentage shown only when confidence >= 60 */}
+                      {wb.ai_confidence >= 60 && wb.ai_confidence >= 0 && (
+                        <span style={{ fontSize: 9, color: color, marginLeft: 6 }}>{wb.ai_confidence}%</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{wb.ai_reasoning}</div>
+                    {wb.last_verified && (
+                      <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 2 }}>
+                        Last verified: {new Date(wb.last_verified).toLocaleDateString()}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>
+                      {wb.data_mode === 'offline-cached' ? 'CACHED' : 'Live AI classification'}
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
 
           {selectedSpot && (
             <CircleMarker
