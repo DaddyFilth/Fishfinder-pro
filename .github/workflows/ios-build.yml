@@ -31,9 +31,6 @@ jobs:
       - name: Build iOS (no signing)
         shell: bash
         run: |
-          set -o pipefail
-          cd ios/App
-          xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -20
           set -euo pipefail
           cd ios/App
           xcodebuild \
@@ -45,7 +42,7 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" | tail -20
       - uses: actions/upload-artifact@v7
         with:
           name: ios-app-build
