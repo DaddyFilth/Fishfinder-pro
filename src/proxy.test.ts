@@ -216,6 +216,17 @@ describe('proxy access control', () => {
     },
   )
 
+  it('fails closed with 503 on protected API routes when Supabase is not configured', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/api/catches'))
+
+    expect(response.status).toBe(503)
+    expect(updateSessionMock).not.toHaveBeenCalled()
+  })
+
   it('lets Next.js resolve unknown browser routes when Supabase is not configured', async () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
