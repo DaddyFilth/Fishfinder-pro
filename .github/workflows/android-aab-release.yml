@@ -13,13 +13,10 @@ concurrency:
 jobs:
   build-release:
     name: Build signed Android release
-    # GitHub-hosted by default because Actions minutes are free for public repositories.
-    # Use your own hardware for every run with:
+    # The override is available only for trusted manual runs on main:
     #   gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
-    # To force GitHub-hosted runners with:
-    #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
     # Prefer no CI at all? bash scripts/build-android-apk.sh --release
-    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || '["ubuntu-latest"]') }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && fromJSON(vars.ANDROID_RUNNER_JSON || '["ubuntu-latest"]') || 'ubuntu-latest' }}
     timeout-minutes: 35
 
     steps:

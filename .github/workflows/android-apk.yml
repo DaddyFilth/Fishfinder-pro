@@ -16,15 +16,12 @@ concurrency:
 jobs:
   build-debug-apk:
     name: Build debug APK
-    # Pull requests always use GitHub-hosted runners; the override applies to manual runs.
-    #
-    # Use your own hardware for manual runs with:
+    # Pull requests always use GitHub-hosted runners. The override is available
+    # only for trusted manual runs on main:
     #   gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
-    # To force GitHub-hosted runners for manual runs with:
-    #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
     #
     # Prefer no CI at all? bash scripts/build-android-apk.sh
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON(vars.ANDROID_RUNNER_JSON || '["ubuntu-latest"]') }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && fromJSON(vars.ANDROID_RUNNER_JSON || '["ubuntu-latest"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
 
     steps:
