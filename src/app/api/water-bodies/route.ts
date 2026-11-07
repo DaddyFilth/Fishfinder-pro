@@ -3,8 +3,6 @@ import { enforceRateLimit } from '@/lib/security';
 import { getAuthContext } from '@/lib/auth/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAiProviderTargets } from '@/lib/groq';
-import { createOpenAiCompatibleClient } from '@/lib/groq';
-import { envValue } from '@/lib/env';
 import type { WaterBodyLabel } from '@/lib/waterBodies';
 
 // ── Zod validation schema for AI response ────────────────────────────────
@@ -38,7 +36,7 @@ async function queryOverpassAPI(lat: number, lon: number, radiusMiles: number): 
     const res = await fetch(overpassUrl, {
       method: 'GET',
       headers: { Accept: 'application/json' },
-      timeout: 15000,
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
@@ -63,7 +61,7 @@ async function queryOverpassAPI(lat: number, lon: number, radiusMiles: number): 
       lon: number;
       water_type: string | null;
       tags: Record<string, string | null>;
-    } => {
+    } | null => {
       const tags = el.tags || {};
       const natural = tags.natural;
       const water = tags.water;
@@ -95,7 +93,7 @@ async function queryOverpassAPI(lat: number, lon: number, radiusMiles: number): 
         water_type: waterType,
         tags,
       };
-    }).filter(Boolean) as typeof results[number][];
+    }).filter((result): result is NonNullable<typeof result> => result !== null);
 
     return { results };
   } catch (error) {
@@ -260,6 +258,7 @@ export async function GET(req: NextRequest) {
           ai_confidence: cached.ai_confidence,
           ai_reasoning: cached.ai_reasoning,
           last_verified: cached.last_verified,
+          data_mode: 'cached',
         } as WaterBodyLabel;
       }
 
@@ -304,6 +303,7 @@ export async function GET(req: NextRequest) {
         ai_confidence: finalResponse.confidence,
         ai_reasoning: finalResponse.reasoning,
         last_verified: new Date().toISOString(),
+        data_mode: 'provider',
       } as WaterBodyLabel;
     })
   );
@@ -327,6 +327,7 @@ export async function GET(req: NextRequest) {
         ai_confidence: cached.ai_confidence,
         ai_reasoning: cached.ai_reasoning,
         last_verified: cached.last_verified,
+        data_mode: 'cached',
       });
     }
   }
