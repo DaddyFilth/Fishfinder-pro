@@ -1,4 +1,3 @@
-import axios, { AxiosError } from 'axios';
 import { z } from 'zod';
 
 const NWS_BASE = process.env.NWS_BASE ?? 'https://api.weather.gov';
@@ -10,6 +9,56 @@ const TIDES_BASE = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 
 const NWS_HOST = 'api.weather.gov';
 const NWS_TIMEOUT_MS = 6000;
+
+class HttpStatusError extends Error {
+  readonly status: number;
+
+  constructor(status: number, url: string) {
+    super(`HTTP ${status} from ${url}`);
+    this.name = 'HttpStatusError';
+    this.status = status;
+  }
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
+}
+
+function buildQueryUrl(
+  base: string,
+  params: Record<string, string | number>,
+): string {
+  const url = new URL(base);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+}
+
+async function fetchJson(
+  url: string,
+  options: {
+    timeoutMs: number;
+    headers?: Record<string, string>;
+    redirect?: RequestRedirect;
+  },
+): Promise<unknown> {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: options.headers,
+    redirect: options.redirect ?? 'follow',
+    signal: AbortSignal.timeout(options.timeoutMs),
+  });
+
+  if (!response.ok) {
+    throw new HttpStatusError(response.status, url);
+  }
+
+  return response.json();
+}
 
 const NWSPointSchema = z.object({
   properties: z.object({
@@ -119,21 +168,17 @@ function logNwsFailure(
   spotLng: number,
   error: unknown,
 ): void {
-  const status =
-    error instanceof AxiosError && typeof error.response?.status === 'number'
-      ? error.response.status
-      : null;
+  const status = error instanceof HttpStatusError ? error.status : null;
 
-  const kind =
-    error instanceof AxiosError
-      ? error.code === 'ECONNABORTED'
-        ? 'timeout'
-        : status === 404
-          ? 'http-404'
-          : 'http-or-network'
+  const kind = isTimeoutError(error)
+    ? 'timeout'
+    : error instanceof HttpStatusError
+      ? status === 404
+        ? 'http-404'
+        : 'http-or-network'
       : error instanceof z.ZodError
         ? 'invalid-response'
-        : 'invalid-url-or-request';
+        : 'http-or-network';
 
   console.warn('[NWS] conditions unavailable', {
     provider: 'NWS',
@@ -159,17 +204,19 @@ export async function fetchNwsWeather(lat: number, lng: number) {
     return null;
   }
 
+  const nwsHeaders = {
+    Accept: 'application/geo+json, application/json',
+    'User-Agent': 'FishFinderPro/1.0 (contact@fishfinderpro.app)',
+  };
+
   try {
-    const pointRes = await axios.get(pointUrl, {
-      headers: {
-        Accept: 'application/geo+json, application/json',
-        'User-Agent': 'FishFinderPro/1.0 (contact@fishfinderpro.app)',
-      },
-      timeout: NWS_TIMEOUT_MS,
-      validateStatus: (status) => status >= 200 && status < 300,
+    const pointPayload = await fetchJson(pointUrl, {
+      headers: nwsHeaders,
+      timeoutMs: NWS_TIMEOUT_MS,
+      redirect: 'error',
     });
 
-    const point = NWSPointSchema.parse(pointRes.data);
+    const point = NWSPointSchema.parse(pointPayload);
     const forecastUrl = point.properties.forecast;
 
     if (!isAllowedNwsUrl(forecastUrl)) {
@@ -184,16 +231,13 @@ export async function fetchNwsWeather(lat: number, lng: number) {
       return null;
     }
 
-    const forecastRes = await axios.get(forecastUrl, {
-      headers: {
-        Accept: 'application/geo+json, application/json',
-        'User-Agent': 'FishFinderPro/1.0 (contact@fishfinderpro.app)',
-      },
-      timeout: NWS_TIMEOUT_MS,
-      validateStatus: (status) => status >= 200 && status < 300,
+    const forecastPayload = await fetchJson(forecastUrl, {
+      headers: nwsHeaders,
+      timeoutMs: NWS_TIMEOUT_MS,
+      redirect: 'error',
     });
 
-    const forecast = NWSForecastSchema.parse(forecastRes.data);
+    const forecast = NWSForecastSchema.parse(forecastPayload);
     const current = forecast.properties.periods[0];
 
     const tempC =
@@ -222,21 +266,20 @@ export async function fetchNwsWeather(lat: number, lng: number) {
   }
 }
 
-export const fetchNWSConditions = fetchNwsWeather
+export const fetchNWSConditions = fetchNwsWeather;
 
 export async function fetchUSGSWaterData(siteId: string) {
   try {
-    const res = await axios.get(`${USGS_BASE}/iv/`, {
-      params: {
-        sites: siteId,
-        parameterCd: '00060,00065,00010,00300',
-        siteStatus: 'active',
-        format: 'json',
-      },
-      timeout: 10000,
+    const base = USGS_BASE.endsWith('/') ? `${USGS_BASE}iv/` : `${USGS_BASE}/iv/`;
+    const url = buildQueryUrl(base, {
+      sites: siteId,
+      parameterCd: '00060,00065,00010,00300',
+      siteStatus: 'active',
+      format: 'json',
     });
+    const payload = await fetchJson(url, { timeoutMs: 10_000 });
 
-    const data = USGSSchema.parse(res.data);
+    const data = USGSSchema.parse(payload);
     const result: Record<string, number | null | string> = {
       source: 'USGS Water Data',
       site_id: siteId,
@@ -254,25 +297,23 @@ export async function fetchUSGSWaterData(siteId: string) {
 
     return result;
   } catch (err) {
-    console.error('[USGS]', err instanceof AxiosError ? err.message : err);
+    console.error('[USGS]', err instanceof Error ? err.message : err);
     return null;
   }
 }
 
 export async function fetchMarineConditions(lat: number, lng: number) {
   try {
-    const res = await axios.get(MARINE_BASE, {
-      params: {
-        latitude: lat,
-        longitude: lng,
-        hourly: 'wave_height,wave_period,wave_direction,sea_surface_temperature,swell_wave_height',
-        forecast_days: 1,
-        timezone: 'auto',
-      },
-      timeout: 8000,
+    const url = buildQueryUrl(MARINE_BASE, {
+      latitude: lat,
+      longitude: lng,
+      hourly: 'wave_height,wave_period,wave_direction,sea_surface_temperature,swell_wave_height',
+      forecast_days: 1,
+      timezone: 'auto',
     });
+    const payload = await fetchJson(url, { timeoutMs: 8_000 });
 
-    const data = MarineSchema.parse(res.data);
+    const data = MarineSchema.parse(payload);
     const h = data.hourly;
     const idx = new Date().getHours();
 
@@ -285,27 +326,25 @@ export async function fetchMarineConditions(lat: number, lng: number) {
       swell_height_m: h.swell_wave_height?.[idx] ?? null,
     };
   } catch (err) {
-    console.error('[Marine]', err instanceof AxiosError ? err.message : err);
+    console.error('[Marine]', err instanceof Error ? err.message : err);
     return null;
   }
 }
 
 export async function fetchPressureTrend(lat: number, lng: number) {
   try {
-    const res = await axios.get(PRESSURE_BASE, {
-      params: {
-        latitude: lat,
-        longitude: lng,
-        current: 'surface_pressure',
-        hourly: 'surface_pressure',
-        past_hours: 3,
-        forecast_days: 1,
-        timezone: 'auto',
-      },
-      timeout: 8000,
+    const url = buildQueryUrl(PRESSURE_BASE, {
+      latitude: lat,
+      longitude: lng,
+      current: 'surface_pressure',
+      hourly: 'surface_pressure',
+      past_hours: 3,
+      forecast_days: 1,
+      timezone: 'auto',
     });
+    const payload = await fetchJson(url, { timeoutMs: 8_000 });
 
-    const data = PressureSchema.parse(res.data);
+    const data = PressureSchema.parse(payload);
     const now = data.current?.surface_pressure ?? null;
     const times = data.hourly?.time ?? [];
     const readings = data.hourly?.surface_pressure ?? [];
@@ -326,11 +365,10 @@ export async function fetchPressureTrend(lat: number, lng: number) {
       trend,
     };
   } catch (err) {
-    console.error('[Pressure]', err instanceof AxiosError ? err.message : err);
+    console.error('[Pressure]', err instanceof Error ? err.message : err);
     return null;
   }
 }
-
 
 export async function fetchTideData(stationId: string) {
   try {
@@ -339,24 +377,24 @@ export async function fetchTideData(stationId: string) {
       .split('T')[0]
       .replace(/-/g, '');
 
-    const res = await axios.get(TIDES_BASE, {
-      params: {
-        begin_date: dateStr,
-        end_date: dateStr,
-        station: stationId,
-        product: 'water_level',
-        datum: 'MLLW',
-        time_zone: 'lst_ldt',
-        units: 'metric',
-        application: 'FishFinderPro',
-        format: 'json',
-      },
-      timeout: 8000,
+    const url = buildQueryUrl(TIDES_BASE, {
+      begin_date: dateStr,
+      end_date: dateStr,
+      station: stationId,
+      product: 'water_level',
+      datum: 'MLLW',
+      time_zone: 'lst_ldt',
+      units: 'metric',
+      application: 'FishFinderPro',
+      format: 'json',
     });
+    const payload = (await fetchJson(url, { timeoutMs: 8_000 })) as {
+      data?: Array<{ t: string; v: string }>;
+    } | null;
 
-    if (!res.data?.data) return null;
+    if (!payload?.data?.length) return null;
 
-    const readings: Array<{ t: string; v: string }> = res.data.data;
+    const readings = payload.data;
     const nowMs = Date.now();
 
     const closest = readings.reduce((prev, curr) =>
@@ -373,7 +411,7 @@ export async function fetchTideData(stationId: string) {
       observation_time: closest.t,
     };
   } catch (err) {
-    console.error('[Tides]', err instanceof AxiosError ? err.message : err);
+    console.error('[Tides]', err instanceof Error ? err.message : err);
     return null;
   }
 }
