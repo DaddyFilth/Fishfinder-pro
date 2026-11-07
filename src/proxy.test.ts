@@ -202,14 +202,28 @@ describe('proxy access control', () => {
     expect(location.searchParams.get('next')).toBe('/account?tab=logs')
   })
 
-  it('fails closed with 503 on protected routes when Supabase is not configured', async () => {
+  it.each(['/account', '/admin/users', '/audit', '/auth/unknown', '/dev/ai-spots'])(
+    'fails closed with 503 on protected page %s when Supabase is not configured',
+    async (pathname) => {
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+
+      const response = await proxy(makeRequest(`https://www.fishfinder-pro.online${pathname}`))
+
+      expect(response.status).toBe(503)
+      expect(updateSessionMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it('lets Next.js resolve unknown browser routes when Supabase is not configured', async () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', undefined)
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
 
-    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/account'))
+    const response = await proxy(makeRequest('https://www.fishfinder-pro.online/not-a-real-page'))
 
-    expect(response.status).toBe(503)
+    expect(response.status).toBe(200)
     expect(updateSessionMock).not.toHaveBeenCalled()
   })
 })
