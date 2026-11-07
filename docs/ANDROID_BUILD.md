@@ -1,9 +1,8 @@
-# Android APK builds without a billed runner
+# Android builds without a billed runner
 
-The Android workflows used to run only on GitHub-hosted runners (`ubuntu-latest`).
-Those are metered: on a private repository they draw down the included Actions
-minutes, and once the allowance or a spending limit is hit, runs stop. APK builds
-now have two paths that billing cannot block.
+The Android workflows use GitHub-hosted runners (`ubuntu-latest`) by default.
+For public repositories, Actions minutes are free. To avoid metered minutes in a
+private repository, use the local build or configure a self-hosted runner.
 
 ## 1. Build locally (no CI at all)
 
@@ -32,8 +31,8 @@ Release signing reads the same variables as the release workflow:
 
 ## 2. Build on a self-hosted runner
 
-Self-hosted runners are never metered, so a billing limit cannot stop them. Both
-Android workflows default to the labels `self-hosted,linux,x64`:
+Self-hosted runners are never metered. To use one for both Android workflows,
+set the repository variable to the runner labels:
 
 ```bash
 npm run android:runner:setup -- --check        # prerequisites only
@@ -45,24 +44,20 @@ The runner host needs Java 17+ and Node 20+. The Android SDK is installed inside
 the workflow by `android-actions/setup-android`, so it does not have to be
 pre-installed on the machine.
 
-Manual runs (`workflow_dispatch`) expose a **runner** dropdown defaulting to
-`self-hosted`; choose `github-hosted` for a one-off hosted run. Pull requests
-build on a hosted runner because those minutes are free for public repositories.
-
-To move every run, pull requests included, off hosted runners:
+This selects your own hardware for all runs, including pull requests:
 
 ```bash
 gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
 ```
 
-To revert to hosted runners everywhere:
+To revert to GitHub-hosted runners everywhere:
 
 ```bash
 gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
 ```
 
-> With a self-hosted default and no runner registered, runs sit in the queue
-> until a runner is available. Use either `gh variable set` command above, or the
+> With a self-hosted runner selected and no matching runner registered, runs sit
+> in the queue until one is available. Use the hosted runner setting above, or the
 > local script, in that case.
 
 ## Which limit actually blocked CI before?

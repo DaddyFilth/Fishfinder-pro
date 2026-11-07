@@ -16,7 +16,9 @@ describe.each(androidWorkflows)('%s runner selection', (workflowPath) => {
   const workflow = read(workflowPath);
 
   it('defaults to a GitHub-hosted runner for public repo CI minutes', () => {
-    expect(workflow).toContain('runs-on: ubuntu-latest');
+    expect(workflow).toContain(
+      "runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || '[\"ubuntu-latest\"]') }}",
+    );
     expect(workflow).toContain('ANDROID_RUNNER_JSON');
     // Self-hosted runner reference appears only in comments, not in YAML.
     expect(workflow).not.toMatch(/runs-on:\s*self-hosted/);

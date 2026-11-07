@@ -13,11 +13,13 @@ concurrency:
 jobs:
   build-release:
     name: Build signed Android release
-    # Self-hosted by default so a billing limit or spent Actions quota can never
-    # block a Play Store build. Override globally with:
+    # GitHub-hosted by default because Actions minutes are free for public repositories.
+    # Use your own hardware for every run with:
+    #   gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
+    # To force GitHub-hosted runners with:
     #   gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
     # Prefer no CI at all? bash scripts/build-android-apk.sh --release
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.ANDROID_RUNNER_JSON || '["ubuntu-latest"]') }}
     timeout-minutes: 35
 
     steps:
