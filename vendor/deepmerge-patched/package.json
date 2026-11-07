@@ -1,0 +1,14 @@
+{
+  "name": "deepmerge",
+  "version": "4.3.2",
+  "description": "A library for deep (recursive) merging of Javascript objects. Vendored copy of TehShrike/deepmerge@4.3.1 hardened against GHSA-gcqx-w48m-w2h4 prototype poisoning in mergeObject().",
+  "homepage": "https://github.com/TehShrike/deepmerge",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "LICENSE"
+  ]
+}

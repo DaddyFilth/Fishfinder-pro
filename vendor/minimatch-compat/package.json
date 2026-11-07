@@ -1,0 +1,18 @@
+{
+  "name": "minimatch",
+  "version": "11.0.4",
+  "description": "ESM + legacy CJS default-export compatibility shim backed by upstream minimatch@11.0.3 (GHSA-g3hv-75wg-m249 fixed).",
+  "license": "ISC",
+  "type": "module",
+  "main": "./cjs.cjs",
+  "exports": {
+    ".": {
+      "import": "./esm.js",
+      "require": "./cjs.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "minimatch-v11": "npm:minimatch@^11.0.3"
+  }
+}

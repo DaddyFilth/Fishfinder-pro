@@ -54,8 +54,14 @@ function clientKey(request: Request) {
 }
 
 function upstashCredentials() {
-  const url = envValue(process.env.UPSTASH_REDIS_REST_URL) || envValue(process.env.NEXT_PUBLIC_KV_REST_API_URL)
-  const token = envValue(process.env.UPSTASH_REDIS_REST_TOKEN) || envValue(process.env.NEXT_PUBLIC_KV_REST_API_TOKEN)
+  const url =
+    envValue(process.env.UPSTASH_REDIS_REST_URL) ||
+    envValue(process.env.KV_REST_API_URL) ||
+    envValue(process.env.NEXT_PUBLIC_KV_REST_API_URL)
+  const token =
+    envValue(process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    envValue(process.env.KV_REST_API_TOKEN) ||
+    envValue(process.env.NEXT_PUBLIC_KV_REST_API_TOKEN)
   return url && token ? { url, token } : null
 }
 

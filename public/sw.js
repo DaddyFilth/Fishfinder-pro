@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fishfinder-pro-v5';
+const CACHE_VERSION = 'fishfinder-pro-v6';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -76,7 +76,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && !response.redirected) {
             const copy = response.clone();
 
             void caches.open(RUNTIME_CACHE).then((cache) => {
