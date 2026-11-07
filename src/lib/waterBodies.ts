@@ -1,5 +1,3 @@
-import type { WaterBodyLabel } from '@/lib/waterBodies';
-
 export interface WaterBodyLabel {
   osm_id: number;
   name: string | null;
@@ -10,6 +8,7 @@ export interface WaterBodyLabel {
   ai_confidence: number;
   ai_reasoning: string;
   last_verified: string;
+  data_mode: 'provider' | 'cached' | 'fallback';
 }
 
 export interface WaterBodyResult {

@@ -1,4 +1,5 @@
-import type { Spot, WaterBodyLabel } from '@/lib/mapFilters';
+import type { WaterBodyLabel } from '@/lib/waterBodies';
+import type { Spot } from '@/lib/mapFilters';
 
 const SPOTS_CACHE_KEY = 'oklahoma-fishfinder:spots:v1';
 const WATER_BODIES_CACHE_KEY = 'oklahoma-fishfinder:water-bodies:v1';

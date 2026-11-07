@@ -84,8 +84,8 @@ async function queryOverpassAPI(lat: number, lon: number, radiusMiles: number): 
       const name = tags.name || null;
 
       // Compute a rough lat/lon from the element
-      let latVal = el.center?.lat ?? el.bbox?.[1] ?? lat;
-      let lonVal = el.center?.lon ?? el.bbox?.[0] ?? lon;
+      const latVal = el.center?.lat ?? el.bbox?.[1] ?? lat;
+      const lonVal = el.center?.lon ?? el.bbox?.[0] ?? lon;
 
       return {
         osm_id: el.id,
@@ -309,9 +309,6 @@ export async function GET(req: NextRequest) {
   );
 
   // 7️⃣ Merge cached results with newly classified ones
-  const classifiedSet = new Map(
-    newClassifications.map((lbl) => [lbl.osm_id, lbl])
-  );
 
   // Build the final response: include both cached and new, plus any fully cached
   const allWaterBodies: WaterBodyLabel[] = [];

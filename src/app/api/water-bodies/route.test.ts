@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NextRequest } from 'next/server'
 
 const { getSupabaseAdmin, getAuthContext } = vi.hoisted(() => ({
   getSupabaseAdmin: vi.fn(),

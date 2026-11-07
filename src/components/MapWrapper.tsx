@@ -7,6 +7,7 @@ import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from 're
 import 'leaflet/dist/leaflet.css';
 import HotZoneOverlay from '@/components/HotZoneOverlay';
 import { fetchWaterBodies, type WaterBodyLabel } from '@/lib/waterBodies';
+import { readCachedWaterBodies, cacheWaterBodies } from '@/lib/offlineSpots';
 
 import L from 'leaflet';
 import BiteTimePanel from '@/components/BiteTimePanel';
@@ -175,7 +176,6 @@ interface Cond {
 type SpotDataMode = MapDataSourceMode;
 
 // Water body label data mode (separate from spot data mode)
-type WaterBodyDataMode = 'provider' | 'cached' | 'fallback';
 
 type Tab =
   | 'score'
@@ -437,13 +437,14 @@ export default function FishingMap({
   const inFlightRef = useRef<Set<string>>(new Set());
   const mapShellRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef<SpotMarkerRegistry['current']>({});
+  const map = useMap();
   const [mapSize, setMapSize] = useState(() => ({
     width: typeof window === 'undefined' ? 0 : window.innerWidth,
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
   }));
   const [waterBodyLabels, setWaterBodyLabels] = useState<WaterBodyLabel[]>([]);
-  const [waterBodyDataMode, setWaterBodyDataMode] = useState<'provider' | 'cached' | 'fallback'>('fallback');
-  const [waterBodyLastVerified, setWaterBodyLastVerified] = useState<string | null>(null);
+  const [, setWaterBodyDataMode] = useState<'provider' | 'cached' | 'fallback'>('fallback');
+  const [, setWaterBodyLastVerified] = useState<string | null>(null);
   // The hot-zone overlay is keyed to real provider conditions from the
   // nearest spot that has a loaded conditions payload. Nothing is assumed.
   const overlayCondition = useMemo<FishingCondition | null>(() => {
@@ -522,6 +523,11 @@ export default function FishingMap({
         const isOnline = navigator.onLine;
         let waterBodies: WaterBodyLabel[];
 
+        if (!userLocation) {
+          setWaterBodyDataMode('fallback');
+          return;
+        }
+
         if (!isOnline) {
           // Offline: try cached data
           const cached = readCachedWaterBodies();
@@ -565,7 +571,6 @@ export default function FishingMap({
       }, 500); // 500ms after user stops interacting
     };
 
-    const map = useMap();
     map.on('moveend', debounceFetch);
     map.on('zoomend', debounceFetch);
 
@@ -930,7 +935,7 @@ export default function FishingMap({
             return (
               <CircleMarker
                 key={`waterbody-${wb.osm_id}`}
-                center={[wb.lat, wb.lng]}
+                center={[wb.lat, wb.lon]}
                 radius={6}
                 pathOptions={{
                   color: color,
