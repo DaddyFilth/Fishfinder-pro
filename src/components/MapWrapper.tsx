@@ -962,7 +962,7 @@ export default function FishingMap({
                       </div>
                     )}
                     <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>
-                      {wb.data_mode === 'offline-cached' ? 'CACHED' : 'Live AI classification'}
+                      {wb.data_mode === 'cached' ? 'CACHED' : 'Live AI classification'}
                     </div>
                   </div>
                 </Popup>

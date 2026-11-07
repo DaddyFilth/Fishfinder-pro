@@ -51,14 +51,6 @@ describe('water-bodies route provenance', () => {
           }),
         }),
       }),
-      from: () => ({
-        select: () => ({
-          limit: () => ({
-            data: [],
-            error: null,
-          }),
-        }),
-      }),
     } as any)
 
     const response = await GET(new NextRequest('https://example.com/api/water-bodies?lat=35&lon=-97&radius_miles=10'))
