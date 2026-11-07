@@ -1,6 +1,8 @@
+import type { WaterBodyLabel } from '@/lib/waterBodies';
 import type { Spot } from '@/lib/mapFilters';
 
-const CACHE_KEY = 'oklahoma-fishfinder:spots:v1';
+const SPOTS_CACHE_KEY = 'oklahoma-fishfinder:spots:v1';
+const WATER_BODIES_CACHE_KEY = 'oklahoma-fishfinder:water-bodies:v1';
 
 interface CachedSpots {
   spots: Spot[];
@@ -12,6 +14,16 @@ export interface CachedSpotResult {
   savedAt: string;
 }
 
+interface CachedWaterBodies {
+  waterBodies: WaterBodyLabel[];
+  savedAt: string;
+}
+
+export interface CachedWaterBodyResult {
+  waterBodies: WaterBodyLabel[];
+  savedAt: string;
+}
+
 function canUseStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
@@ -19,7 +31,7 @@ function canUseStorage() {
 export function readCachedSpots(): CachedSpotResult | null {
   if (!canUseStorage()) return null;
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY);
+    const raw = window.localStorage.getItem(SPOTS_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedSpots;
     if (!Array.isArray(parsed.spots) || typeof parsed.savedAt !== 'string') return null;
@@ -32,7 +44,7 @@ export function readCachedSpots(): CachedSpotResult | null {
 export function cacheSpots(spots: Spot[], savedAt = new Date().toISOString()) {
   if (!canUseStorage() || spots.length === 0) return false;
   try {
-    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ spots, savedAt } satisfies CachedSpots));
+    window.localStorage.setItem(SPOTS_CACHE_KEY, JSON.stringify({ spots, savedAt } satisfies CachedSpots));
     return true;
   } catch {
     return false;
@@ -49,4 +61,43 @@ export function formatCacheAge(savedAt: string | null) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} hr ago`;
   return `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`;
+}
+
+/** Read the last water bodies response from IndexedDB (localStorage). */
+export function readCachedWaterBodies(): CachedWaterBodyResult | null {
+  if (!canUseStorage()) return null;
+  try {
+    const raw = window.localStorage.getItem(WATER_BODIES_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedWaterBodies;
+    if (
+      !Array.isArray(parsed.waterBodies) ||
+      typeof parsed.savedAt !== 'string' ||
+      !parsed.waterBodies.every(
+        (wb) =>
+          typeof wb.osm_id === 'number' &&
+          typeof wb.lat === 'number' &&
+          typeof wb.lon === 'number' &&
+          typeof wb.access_status === 'string'
+      )
+    )
+      return null;
+    return { waterBodies: parsed.waterBodies, savedAt: parsed.savedAt };
+  } catch {
+    return null;
+  }
+}
+
+/** Cache the water bodies response in IndexedDB (localStorage). */
+export function cacheWaterBodies(waterBodies: WaterBodyLabel[], savedAt = new Date().toISOString()) {
+  if (!canUseStorage() || waterBodies.length === 0) return false;
+  try {
+    window.localStorage.setItem(
+      WATER_BODIES_CACHE_KEY,
+      JSON.stringify({ waterBodies, savedAt } satisfies CachedWaterBodies)
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
