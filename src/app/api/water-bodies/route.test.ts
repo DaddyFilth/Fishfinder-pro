@@ -18,6 +18,11 @@ vi.mock('@/lib/auth/server', () => ({
   getAuthContext,
 }))
 
+vi.mock('@/lib/groq', () => ({
+  getAiProviderTargets: vi.fn(async () => []),
+  createOpenAiCompatibleClient: vi.fn(() => null),
+}))
+
 import { GET } from './route'
 
 describe('water-bodies route provenance', () => {
@@ -157,10 +162,7 @@ describe('water-bodies route provenance', () => {
       new Response(JSON.stringify(overpassResponse), { status: 200 })
     )
 
-    // Mock AI provider to fail (no API keys)
-    const originalGetAiProviderTargets = require('@/lib/groq').getAiProviderTargets
-    ;(require('@/lib/groq') as any).getAiProviderTargets = vi.fn(() => [])
-
+    // AI provider targets are mocked to return none, so classification falls back to UNKNOWN.
     const response = await GET(
       new NextRequest('https://example.com/api/water-bodies?lat=35&lon=-97&radius_miles=10')
     )

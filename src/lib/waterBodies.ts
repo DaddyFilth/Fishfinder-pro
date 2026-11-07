@@ -90,5 +90,6 @@ export function mapOverpassResult(
     ai_confidence: confidence,
     ai_reasoning: reasoning,
     last_verified: new Date().toISOString(),
+    data_mode: 'cached',
   };
 }

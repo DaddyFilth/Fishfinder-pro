@@ -443,7 +443,7 @@ export default function FishingMap({
     height: typeof window === 'undefined' ? 0 : window.innerHeight,
   }));
   const [waterBodyLabels, setWaterBodyLabels] = useState<WaterBodyLabel[]>([]);
-  const [, setWaterBodyDataMode] = useState<'provider' | 'cached' | 'fallback'>('fallback');
+  const [, setWaterBodyDataMode] = useState<'provider' | 'cached' | 'fallback' | 'offline-cached'>('fallback');
   const [, setWaterBodyLastVerified] = useState<string | null>(null);
   // The hot-zone overlay is keyed to real provider conditions from the
   // nearest spot that has a loaded conditions payload. Nothing is assumed.

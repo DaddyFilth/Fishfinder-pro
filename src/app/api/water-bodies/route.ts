@@ -11,7 +11,7 @@ import type { WaterBodyLabel } from '@/lib/waterBodies';
 import { z } from 'zod';
 
 const WaterBodyAIResponseSchema = z.object({
-  status: z.literal('PUBLIC') | z.literal('PRIVATE') | z.literal('UNKNOWN'),
+  status: z.enum(['PUBLIC', 'PRIVATE', 'UNKNOWN']),
   confidence: z.number().int().min(0).max(100),
   reasoning: z.string().nonempty(),
 });
