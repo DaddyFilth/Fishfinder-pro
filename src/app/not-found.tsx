@@ -42,7 +42,7 @@ export default function NotFound() {
             minHeight: '44px',
             padding: '0 18px',
             borderRadius: '10px',
-            background: '#0891b2',
+            background: '#0e7490',
             color: '#ecfeff',
             fontWeight: 800,
             textDecoration: 'none',
