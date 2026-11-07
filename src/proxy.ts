@@ -171,6 +171,16 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
+    // Let Next.js resolve browser routes so missing pages can render the app's
+    // 404 boundary. API routes still fail closed when auth is unavailable.
+    if (!request.nextUrl.pathname.startsWith('/api/')) {
+      return applySecurityHeaders(
+        NextResponse.next({ request: { headers: requestHeaders } }),
+        request.nextUrl.protocol,
+        contentSecurityPolicy,
+      );
+    }
+
     return applySecurityHeaders(
       NextResponse.json(
         { error: 'Authentication is unavailable because Supabase is not configured.' },
