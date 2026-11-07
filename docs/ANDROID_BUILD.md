@@ -1,8 +1,9 @@
 # Android builds without a billed runner
 
-The Android workflows use GitHub-hosted runners (`ubuntu-latest`) by default.
-For public repositories, Actions minutes are free. To avoid metered minutes in a
-private repository, use the local build or configure a self-hosted runner.
+Android pull-request builds always use GitHub-hosted runners (`ubuntu-latest`).
+Manual Android workflow runs use them by default; for public repositories,
+Actions minutes are free. To avoid metered minutes in a private repository, use
+the local build or configure a self-hosted runner for manual runs.
 
 ## 1. Build locally (no CI at all)
 
@@ -31,8 +32,8 @@ Release signing reads the same variables as the release workflow:
 
 ## 2. Build on a self-hosted runner
 
-Self-hosted runners are never metered. To use one for both Android workflows,
-set the repository variable to the runner labels:
+Self-hosted runners are never metered. To use one for manually dispatched
+Android workflows, set the repository variable to the runner labels:
 
 ```bash
 npm run android:runner:setup -- --check        # prerequisites only
@@ -44,13 +45,14 @@ The runner host needs Java 17+ and Node 20+. The Android SDK is installed inside
 the workflow by `android-actions/setup-android`, so it does not have to be
 pre-installed on the machine.
 
-This selects your own hardware for all runs, including pull requests:
+This selects your own hardware for manual runs. Pull-request APK builds always
+remain on GitHub-hosted runners, regardless of this setting:
 
 ```bash
 gh variable set ANDROID_RUNNER_JSON --body '["self-hosted","linux","x64"]'
 ```
 
-To revert to GitHub-hosted runners everywhere:
+To revert to GitHub-hosted runners for manual runs:
 
 ```bash
 gh variable set ANDROID_RUNNER_JSON --body '["ubuntu-latest"]'
