@@ -3,8 +3,6 @@ import { enforceRateLimit } from '@/lib/security';
 import { getAuthContext } from '@/lib/auth/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAiProviderTargets } from '@/lib/groq';
-import { createOpenAiCompatibleClient } from '@/lib/groq';
-import { envValue } from '@/lib/env';
 import type { WaterBodyLabel } from '@/lib/waterBodies';
 
 // ── Zod validation schema for AI response ────────────────────────────────

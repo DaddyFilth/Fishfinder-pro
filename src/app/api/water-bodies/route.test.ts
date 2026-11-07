@@ -51,7 +51,7 @@ describe('water-bodies route provenance', () => {
           }),
         }),
       }),
-    } as any)
+    } as never)
 
     const response = await GET(new NextRequest('https://example.com/api/water-bodies?lat=35&lon=-97&radius_miles=10'))
     const payload = await response.json()
@@ -91,7 +91,7 @@ describe('water-bodies route provenance', () => {
           }),
         }),
       }),
-    } as any)
+    } as never)
 
     // Mock fetch for Overpass - return one water body
     const overpassResponse = {
@@ -136,7 +136,7 @@ describe('water-bodies route provenance', () => {
           }),
         }),
       }),
-    } as any)
+    } as never)
 
     // Mock fetch for Overpass - return one water body
     const overpassResponse = {
