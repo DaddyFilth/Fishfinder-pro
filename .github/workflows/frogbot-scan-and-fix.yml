@@ -38,7 +38,7 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jfrog/frogbot@cad4840a9169a65d2add8d3326ebe3cee8e1723e  # v3.8.1
+      - uses: jfrog/frogbot@4e80fdf501fa8fb34249d32fe981e6e37acdb5b3  # v3.8.2
         if: steps.frogbot-credentials.outputs.configured == 'true'
         env:
           # [Mandatory if the two conditions below are met]
