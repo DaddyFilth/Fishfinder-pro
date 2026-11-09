@@ -70,15 +70,15 @@
     "csv-parse": "^7.0.2",
     "deepmerge": "file:vendor/deepmerge-patched",
     "eslint": "^10",
-    "eslint-config-next": "^16.4.2",
+    "eslint-config-next": "^16.4.5",
     "minimatch": "file:vendor/minimatch-compat",
-    "playwright-core": "^1.64.1",
+    "playwright-core": "^1.65.0",
     "shadcn": "^4.21.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.5",
-    "wrangler": "^4.151.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
   },
   "allowScripts": {
     "esbuild": true,
